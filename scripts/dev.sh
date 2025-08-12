@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-npm run build
-node dist/scripts/start.js &
+npm --prefix backend run build
+node backend/dist/scripts/start.js &
 BACK_PID=$!
 
 npm --prefix frontend run dev &
