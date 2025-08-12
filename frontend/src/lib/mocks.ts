@@ -1,5 +1,5 @@
 import axios from './axios';
-import { Pool, NewPool } from '../types';
+import type { Pool, NewPool } from '../types';
 
 let pools: Pool[] = [
   {

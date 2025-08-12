@@ -1,5 +1,10 @@
 # prompt-swap
-## run locally
+
+## Run locally
+
+```bash
 npm --prefix backend install
 npm --prefix frontend install
 npm run dev
+```
+
