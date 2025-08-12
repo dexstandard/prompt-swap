@@ -1,7 +1,7 @@
 import { Button, Select, TextInput, Textarea, Stack } from '@mantine/core';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { NewPool, newPoolSchema } from '../../types';
+import { type NewPool, newPoolSchema } from '../../types';
 import { usePools } from '../../hooks/usePools';
 import { notifications } from '@mantine/notifications';
 
@@ -55,7 +55,7 @@ export default function CreatePoolForm() {
         <TextInput label="TP %" type="number" {...form.register('tpPct', { valueAsNumber: true })} />
         <TextInput label="SL %" type="number" {...form.register('slPct', { valueAsNumber: true })} />
         <Textarea label="Notes" {...form.register('notes')} />
-        <Button type="submit" loading={createMutation.isLoading} mt="md">
+        <Button type="submit" loading={createMutation.isPending} mt="md">
           Create
         </Button>
       </Stack>

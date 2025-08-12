@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from '../lib/axios';
-import { NewPool, Pool } from '../types';
+import type { NewPool, Pool } from '../types';
 
 export function usePools() {
   const queryClient = useQueryClient();
