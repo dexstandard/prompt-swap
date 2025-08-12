@@ -2,7 +2,7 @@
 set -euo pipefail
 
 npm --prefix backend run build
-node backend/dist/scripts/start.js &
+npm --prefix backend run start &
 BACK_PID=$!
 
 npm --prefix frontend run dev &
