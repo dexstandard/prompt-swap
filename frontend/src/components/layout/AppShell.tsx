@@ -1,6 +1,7 @@
 import { Link, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from '../../lib/axios';
+import GoogleLoginButton from '../GoogleLoginButton';
 
 function ApiStatus() {
   const { isSuccess } = useQuery({
@@ -16,7 +17,10 @@ export default function AppShell() {
     <div className="min-h-screen flex flex-col">
       <header className="bg-gray-800 text-white p-4 flex justify-between">
         <span className="font-bold">PromptSwap</span>
-        <ApiStatus />
+        <div className="flex items-center gap-4">
+          <ApiStatus />
+          <GoogleLoginButton />
+        </div>
       </header>
       <div className="flex flex-1">
         <nav className="w-48 bg-gray-100 p-4">
