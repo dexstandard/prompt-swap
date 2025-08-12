@@ -12,7 +12,8 @@ export default function PoolsTable() {
   const [sort, setSort] = useState<SortKey>('name');
   const [page, setPage] = useState(1);
 
-  const data = (poolsQuery.data || []).filter((p) =>
+  const pools = Array.isArray(poolsQuery.data) ? poolsQuery.data : [];
+  const data = pools.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
 
