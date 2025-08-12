@@ -4,7 +4,7 @@
   "description": "PromptSwap Server",
   "type": "module",
   "scripts": {
-    "build": "tsc && cp src/db/schema.sql dist/src/db/schema.sql",
+    "build": "tsc && mkdir -p dist/db && cp src/db/schema.sql dist/db/schema.sql",
     "start": "node dist/scripts/start.js",
     "test": "vitest run"
   },
