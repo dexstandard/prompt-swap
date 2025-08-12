@@ -23,7 +23,7 @@ export function setupMocks() {
       config.adapter = async () => ({ data: pools, status: 200, statusText: 'OK', headers: {}, config });
     }
     if (method === 'post' && url === '/pools') {
-      const payload: NewPool = JSON.parse(data as any);
+      const payload: NewPool = JSON.parse(String(data));
       const pool: Pool = {
         ...payload,
         id: Math.random().toString(36).slice(2),
@@ -38,7 +38,7 @@ export function setupMocks() {
     }
     if (method === 'patch' && url?.startsWith('/pools/')) {
       const id = url.split('/').pop()!;
-      const payload = JSON.parse(data as any);
+      const payload = JSON.parse(String(data));
       pools = pools.map((p) => (p.id === id ? { ...p, ...payload } : p));
       const pool = pools.find((p) => p.id === id)!;
       config.adapter = async () => ({ data: pool, status: 200, statusText: 'OK', headers: {}, config });
