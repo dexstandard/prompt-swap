@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import buildServer from '../src/server.js';
+
+process.env.DATABASE_URL = ':memory:';
+process.env.KEY_PASSWORD = 'test-pass';
+
+const { default: buildServer } = await import('../src/server.js');
 
 describe('health route', () => {
   it('returns ok', async () => {
