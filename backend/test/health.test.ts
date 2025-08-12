@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import buildServer from '../src/server.js';
 
+process.env.KEY_PASSWORD = 'test-pass';
+
 describe('health route', () => {
   it('returns ok', async () => {
     const app = await buildServer();

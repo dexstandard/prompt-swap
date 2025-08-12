@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 // Use in-memory database for testing
 process.env.DATABASE_URL = ':memory:';
+process.env.KEY_PASSWORD = 'test-pass';
 
 const { db } = await import('../src/db/index.js');
 
