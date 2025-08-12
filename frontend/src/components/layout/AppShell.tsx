@@ -1,38 +1,36 @@
-import { AppShell as MantineAppShell, Group, NavLink, Text } from '@mantine/core';
-import { Link } from 'react-router-dom';
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from '../../lib/axios';
 
 function ApiStatus() {
   const { isSuccess } = useQuery({
     queryKey: ['api-status'],
-    queryFn: () => axios.get('/pools'),
+    queryFn: () => axios.get('/indexes'),
   });
 
-  return <Text size="sm">API: {isSuccess ? 'Online' : 'Offline'}</Text>;
+  return <span className="text-sm">API: {isSuccess ? 'Online' : 'Offline'}</span>;
 }
 
 export default function AppShell() {
   return (
-    <MantineAppShell
-      header={{ height: 60 }}
-      navbar={{ width: 200, breakpoint: 'sm' }}
-      padding="md"
-    >
-      <MantineAppShell.Header>
-        <Group justify="space-between" px="md" h="100%">
-          <Text>PromptSwap</Text>
-          <ApiStatus />
-        </Group>
-      </MantineAppShell.Header>
-      <MantineAppShell.Navbar p="md">
-        <NavLink component={Link} to="/">Pools</NavLink>
-        <NavLink component={Link} to="/settings">Settings</NavLink>
-      </MantineAppShell.Navbar>
-      <MantineAppShell.Main>
-        <Outlet />
-      </MantineAppShell.Main>
-    </MantineAppShell>
+    <div className="min-h-screen flex flex-col">
+      <header className="bg-gray-800 text-white p-4 flex justify-between">
+        <span className="font-bold">PromptSwap</span>
+        <ApiStatus />
+      </header>
+      <div className="flex flex-1">
+        <nav className="w-48 bg-gray-100 p-4">
+          <Link to="/" className="block mb-2 text-gray-700 hover:text-gray-900">
+            Index
+          </Link>
+          <Link to="/settings" className="block mb-2 text-gray-700 hover:text-gray-900">
+            Settings
+          </Link>
+        </nav>
+        <main className="flex-1 p-4 bg-white">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 }
