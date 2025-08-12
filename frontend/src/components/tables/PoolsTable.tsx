@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Group, Table, TextInput, Pagination } from '@mantine/core';
+import { Button, Group, Table, TextInput, Pagination, Paper, Stack, Title } from '@mantine/core';
 import { usePools } from '../../hooks/usePools';
 
 const PAGE_SIZE = 10;
@@ -22,49 +22,53 @@ export default function PoolsTable() {
   const paged = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div>
-      <TextInput
-        placeholder="Search"
-        mb="sm"
-        value={search}
-        onChange={(e) => setSearch(e.currentTarget.value)}
-      />
-      <Table striped withTableBorder>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th onClick={() => setSort('name')}>Name</Table.Th>
-            <Table.Th onClick={() => setSort('exchange')}>Exchange</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th></Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {paged.map((pool) => (
-            <Table.Tr key={pool.id}>
-              <Table.Td>{pool.name}</Table.Td>
-              <Table.Td>{pool.exchange}</Table.Td>
-              <Table.Td>{pool.status}</Table.Td>
-              <Table.Td>
-                <Group justify="flex-end">
-                  <Button
-                    size="xs"
-                    variant="light"
-                    onClick={() =>
-                      statusMutation.mutate({
-                        id: pool.id,
-                        status: pool.status === 'active' ? 'paused' : 'active',
-                      })
-                    }
-                  >
-                    {pool.status === 'active' ? 'Pause' : 'Activate'}
-                  </Button>
-                </Group>
-              </Table.Td>
+    <Paper withBorder shadow="sm" p="md" radius="md">
+      <Stack>
+        <Title order={4}>Pools</Title>
+        <TextInput
+          placeholder="Search"
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+        />
+        <Table striped withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th onClick={() => setSort('name')}>Name</Table.Th>
+              <Table.Th onClick={() => setSort('exchange')}>Exchange</Table.Th>
+              <Table.Th>Status</Table.Th>
+              <Table.Th></Table.Th>
             </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-      <Pagination mt="sm" total={pages} value={page} onChange={setPage} />
-    </div>
+          </Table.Thead>
+          <Table.Tbody>
+            {paged.map((pool) => (
+              <Table.Tr key={pool.id}>
+                <Table.Td>{pool.name}</Table.Td>
+                <Table.Td>{pool.exchange}</Table.Td>
+                <Table.Td>{pool.status}</Table.Td>
+                <Table.Td>
+                  <Group justify="flex-end">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      onClick={() =>
+                        statusMutation.mutate({
+                          id: pool.id,
+                          status: pool.status === 'active' ? 'paused' : 'active',
+                        })
+                      }
+                    >
+                      {pool.status === 'active' ? 'Pause' : 'Activate'}
+                    </Button>
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+        <Group justify="center" mt="sm">
+          <Pagination total={pages} value={page} onChange={setPage} />
+        </Group>
+      </Stack>
+    </Paper>
   );
 }
