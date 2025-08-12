@@ -5,5 +5,8 @@
     "dev": "./scripts/dev.sh",
     "test": "npm --prefix backend test",
     "build": "npm --prefix backend run build"
+  },
+  "engines": {
+    "node": "22.18.0"
   }
 }
