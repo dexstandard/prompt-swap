@@ -9,13 +9,16 @@ const schema = z
     tokenAPercent: z
       .coerce.number()
       .min(1, 'Must be at least 1')
-      .max(100, 'Must be 100 or less'),
+      .max(99, 'Must be 99 or less'),
     tokenBPercent: z
       .coerce.number()
       .min(1, 'Must be at least 1')
-      .max(100, 'Must be 100 or less'),
+      .max(99, 'Must be 99 or less'),
     risk: z.enum(['low', 'medium', 'high']),
     rebalance: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
+    systemPrompt: z
+      .string()
+      .min(1, 'System prompt is required'),
   })
   .refine((data) => data.tokenA !== data.tokenB, {
     message: 'Tokens must be different',
@@ -45,6 +48,8 @@ export default function IndexForm() {
       tokenBPercent: 50,
       risk: 'low',
       rebalance: '1h',
+      systemPrompt:
+        'Manage this index using the defined parameters. Use news and real market data to catch lows and highs.',
     },
   });
 
@@ -87,12 +92,14 @@ export default function IndexForm() {
               valueAsNumber: true,
               onChange: (e) => {
                 let val = Number(e.target.value);
-                if (isNaN(val)) val = 0;
-                val = Math.max(0, Math.min(100, val));
+                if (isNaN(val)) val = 1;
+                val = Math.max(1, Math.min(99, val));
                 setValue('tokenAPercent', val, { shouldValidate: true });
                 setValue('tokenBPercent', 100 - val, { shouldValidate: true });
               },
             })}
+            min={1}
+            max={99}
             className="w-full border rounded p-2"
           />
         </div>
@@ -126,12 +133,14 @@ export default function IndexForm() {
               valueAsNumber: true,
               onChange: (e) => {
                 let val = Number(e.target.value);
-                if (isNaN(val)) val = 0;
-                val = Math.max(0, Math.min(100, val));
+                if (isNaN(val)) val = 1;
+                val = Math.max(1, Math.min(99, val));
                 setValue('tokenBPercent', val, { shouldValidate: true });
                 setValue('tokenAPercent', 100 - val, { shouldValidate: true });
               },
             })}
+            min={1}
+            max={99}
             className="w-full border rounded p-2"
           />
         </div>
@@ -163,6 +172,19 @@ export default function IndexForm() {
           <option value="3d">3 days</option>
           <option value="1w">1 week</option>
         </select>
+      </div>
+      <div>
+        <label
+          className="block text-sm font-medium mb-1"
+          htmlFor="systemPrompt"
+        >
+          System Prompt
+        </label>
+        <textarea
+          id="systemPrompt"
+          {...register('systemPrompt')}
+          className="w-full border rounded p-2"
+        />
       </div>
       <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
         Save
