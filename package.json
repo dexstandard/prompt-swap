@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc && cp src/db/schema.sql dist/src/db/schema.sql",
     "start": "node dist/scripts/start.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev": "./scripts/dev.sh"
   },
   "dependencies": {
     "better-sqlite3": "^8.6.0",
