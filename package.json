@@ -1,25 +1,9 @@
 {
-  "name": "promptswap-server",
-  "version": "0.1.0",
-  "description": "PromptSwap Server",
-  "type": "module",
+  "name": "prompt-swap",
+  "private": true,
   "scripts": {
-    "build": "tsc && cp src/db/schema.sql dist/src/db/schema.sql",
-    "start": "node dist/scripts/start.js",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "better-sqlite3": "^8.6.0",
-    "fastify": "^4.24.3",
-    "node-cron": "^3.0.2",
-    "pino": "^8.15.0",
-    "zod": "^3.22.4"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^20.8.7",
-    "@types/node-cron": "^3.0.11",
-    "typescript": "^5.2.2",
-    "vitest": "^3.2.4"
+    "dev": "./scripts/dev.sh",
+    "test": "npm --prefix backend test",
+    "build": "npm --prefix backend run build"
   }
 }
