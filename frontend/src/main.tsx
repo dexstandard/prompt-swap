@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import queryClient from './lib/queryClient';
 import { setupMocks } from './lib/mocks';
+import { UserProvider } from './lib/user';
 import './index.css';
 
 setupMocks();
@@ -12,9 +13,11 @@ setupMocks();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <UserProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </UserProvider>
     </QueryClientProvider>
   </React.StrictMode>,
 );
