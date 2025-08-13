@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { useUser } from '../lib/user';
@@ -58,6 +59,7 @@ export default function Dashboard() {
             <th className="text-left">Index</th>
             <th className="text-left">Ratio</th>
             <th className="text-left">Risk</th>
+            <th className="text-left">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -67,6 +69,14 @@ export default function Dashboard() {
               <td>{`${idx.tokenA}/${idx.tokenB}`}</td>
               <td>{`${idx.tokenAPercent}%/${idx.tokenBPercent}%`}</td>
               <td>{idx.risk}</td>
+              <td>
+                <Link
+                  to={`/indexes/${idx.id}`}
+                  className="px-2 py-1 border inline-block"
+                >
+                  View
+                </Link>
+              </td>
             </tr>
           ))}
         </tbody>

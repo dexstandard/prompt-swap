@@ -22,6 +22,7 @@ describe('index routes', () => {
       tokenBPercent: 40,
       risk: 'low',
       rebalance: '1h',
+      model: 'gpt-5',
       systemPrompt: 'prompt',
     };
 
@@ -31,7 +32,7 @@ describe('index routes', () => {
 
     res = await app.inject({ method: 'GET', url: `/indexes/${id}` });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...payload });
+    expect(res.json()).toMatchObject({ id, ...payload, tvl: 0 });
 
     res = await app.inject({ method: 'GET', url: '/indexes' });
     expect(res.statusCode).toBe(200);
@@ -45,10 +46,10 @@ describe('index routes', () => {
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
 
-    const update = { ...payload, tokenAPercent: 70, tokenBPercent: 30, risk: 'medium' };
+    const update = { ...payload, tokenAPercent: 70, tokenBPercent: 30, risk: 'medium', model: 'o3' };
     res = await app.inject({ method: 'PUT', url: `/indexes/${id}`, payload: update });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...update });
+    expect(res.json()).toMatchObject({ id, ...update, tvl: 0 });
 
     res = await app.inject({ method: 'DELETE', url: `/indexes/${id}` });
     expect(res.statusCode).toBe(200);
