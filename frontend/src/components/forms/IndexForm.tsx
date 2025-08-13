@@ -61,7 +61,10 @@ export default function IndexForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="bg-white shadow-md rounded p-6 space-y-4">
+    <form
+      onSubmit={onSubmit}
+      className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-xl"
+    >
       <h2 className="text-xl font-bold">Create Index</h2>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -183,7 +186,7 @@ export default function IndexForm() {
         <textarea
           id="systemPrompt"
           {...register('systemPrompt')}
-          className="w-full border rounded p-2"
+          className="w-full border rounded p-2 h-32"
         />
       </div>
       <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
