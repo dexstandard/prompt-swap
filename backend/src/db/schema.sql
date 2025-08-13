@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS executions(
   tx_hash TEXT,
   created_at INTEGER
 );
-CREATE TABLE IF NOT EXISTS portfolios(
+CREATE TABLE IF NOT EXISTS token_indexes(
   id TEXT PRIMARY KEY,
   user_id TEXT,
   token_a TEXT,
