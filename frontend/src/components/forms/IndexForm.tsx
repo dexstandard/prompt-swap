@@ -18,6 +18,7 @@ const schema = z
       .max(99, 'Must be 99 or less'),
     risk: z.enum(['low', 'medium', 'high']),
     rebalance: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
+    model: z.enum(['gpt-5', 'o3', 'gpt-4.1', 'gpt-4o']),
     systemPrompt: z
       .string()
       .min(1, 'System prompt is required'),
@@ -40,6 +41,13 @@ const tokens = [
   { value: 'usdt', label: 'USDT' },
 ];
 
+const models = [
+  { value: 'gpt-5', label: 'gpt-5' },
+  { value: 'o3', label: 'o3' },
+  { value: 'gpt-4.1', label: 'gpt-4.1' },
+  { value: 'gpt-4o', label: 'gpt-4o' },
+];
+
 export default function IndexForm() {
   const { user } = useUser();
   const { register, handleSubmit, watch, setValue } = useForm<FormValues>({
@@ -51,6 +59,7 @@ export default function IndexForm() {
       tokenBPercent: 50,
       risk: 'low',
       rebalance: '1h',
+      model: 'gpt-5',
       systemPrompt:
         'Manage this index using the defined parameters. Use news and real market data to catch lows and highs.',
     },
@@ -178,6 +187,26 @@ export default function IndexForm() {
           <option value="24h">1 day</option>
           <option value="3d">3 days</option>
           <option value="1w">1 week</option>
+        </select>
+      </div>
+      <div>
+        {!user?.openaiKey && (
+          <p className="text-sm text-gray-600 mb-1">add your openai key to continue</p>
+        )}
+        <label className="block text-sm font-medium mb-1" htmlFor="model">
+          Model
+        </label>
+        <select
+          id="model"
+          {...register('model')}
+          className="w-full border rounded p-2"
+          disabled={!user?.openaiKey}
+        >
+          {models.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
         </select>
       </div>
       <div>
