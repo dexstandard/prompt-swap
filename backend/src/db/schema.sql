@@ -24,5 +24,7 @@ CREATE TABLE IF NOT EXISTS token_indexes(
   token_b_pct INTEGER,
   risk TEXT,
   rebalance TEXT,
+  model TEXT,
+  tvl REAL,
   system_prompt TEXT
 );
