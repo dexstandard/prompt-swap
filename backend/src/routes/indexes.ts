@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 
-interface PortfolioRow {
+interface TokenIndexRow {
   id: string;
   user_id: string;
   token_a: string;
@@ -14,7 +14,7 @@ interface PortfolioRow {
   system_prompt: string;
 }
 
-function toApi(row: PortfolioRow) {
+function toApi(row: TokenIndexRow) {
   return {
     id: row.id,
     userId: row.user_id,
@@ -30,7 +30,7 @@ function toApi(row: PortfolioRow) {
 
 export default async function indexRoutes(app: FastifyInstance) {
   app.get('/indexes', async () => {
-    const rows = db.prepare<[], PortfolioRow>('SELECT * FROM portfolios').all();
+    const rows = db.prepare<[], TokenIndexRow>('SELECT * FROM token_indexes').all();
     return rows.map(toApi);
   });
 
@@ -47,7 +47,7 @@ export default async function indexRoutes(app: FastifyInstance) {
     };
     const id = randomUUID();
     db.prepare(
-      `INSERT INTO portfolios (id, user_id, token_a, token_b, token_a_pct, token_b_pct, risk, rebalance, system_prompt)
+      `INSERT INTO token_indexes (id, user_id, token_a, token_b, token_a_pct, token_b_pct, risk, rebalance, system_prompt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
@@ -66,8 +66,8 @@ export default async function indexRoutes(app: FastifyInstance) {
   app.get('/indexes/:id', async (req, reply) => {
     const id = (req.params as any).id;
     const row = db
-      .prepare('SELECT * FROM portfolios WHERE id = ?')
-      .get(id) as PortfolioRow | undefined;
+      .prepare('SELECT * FROM token_indexes WHERE id = ?')
+      .get(id) as TokenIndexRow | undefined;
     if (!row) return reply.code(404).send({ error: 'not found' });
     return toApi(row);
   });
@@ -85,11 +85,11 @@ export default async function indexRoutes(app: FastifyInstance) {
       systemPrompt: string;
     };
     const existing = db
-      .prepare('SELECT id FROM portfolios WHERE id = ?')
+      .prepare('SELECT id FROM token_indexes WHERE id = ?')
       .get(id) as { id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     db.prepare(
-      `UPDATE portfolios SET user_id = ?, token_a = ?, token_b = ?, token_a_pct = ?, token_b_pct = ?, risk = ?, rebalance = ?, system_prompt = ? WHERE id = ?`
+      `UPDATE token_indexes SET user_id = ?, token_a = ?, token_b = ?, token_a_pct = ?, token_b_pct = ?, risk = ?, rebalance = ?, system_prompt = ? WHERE id = ?`
     ).run(
       body.userId,
       body.tokenA,
@@ -106,7 +106,7 @@ export default async function indexRoutes(app: FastifyInstance) {
 
   app.delete('/indexes/:id', async (req, reply) => {
     const id = (req.params as any).id;
-    const res = db.prepare('DELETE FROM portfolios WHERE id = ?').run(id);
+    const res = db.prepare('DELETE FROM token_indexes WHERE id = ?').run(id);
     if (res.changes === 0) return reply.code(404).send({ error: 'not found' });
     return { ok: true };
   });
