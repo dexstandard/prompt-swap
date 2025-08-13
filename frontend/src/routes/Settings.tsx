@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/user';
 
@@ -10,17 +11,22 @@ function KeySection({ type, label }: { type: KeyType; label: string }) {
   const { user } = useUser();
   const form = useForm<{ key: string }>({ defaultValues: { key: '' } });
   const id = user!.id;
-  const query = useQuery({
+  const query = useQuery<string | null>({
     queryKey: [type, id],
     enabled: !!user,
     queryFn: async () => {
-      const res = await api.get(`/users/${id}/${type}-key`);
-      return res.data.key as string;
+      try {
+        const res = await api.get(`/users/${id}/${type}-key`);
+        return res.data.key as string;
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+        throw err;
+      }
     },
   });
 
   useEffect(() => {
-    if (query.data) form.setValue('key', query.data);
+    form.setValue('key', query.data ?? '');
   }, [query.data, form]);
 
   const saveMut = useMutation({

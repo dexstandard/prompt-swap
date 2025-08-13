@@ -11,6 +11,7 @@ export default defineConfig({
     },
     proxy: {
       '/login': 'http://localhost:3000',
+      // Covers /users/:id/ai-key and /users/:id/binance-key
       '/users': 'http://localhost:3000',
       '/indexes': 'http://localhost:3000',
     },
