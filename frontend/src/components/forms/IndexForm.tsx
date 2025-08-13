@@ -193,7 +193,18 @@ export default function IndexForm() {
           className="w-full border rounded p-2 h-32"
         />
       </div>
-      <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
+      {!user && (
+        <p className="text-sm text-gray-600 mb-2">Please log in to continue</p>
+      )}
+      <button
+        type="submit"
+        className={`w-full py-2 rounded ${
+          user
+            ? 'bg-blue-600 text-white'
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+        }`}
+        disabled={!user}
+      >
         Save
       </button>
     </form>
