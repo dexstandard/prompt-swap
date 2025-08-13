@@ -30,16 +30,19 @@ function KeySection({ type, label }: { type: KeyType; label: string }) {
   }, [query.data, form]);
 
   const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    setEditing(!query.data);
+    if (type === 'ai') setIsKeyValid(query.data ? true : null);
+  }, [query.data, type]);
+
   const keyValue = form.watch('key');
 
   useEffect(() => {
-    if (type !== 'ai') return;
+    if (type !== 'ai' || !editing) return;
     if (!keyValue) {
       setIsKeyValid(null);
-      return;
-    }
-    if (keyValue.includes('*')) {
-      setIsKeyValid(true);
       return;
     }
     const handle = setTimeout(async () => {
@@ -53,11 +56,7 @@ function KeySection({ type, label }: { type: KeyType; label: string }) {
       }
     }, 500);
     return () => clearTimeout(handle);
-  }, [keyValue, type]);
-
-  useEffect(() => {
-    if (type === 'ai' && query.data) setIsKeyValid(true);
-  }, [query.data, type]);
+  }, [keyValue, type, editing]);
 
   const saveMut = useMutation({
     mutationFn: async (key: string) => {
@@ -65,7 +64,10 @@ function KeySection({ type, label }: { type: KeyType; label: string }) {
       const res = await api[method](`/users/${id}/${type}-key`, { key });
       return res.data.key as string;
     },
-    onSuccess: () => query.refetch(),
+    onSuccess: () => {
+      query.refetch();
+      setEditing(false);
+    },
     onError: (err) => {
       if (
         type === 'ai' &&
@@ -94,7 +96,7 @@ function KeySection({ type, label }: { type: KeyType; label: string }) {
       <h2 className="text-lg font-bold">{label}</h2>
       {query.isLoading ? (
         <p>Loading...</p>
-      ) : (
+      ) : editing ? (
         <form onSubmit={onSubmit} className="space-y-2">
           <input
             type="text"
@@ -119,17 +121,45 @@ function KeySection({ type, label }: { type: KeyType; label: string }) {
             {query.data && (
               <button
                 type="button"
-                onClick={() => delMut.mutate()}
-                disabled={buttonsDisabled}
-                className={`bg-red-600 text-white px-4 py-2 rounded ${
-                  buttonsDisabled ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                onClick={() => {
+                  setEditing(false);
+                  form.setValue('key', query.data ?? '');
+                  if (type === 'ai') setIsKeyValid(true);
+                }}
+                className="bg-gray-300 px-4 py-2 rounded"
               >
-                Delete
+                Cancel
               </button>
             )}
           </div>
         </form>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={query.data ?? ''}
+            disabled
+            className="border rounded p-2 w-full"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(true);
+              form.setValue('key', '');
+              if (type === 'ai') setIsKeyValid(null);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => delMut.mutate()}
+            className="bg-red-600 text-white px-4 py-2 rounded"
+          >
+            Delete
+          </button>
+        </div>
       )}
     </div>
   );
