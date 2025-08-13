@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-export type User = { id: string; email?: string } | null;
+export type User = { id: string; email?: string; openaiKey?: string } | null;
 
 const UserContext = createContext<{ user: User; setUser: (u: User) => void }>({
   user: null,
