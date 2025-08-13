@@ -14,20 +14,24 @@ describe('AI API key routes', () => {
     const app = await buildServer();
     db.prepare('INSERT INTO users (id) VALUES (?)').run('user1');
 
+    const key1 = 'aikey1234567890';
+    const key2 = 'aikeyabcdefghij';
+
     let res = await app.inject({
       method: 'POST',
       url: '/users/user1/ai-key',
-      payload: { key: 'aikey1' },
+      payload: { key: key1 },
     });
     expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ key: 'aike...7890' });
     const row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
       .get('user1');
-    expect(row.ai_api_key_enc).not.toBe('aikey1');
+    expect(row.ai_api_key_enc).not.toBe(key1);
 
     res = await app.inject({ method: 'GET', url: '/users/user1/ai-key' });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'aikey1' });
+    expect(res.json()).toMatchObject({ key: 'aike...7890' });
 
     res = await app.inject({
       method: 'POST',
@@ -39,10 +43,10 @@ describe('AI API key routes', () => {
     res = await app.inject({
       method: 'PUT',
       url: '/users/user1/ai-key',
-      payload: { key: 'aikey2' },
+      payload: { key: key2 },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'aikey2' });
+    expect(res.json()).toMatchObject({ key: 'aike...ghij' });
 
     res = await app.inject({ method: 'DELETE', url: '/users/user1/ai-key' });
     expect(res.statusCode).toBe(200);
@@ -59,20 +63,24 @@ describe('Binance API key routes', () => {
     const app = await buildServer();
     db.prepare('INSERT INTO users (id) VALUES (?)').run('user2');
 
+    const key1 = 'bkey1234567890';
+    const key2 = 'bkeyabcdefghij';
+
     let res = await app.inject({
       method: 'POST',
       url: '/users/user2/binance-key',
-      payload: { key: 'bkey1' },
+      payload: { key: key1 },
     });
     expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ key: 'bkey...7890' });
     const row = db
       .prepare('SELECT binance_api_key_enc FROM users WHERE id = ?')
       .get('user2');
-    expect(row.binance_api_key_enc).not.toBe('bkey1');
+    expect(row.binance_api_key_enc).not.toBe(key1);
 
     res = await app.inject({ method: 'GET', url: '/users/user2/binance-key' });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'bkey1' });
+    expect(res.json()).toMatchObject({ key: 'bkey...7890' });
 
     res = await app.inject({
       method: 'POST',
@@ -84,10 +92,10 @@ describe('Binance API key routes', () => {
     res = await app.inject({
       method: 'PUT',
       url: '/users/user2/binance-key',
-      payload: { key: 'bkey2' },
+      payload: { key: key2 },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'bkey2' });
+    expect(res.json()).toMatchObject({ key: 'bkey...ghij' });
 
     res = await app.inject({ method: 'DELETE', url: '/users/user2/binance-key' });
     expect(res.statusCode).toBe(200);
