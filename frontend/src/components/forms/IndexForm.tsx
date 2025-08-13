@@ -191,7 +191,7 @@ export default function IndexForm() {
       </div>
       <div>
         {!user?.openaiKey && (
-          <p className="text-sm text-gray-600 mb-1">add your openai key to continue</p>
+          <p className="text-sm text-gray-600 mb-1">Add your openai key to continue</p>
         )}
         <label className="block text-sm font-medium mb-1" htmlFor="model">
           Model
@@ -223,7 +223,7 @@ export default function IndexForm() {
         />
       </div>
       {!user && (
-        <p className="text-sm text-gray-600 mb-2">Please log in to continue</p>
+        <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
       )}
       <button
         type="submit"
