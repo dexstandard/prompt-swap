@@ -1,6 +1,8 @@
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/user';
 
@@ -9,11 +11,11 @@ const schema = z
     tokenA: z.string().min(1, 'Token A is required'),
     tokenB: z.string().min(1, 'Token B is required'),
     tokenAPercent: z
-      .coerce.number()
+      .number()
       .min(1, 'Must be at least 1')
       .max(99, 'Must be 99 or less'),
     tokenBPercent: z
-      .coerce.number()
+      .number()
       .min(1, 'Must be at least 1')
       .max(99, 'Must be 99 or less'),
     risk: z.enum(['low', 'medium', 'high']),
@@ -50,6 +52,20 @@ const models = [
 
 export default function IndexForm() {
   const { user } = useUser();
+  const keyQuery = useQuery<string | null>({
+    queryKey: ['ai-key', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      try {
+        const res = await api.get(`/users/${user!.id}/ai-key`);
+        return res.data.key as string;
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+        throw err;
+      }
+    },
+  });
+  const hasOpenAIKey = !!keyQuery.data;
   const { register, handleSubmit, watch, setValue } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -190,7 +206,7 @@ export default function IndexForm() {
         </select>
       </div>
       <div>
-        {!user?.openaiKey && (
+        {user && !hasOpenAIKey && (
           <p className="text-sm text-gray-600 mb-1">Add your openai key to continue</p>
         )}
         <label className="block text-sm font-medium mb-1" htmlFor="model">
@@ -200,7 +216,7 @@ export default function IndexForm() {
           id="model"
           {...register('model')}
           className="w-full border rounded p-2"
-          disabled={!user?.openaiKey}
+          disabled={!hasOpenAIKey}
         >
           {models.map((m) => (
             <option key={m.value} value={m.value}>
@@ -225,14 +241,17 @@ export default function IndexForm() {
       {!user && (
         <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
       )}
+      {user && !hasOpenAIKey && (
+        <p className="text-sm text-gray-600 mb-2">Add your openai key to continue</p>
+      )}
       <button
         type="submit"
         className={`w-full py-2 rounded ${
-          user
+          user && hasOpenAIKey
             ? 'bg-blue-600 text-white'
             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
         }`}
-        disabled={!user}
+        disabled={!user || !hasOpenAIKey}
       >
         Save
       </button>
