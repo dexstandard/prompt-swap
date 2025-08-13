@@ -19,10 +19,14 @@ export default function GoogleLoginButton() {
     });
     google.accounts.id.renderButton(btnRef.current, {
       theme: 'outline',
-      size: 'large',
+      size: 'small',
+      text: 'signin',
     });
   }, [user, setUser]);
 
-  if (user) return <span className="text-sm">{user.email}</span>;
-  return <div ref={btnRef}></div>;
+  if (user)
+    return (
+      <div className="h-5 flex items-center text-sm">{user.email}</div>
+    );
+  return <div ref={btnRef} className="h-5 capitalize" />;
 }
