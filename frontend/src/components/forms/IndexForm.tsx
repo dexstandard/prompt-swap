@@ -1,6 +1,8 @@
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import api from '../../lib/axios';
+import { useUser } from '../../lib/user';
 
 const schema = z
   .object({
@@ -39,6 +41,7 @@ const tokens = [
 ];
 
 export default function IndexForm() {
+  const { user } = useUser();
   const { register, handleSubmit, watch, setValue } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -56,8 +59,9 @@ export default function IndexForm() {
   const tokenA = watch('tokenA');
   const tokenB = watch('tokenB');
 
-  const onSubmit = handleSubmit((values) => {
-    console.log(values);
+  const onSubmit = handleSubmit(async (values) => {
+    if (!user) return;
+    await api.post('/indexes', { userId: user.id, ...values });
   });
 
   return (
