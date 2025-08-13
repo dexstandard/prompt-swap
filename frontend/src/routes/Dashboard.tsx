@@ -8,6 +8,8 @@ interface IndexItem {
   userId: string;
   tokenA: string;
   tokenB: string;
+  tokenAPercent: number;
+  tokenBPercent: number;
   risk: string;
 }
 
@@ -53,8 +55,8 @@ export default function Dashboard() {
         <thead>
           <tr>
             <th className="text-left">User</th>
-            <th className="text-left">Token A</th>
-            <th className="text-left">Token B</th>
+            <th className="text-left">Index</th>
+            <th className="text-left">Ratio</th>
             <th className="text-left">Risk</th>
           </tr>
         </thead>
@@ -62,8 +64,8 @@ export default function Dashboard() {
           {data?.items.map((idx) => (
             <tr key={idx.id}>
               <td>{idx.userId}</td>
-              <td>{idx.tokenA}</td>
-              <td>{idx.tokenB}</td>
+              <td>{`${idx.tokenA}/${idx.tokenB}`}</td>
+              <td>{`${idx.tokenAPercent}%/${idx.tokenBPercent}%`}</td>
               <td>{idx.risk}</td>
             </tr>
           ))}
