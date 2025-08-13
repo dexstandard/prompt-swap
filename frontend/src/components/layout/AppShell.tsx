@@ -25,7 +25,10 @@ export default function AppShell() {
       <div className="flex flex-1">
         <nav className="w-48 bg-gray-100 p-4">
           <Link to="/" className="block mb-2 text-gray-700 hover:text-gray-900">
-            Index
+            Dashboard
+          </Link>
+          <Link to="/create-index" className="block mb-2 text-gray-700 hover:text-gray-900">
+            Create Index
           </Link>
           <Link to="/settings" className="block mb-2 text-gray-700 hover:text-gray-900">
             Settings
