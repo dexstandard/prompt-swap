@@ -34,6 +34,35 @@ export default async function indexRoutes(app: FastifyInstance) {
     return rows.map(toApi);
   });
 
+  app.get('/indexes/paginated', async (req) => {
+    const {
+      page = '1',
+      pageSize = '10',
+      userId,
+    } = req.query as { page?: string; pageSize?: string; userId?: string };
+    const p = Math.max(parseInt(page, 10), 1);
+    const ps = Math.max(parseInt(pageSize, 10), 1);
+    const offset = (p - 1) * ps;
+    const params: any[] = [];
+    let where = '';
+    if (userId) {
+      where = 'WHERE user_id = ?';
+      params.push(userId);
+    }
+    const totalRow = db
+      .prepare(`SELECT COUNT(*) as count FROM token_indexes ${where}`)
+      .get(...params) as { count: number };
+    const rows = db
+      .prepare(`SELECT * FROM token_indexes ${where} LIMIT ? OFFSET ?`)
+      .all(...params, ps, offset) as TokenIndexRow[];
+    return {
+      items: rows.map(toApi),
+      total: totalRow.count,
+      page: p,
+      pageSize: ps,
+    };
+  });
+
   app.post('/indexes', async (req) => {
     const body = req.body as {
       userId: string;

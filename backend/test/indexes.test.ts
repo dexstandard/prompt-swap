@@ -37,6 +37,14 @@ describe('index routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toHaveLength(1);
 
+    res = await app.inject({
+      method: 'GET',
+      url: '/indexes/paginated?page=1&pageSize=10&userId=user1',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
+    expect(res.json().items).toHaveLength(1);
+
     const update = { ...payload, tokenAPercent: 70, tokenBPercent: 30, risk: 'medium' };
     res = await app.inject({ method: 'PUT', url: `/indexes/${id}`, payload: update });
     expect(res.statusCode).toBe(200);
