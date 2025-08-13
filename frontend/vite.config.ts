@@ -11,6 +11,7 @@ export default defineConfig({
     },
     proxy: {
       '/login': 'http://localhost:3000',
+      '/users': 'http://localhost:3000',
     },
   },
 });
