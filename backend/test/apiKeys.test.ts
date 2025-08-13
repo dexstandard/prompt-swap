@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 process.env.DATABASE_URL = ':memory:';
 process.env.KEY_PASSWORD = 'test-pass';
@@ -14,17 +14,34 @@ describe('AI API key routes', () => {
     const app = await buildServer();
     db.prepare('INSERT INTO users (id) VALUES (?)').run('user1');
 
+    const fetchMock = vi.fn();
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+
     const key1 = 'aikey1234567890';
     const key2 = 'aikeyabcdefghij';
 
+    fetchMock.mockResolvedValueOnce({ ok: false } as any);
     let res = await app.inject({
+      method: 'POST',
+      url: '/users/user1/ai-key',
+      payload: { key: 'bad' },
+    });
+    expect(res.statusCode).toBe(400);
+    let row = db
+      .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
+      .get('user1');
+    expect(row.ai_api_key_enc).toBeNull();
+
+    fetchMock.mockResolvedValueOnce({ ok: true } as any);
+    res = await app.inject({
       method: 'POST',
       url: '/users/user1/ai-key',
       payload: { key: key1 },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ key: 'aike...7890' });
-    const row = db
+    row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
       .get('user1');
     expect(row.ai_api_key_enc).not.toBe(key1);
@@ -40,6 +57,17 @@ describe('AI API key routes', () => {
     });
     expect(res.statusCode).toBe(400);
 
+    fetchMock.mockResolvedValueOnce({ ok: false } as any);
+    res = await app.inject({
+      method: 'PUT',
+      url: '/users/user1/ai-key',
+      payload: { key: 'bad2' },
+    });
+    expect(res.statusCode).toBe(400);
+    res = await app.inject({ method: 'GET', url: '/users/user1/ai-key' });
+    expect(res.json()).toMatchObject({ key: 'aike...7890' });
+
+    fetchMock.mockResolvedValueOnce({ ok: true } as any);
     res = await app.inject({
       method: 'PUT',
       url: '/users/user1/ai-key',
@@ -55,6 +83,7 @@ describe('AI API key routes', () => {
     expect(res.statusCode).toBe(404);
 
     await app.close();
+    (globalThis as any).fetch = originalFetch;
   });
 });
 
