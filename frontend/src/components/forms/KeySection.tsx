@@ -91,7 +91,7 @@ export default function KeySection({ label }: { label: string }) {
       {query.isLoading ? (
         <p>Loading...</p>
       ) : editing ? (
-        <form onSubmit={onSubmit} className="space-y-2">
+        <div className="space-y-2">
           <input
             type="text"
             {...form.register('key')}
@@ -104,7 +104,8 @@ export default function KeySection({ label }: { label: string }) {
           )}
           <div className="flex gap-2">
             <button
-              type="submit"
+              type="button"
+              onClick={onSubmit}
               disabled={buttonsDisabled}
               className={`bg-blue-600 text-white px-4 py-2 rounded ${
                 buttonsDisabled ? 'opacity-50 cursor-not-allowed' : ''
@@ -126,7 +127,7 @@ export default function KeySection({ label }: { label: string }) {
               </button>
             )}
           </div>
-        </form>
+        </div>
       ) : (
         <div className="flex gap-2">
           <input
