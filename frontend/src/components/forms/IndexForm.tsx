@@ -13,14 +13,18 @@ const schema = z
   .object({
     tokenA: z.string().min(1, 'Token A is required'),
     tokenB: z.string().min(1, 'Token B is required'),
-    tokenAPercent: z
+    targetAllocation: z
       .number()
       .min(1, 'Must be at least 1')
       .max(99, 'Must be 99 or less'),
-    tokenBPercent: z
+    minTokenAAllocation: z
       .number()
-      .min(1, 'Must be at least 1')
-      .max(99, 'Must be 99 or less'),
+      .min(0, 'Must be at least 0')
+      .max(100, 'Must be 100 or less'),
+    minTokenBAllocation: z
+      .number()
+      .min(0, 'Must be at least 0')
+      .max(100, 'Must be 100 or less'),
     risk: z.enum(['low', 'medium', 'high']),
     rebalance: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
     model: z.string().min(1, 'Model is required'),
@@ -32,9 +36,9 @@ const schema = z
     message: 'Tokens must be different',
     path: ['tokenB'],
   })
-  .refine((data) => data.tokenAPercent + data.tokenBPercent === 100, {
-    message: 'Percentages must total 100',
-    path: ['tokenBPercent'],
+  .refine((data) => data.minTokenAAllocation + data.minTokenBAllocation === 100, {
+    message: 'Minimum allocations must total 100',
+    path: ['minTokenBAllocation'],
   });
 
 type FormValues = z.infer<typeof schema>;
@@ -81,8 +85,9 @@ export default function IndexForm() {
     defaultValues: {
       tokenA: 'usdt',
       tokenB: 'sol',
-      tokenAPercent: 50,
-      tokenBPercent: 50,
+      targetAllocation: 50,
+      minTokenAAllocation: 50,
+      minTokenBAllocation: 50,
       risk: 'low',
       rebalance: '1h',
       model: '',
@@ -93,6 +98,7 @@ export default function IndexForm() {
 
   const tokenA = watch('tokenA');
   const tokenB = watch('tokenB');
+  const targetAllocation = watch('targetAllocation');
 
   const modelsQuery = useQuery<string[]>({
     queryKey: ['openai-models', user?.id],
@@ -142,30 +148,6 @@ export default function IndexForm() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="tokenAPercent">
-            % Token A
-          </label>
-          <input
-            id="tokenAPercent"
-            type="number"
-            {...register('tokenAPercent', {
-              valueAsNumber: true,
-              onChange: (e) => {
-                let val = Number(e.target.value);
-                if (isNaN(val)) val = 1;
-                val = Math.max(1, Math.min(99, val));
-                setValue('tokenAPercent', val, { shouldValidate: true });
-                setValue('tokenBPercent', 100 - val, { shouldValidate: true });
-              },
-            })}
-            min={1}
-            max={99}
-            className="w-full border rounded p-2"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
           <label className="block text-sm font-medium mb-1" htmlFor="tokenB">
             Token B
           </label>
@@ -182,25 +164,59 @@ export default function IndexForm() {
               ))}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="tokenBPercent">
-            % Token B
-          </label>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" htmlFor="targetAllocation">
+          Target Allocation
+        </label>
+        <div className="flex items-center gap-2">
+          <span className="w-24 text-right">
+            {targetAllocation}% {tokenA.toUpperCase()}
+          </span>
           <input
-            id="tokenBPercent"
-            type="number"
-            {...register('tokenBPercent', {
-              valueAsNumber: true,
-              onChange: (e) => {
-                let val = Number(e.target.value);
-                if (isNaN(val)) val = 1;
-                val = Math.max(1, Math.min(99, val));
-                setValue('tokenBPercent', val, { shouldValidate: true });
-                setValue('tokenAPercent', 100 - val, { shouldValidate: true });
-              },
-            })}
+            id="targetAllocation"
+            type="range"
             min={1}
             max={99}
+            {...register('targetAllocation', { valueAsNumber: true })}
+            value={targetAllocation}
+            className="flex-1"
+          />
+          <span className="w-24">
+            {100 - targetAllocation}% {tokenB.toUpperCase()}
+          </span>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label
+            className="block text-sm font-medium mb-1"
+            htmlFor="minTokenAAllocation"
+          >
+            Minimum {tokenA.toUpperCase()} allocation
+          </label>
+          <input
+            id="minTokenAAllocation"
+            type="number"
+            {...register('minTokenAAllocation', { valueAsNumber: true })}
+            min={0}
+            max={100}
+            className="w-full border rounded p-2"
+          />
+        </div>
+        <div>
+          <label
+            className="block text-sm font-medium mb-1"
+            htmlFor="minTokenBAllocation"
+          >
+            Minimum {tokenB.toUpperCase()} allocation
+          </label>
+          <input
+            id="minTokenBAllocation"
+            type="number"
+            {...register('minTokenBAllocation', { valueAsNumber: true })}
+            min={0}
+            max={100}
             className="w-full border rounded p-2"
           />
         </div>
