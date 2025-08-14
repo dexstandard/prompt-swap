@@ -7,6 +7,7 @@ import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/user';
 import KeySection from './KeySection';
+import BinanceKeySection from './BinanceKeySection';
 
 const schema = z
   .object({
@@ -47,7 +48,7 @@ const tokens = [
 
 export default function IndexForm() {
   const { user } = useUser();
-  const keyQuery = useQuery<string | null>({
+  const aiKeyQuery = useQuery<string | null>({
     queryKey: ['ai-key', user?.id],
     enabled: !!user,
     queryFn: async () => {
@@ -60,7 +61,21 @@ export default function IndexForm() {
       }
     },
   });
-  const hasOpenAIKey = !!keyQuery.data;
+  const hasOpenAIKey = !!aiKeyQuery.data;
+  const binanceKeyQuery = useQuery<string | null>({
+    queryKey: ['binance-key', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      try {
+        const res = await api.get(`/users/${user!.id}/binance-key`);
+        return res.data.key as string;
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+        throw err;
+      }
+    },
+  });
+  const hasBinanceKey = !!binanceKeyQuery.data;
   const { register, handleSubmit, watch, setValue } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -80,11 +95,11 @@ export default function IndexForm() {
   const tokenB = watch('tokenB');
 
   const modelsQuery = useQuery<string[]>({
-    queryKey: ['openai-models', keyQuery.data],
+    queryKey: ['openai-models', aiKeyQuery.data],
     enabled: hasOpenAIKey,
     queryFn: async () => {
       const res = await fetch('https://api.openai.com/v1/models', {
-        headers: { Authorization: `Bearer ${keyQuery.data}` },
+        headers: { Authorization: `Bearer ${aiKeyQuery.data}` },
       });
       if (!res.ok) return [];
       const json = await res.json();
@@ -107,9 +122,12 @@ export default function IndexForm() {
 
   return (
     <>
-      {user && !hasOpenAIKey && (
+      {user && (!hasOpenAIKey || !hasBinanceKey) && (
         <div className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-xl mb-4">
-          <KeySection type="ai" label="OpenAI API Key" />
+          {!hasOpenAIKey && <KeySection label="OpenAI API Key" />}
+          {!hasBinanceKey && (
+            <BinanceKeySection label="Binance API Credentials" />
+          )}
         </div>
       )}
       <form

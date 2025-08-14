@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS users(
   policy_json TEXT,
   session_key_expires_at INTEGER,
   ai_api_key_enc TEXT,
-  binance_api_key_enc TEXT
+  binance_api_key_enc TEXT,
+  binance_api_secret_enc TEXT
 );
 
 CREATE TABLE IF NOT EXISTS executions(
