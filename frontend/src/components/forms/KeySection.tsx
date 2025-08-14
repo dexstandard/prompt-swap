@@ -87,7 +87,7 @@ export default function KeySection({ label }: { label: string }) {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-lg font-bold">{label}</h2>
+      {label && <h2 className="text-lg font-bold">{label}</h2>}
       {query.isLoading ? (
         <p>Loading...</p>
       ) : editing ? (

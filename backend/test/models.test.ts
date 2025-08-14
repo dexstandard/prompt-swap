@@ -1,0 +1,53 @@
+import { describe, it, expect, vi } from 'vitest';
+
+process.env.DATABASE_URL = ':memory:';
+process.env.KEY_PASSWORD = 'test-pass';
+process.env.GOOGLE_CLIENT_ID = 'test-client';
+
+const { db, migrate } = await import('../src/db/index.js');
+import buildServer from '../src/server.js';
+import { encrypt } from '../src/util/crypto.js';
+
+migrate();
+
+describe('model routes', () => {
+  it('returns filtered models', async () => {
+    const app = await buildServer();
+    const key = 'aikey1234567890';
+    const enc = encrypt(key, process.env.KEY_PASSWORD!);
+    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run(
+      'user1',
+      enc,
+    );
+
+    const fetchMock = vi.fn();
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [
+          { id: 'gpt-4.1-mini' },
+          { id: 'gpt-3.5' },
+          { id: 'o3-mini' },
+          { id: 'gpt-5' },
+        ],
+      }),
+    } as any);
+
+    const res = await app.inject({ method: 'GET', url: '/users/user1/models' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ models: ['gpt-4.1-mini', 'o3-mini', 'gpt-5'] });
+
+    await app.close();
+    (globalThis as any).fetch = originalFetch;
+  });
+
+  it('requires a key', async () => {
+    const app = await buildServer();
+    db.prepare('INSERT INTO users (id) VALUES (?)').run('user2');
+    const res = await app.inject({ method: 'GET', url: '/users/user2/models' });
+    expect(res.statusCode).toBe(404);
+    await app.close();
+  });
+});
