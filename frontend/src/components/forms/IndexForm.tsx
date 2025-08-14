@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/user';
+import { normalizeAllocations } from '../../lib/allocations';
 import KeySection from './KeySection';
 import BinanceKeySection from './BinanceKeySection';
 
@@ -15,8 +16,8 @@ const schema = z
     tokenB: z.string().min(1, 'Token B is required'),
     targetAllocation: z
       .number()
-      .min(1, 'Must be at least 1')
-      .max(99, 'Must be 99 or less'),
+      .min(0, 'Must be at least 0')
+      .max(100, 'Must be 100 or less'),
     minTokenAAllocation: z
       .number()
       .min(0, 'Must be at least 0')
@@ -35,10 +36,6 @@ const schema = z
   .refine((data) => data.tokenA !== data.tokenB, {
     message: 'Tokens must be different',
     path: ['tokenB'],
-  })
-  .refine((data) => data.minTokenAAllocation + data.minTokenBAllocation === 100, {
-    message: 'Minimum allocations must total 100',
-    path: ['minTokenBAllocation'],
   });
 
 type FormValues = z.infer<typeof schema>;
@@ -99,6 +96,8 @@ export default function IndexForm() {
   const tokenA = watch('tokenA');
   const tokenB = watch('tokenB');
   const targetAllocation = watch('targetAllocation');
+  const minTokenAAllocation = watch('minTokenAAllocation');
+  const minTokenBAllocation = watch('minTokenBAllocation');
 
   const modelsQuery = useQuery<string[]>({
     queryKey: ['openai-models', user?.id],
@@ -116,6 +115,35 @@ export default function IndexForm() {
       setValue('model', modelsQuery.data[0]);
     }
   }, [modelsQuery.data, setValue]);
+
+  useEffect(() => {
+    const currentTarget = Number.isFinite(targetAllocation) ? targetAllocation : 0;
+    const currentMinA = Number.isFinite(minTokenAAllocation)
+      ? minTokenAAllocation
+      : 0;
+    const currentMinB = Number.isFinite(minTokenBAllocation)
+      ? minTokenBAllocation
+      : 0;
+    const normalized = normalizeAllocations(
+      currentTarget,
+      currentMinA,
+      currentMinB
+    );
+    if (
+      normalized.targetAllocation !== currentTarget ||
+      normalized.minTokenAAllocation !== currentMinA ||
+      normalized.minTokenBAllocation !== currentMinB
+    ) {
+      setValue('targetAllocation', normalized.targetAllocation);
+      setValue('minTokenAAllocation', normalized.minTokenAAllocation);
+      setValue('minTokenBAllocation', normalized.minTokenBAllocation);
+    }
+  }, [
+    targetAllocation,
+    minTokenAAllocation,
+    minTokenBAllocation,
+    setValue,
+  ]);
 
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
@@ -176,8 +204,8 @@ export default function IndexForm() {
           <input
             id="targetAllocation"
             type="range"
-            min={1}
-            max={99}
+            min={0}
+            max={100}
             {...register('targetAllocation', { valueAsNumber: true })}
             value={targetAllocation}
             className="flex-1"
