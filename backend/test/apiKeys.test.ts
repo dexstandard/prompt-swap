@@ -28,6 +28,7 @@ describe('AI API key routes', () => {
       payload: { key: 'bad' },
     });
     expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'verification failed' });
     let row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
       .get('user1');
@@ -64,6 +65,7 @@ describe('AI API key routes', () => {
       payload: { key: 'bad2' },
     });
     expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'verification failed' });
     res = await app.inject({ method: 'GET', url: '/users/user1/ai-key' });
     expect(res.json()).toMatchObject({ key: 'aike...7890' });
 
@@ -108,6 +110,7 @@ describe('Binance API key routes', () => {
       payload: { key: 'bad', secret: 'bad' },
     });
     expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'verification failed' });
     let row = db
       .prepare(
         'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
@@ -156,6 +159,7 @@ describe('Binance API key routes', () => {
       payload: { key: 'bad2', secret: 'bad2' },
     });
     expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'verification failed' });
     res = await app.inject({ method: 'GET', url: '/users/user2/binance-key' });
     expect(res.json()).toMatchObject({
       key: 'bkey...7890',

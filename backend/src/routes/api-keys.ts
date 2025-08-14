@@ -47,7 +47,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     if (!row) return reply.code(404).send({ error: 'user not found' });
     if (row.ai_api_key_enc) return reply.code(400).send({ error: 'key exists' });
     if (!(await isValidOpenAIKey(key)))
-      return reply.code(400).send({ error: 'invalid key' });
+      return reply.code(400).send({ error: 'verification failed' });
     const enc = encrypt(key, env.KEY_PASSWORD);
     db.prepare('UPDATE users SET ai_api_key_enc = ? WHERE id = ?').run(enc, id);
     return { key: redactKey(key) };
@@ -73,7 +73,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     if (!row || !row.ai_api_key_enc)
       return reply.code(404).send({ error: 'not found' });
     if (!(await isValidOpenAIKey(key)))
-      return reply.code(400).send({ error: 'invalid key' });
+      return reply.code(400).send({ error: 'verification failed' });
     const enc = encrypt(key, env.KEY_PASSWORD);
     db.prepare('UPDATE users SET ai_api_key_enc = ? WHERE id = ?').run(enc, id);
     return { key: redactKey(key) };
@@ -103,7 +103,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     if (row.binance_api_key_enc || row.binance_api_secret_enc)
       return reply.code(400).send({ error: 'key exists' });
     if (!(await isValidBinanceKey(key, secret)))
-      return reply.code(400).send({ error: 'invalid key' });
+      return reply.code(400).send({ error: 'verification failed' });
     const encKey = encrypt(key, env.KEY_PASSWORD);
     const encSecret = encrypt(secret, env.KEY_PASSWORD);
     db.prepare(
@@ -141,7 +141,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     if (!row || !row.binance_api_key_enc || !row.binance_api_secret_enc)
       return reply.code(404).send({ error: 'not found' });
     if (!(await isValidBinanceKey(key, secret)))
-      return reply.code(400).send({ error: 'invalid key' });
+      return reply.code(400).send({ error: 'verification failed' });
     const encKey = encrypt(key, env.KEY_PASSWORD);
     const encSecret = encrypt(secret, env.KEY_PASSWORD);
     db.prepare(
