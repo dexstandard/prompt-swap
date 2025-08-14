@@ -92,39 +92,87 @@ describe('Binance API key routes', () => {
     const app = await buildServer();
     db.prepare('INSERT INTO users (id) VALUES (?)').run('user2');
 
+    const fetchMock = vi.fn();
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+
     const key1 = 'bkey1234567890';
     const key2 = 'bkeyabcdefghij';
+    const secret1 = 'bsec1234567890';
+    const secret2 = 'bsecabcdefghij';
 
+    fetchMock.mockResolvedValueOnce({ ok: false } as any);
     let res = await app.inject({
       method: 'POST',
       url: '/users/user2/binance-key',
-      payload: { key: key1 },
+      payload: { key: 'bad', secret: 'bad' },
+    });
+    expect(res.statusCode).toBe(400);
+    let row = db
+      .prepare(
+        'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
+      )
+      .get('user2');
+    expect(row.binance_api_key_enc).toBeNull();
+    expect(row.binance_api_secret_enc).toBeNull();
+
+    fetchMock.mockResolvedValueOnce({ ok: true } as any);
+    res = await app.inject({
+      method: 'POST',
+      url: '/users/user2/binance-key',
+      payload: { key: key1, secret: secret1 },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'bkey...7890' });
-    const row = db
-      .prepare('SELECT binance_api_key_enc FROM users WHERE id = ?')
+    expect(res.json()).toMatchObject({
+      key: 'bkey...7890',
+      secret: 'bsec...7890',
+    });
+    row = db
+      .prepare(
+        'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
+      )
       .get('user2');
     expect(row.binance_api_key_enc).not.toBe(key1);
+    expect(row.binance_api_secret_enc).not.toBe(secret1);
 
     res = await app.inject({ method: 'GET', url: '/users/user2/binance-key' });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'bkey...7890' });
+    expect(res.json()).toMatchObject({
+      key: 'bkey...7890',
+      secret: 'bsec...7890',
+    });
 
     res = await app.inject({
       method: 'POST',
       url: '/users/user2/binance-key',
-      payload: { key: 'dup' },
+      payload: { key: 'dup', secret: 'dup' },
     });
     expect(res.statusCode).toBe(400);
 
+    fetchMock.mockResolvedValueOnce({ ok: false } as any);
     res = await app.inject({
       method: 'PUT',
       url: '/users/user2/binance-key',
-      payload: { key: key2 },
+      payload: { key: 'bad2', secret: 'bad2' },
+    });
+    expect(res.statusCode).toBe(400);
+    res = await app.inject({ method: 'GET', url: '/users/user2/binance-key' });
+    expect(res.json()).toMatchObject({
+      key: 'bkey...7890',
+      secret: 'bsec...7890',
+    });
+
+    fetchMock.mockResolvedValueOnce({ ok: true } as any);
+    res = await app.inject({
+      method: 'PUT',
+      url: '/users/user2/binance-key',
+      payload: { key: key2, secret: secret2 },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'bkey...ghij' });
+    expect(res.json()).toMatchObject({
+      key: 'bkey...ghij',
+      secret: 'bsec...ghij',
+    });
 
     res = await app.inject({ method: 'DELETE', url: '/users/user2/binance-key' });
     expect(res.statusCode).toBe(200);
@@ -133,5 +181,6 @@ describe('Binance API key routes', () => {
     expect(res.statusCode).toBe(404);
 
     await app.close();
+    (globalThis as any).fetch = originalFetch;
   });
 });
