@@ -18,8 +18,9 @@ describe('index routes', () => {
       userId: 'user1',
       tokenA: 'btc',
       tokenB: 'eth',
-      tokenAPercent: 60,
-      tokenBPercent: 40,
+      targetAllocation: 60,
+      minTokenAAllocation: 50,
+      minTokenBAllocation: 50,
       risk: 'low',
       rebalance: '1h',
       model: 'gpt-5',
@@ -46,7 +47,7 @@ describe('index routes', () => {
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
 
-    const update = { ...payload, tokenAPercent: 70, tokenBPercent: 30, risk: 'medium', model: 'o3' };
+    const update = { ...payload, targetAllocation: 70, risk: 'medium', model: 'o3' };
     res = await app.inject({ method: 'PUT', url: `/indexes/${id}`, payload: update });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ id, ...update, tvl: 0 });

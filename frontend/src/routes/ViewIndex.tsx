@@ -7,8 +7,9 @@ interface IndexDetails {
   userId: string;
   tokenA: string;
   tokenB: string;
-  tokenAPercent: number;
-  tokenBPercent: number;
+  targetAllocation: number;
+  minTokenAAllocation: number;
+  minTokenBAllocation: number;
   risk: string;
   rebalance: string;
   model: string;
@@ -36,7 +37,10 @@ export default function ViewIndex() {
         <strong>User:</strong> {data.userId}
       </p>
       <p>
-        <strong>Ratio:</strong> {data.tokenAPercent}%/{data.tokenBPercent}%
+        <strong>Target Allocation:</strong> {data.targetAllocation}%/{100 - data.targetAllocation}%
+      </p>
+      <p>
+        <strong>Minimum Allocation:</strong> {data.minTokenAAllocation}%/{data.minTokenBAllocation}%
       </p>
       <p>
         <strong>Risk:</strong> {data.risk}

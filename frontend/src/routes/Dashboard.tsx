@@ -9,8 +9,7 @@ interface IndexItem {
   userId: string;
   tokenA: string;
   tokenB: string;
-  tokenAPercent: number;
-  tokenBPercent: number;
+  targetAllocation: number;
   risk: string;
 }
 
@@ -57,7 +56,7 @@ export default function Dashboard() {
           <tr>
             <th className="text-left">User</th>
             <th className="text-left">Index</th>
-            <th className="text-left">Ratio</th>
+            <th className="text-left">Target</th>
             <th className="text-left">Risk</th>
             <th className="text-left">Actions</th>
           </tr>
@@ -67,7 +66,7 @@ export default function Dashboard() {
             <tr key={idx.id}>
               <td>{idx.userId}</td>
               <td>{`${idx.tokenA}/${idx.tokenB}`}</td>
-              <td>{`${idx.tokenAPercent}%/${idx.tokenBPercent}%`}</td>
+              <td>{`${idx.targetAllocation}%/${100 - idx.targetAllocation}%`}</td>
               <td>{idx.risk}</td>
               <td>
                 <Link

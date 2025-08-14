@@ -7,8 +7,9 @@ interface TokenIndexRow {
   user_id: string;
   token_a: string;
   token_b: string;
-  token_a_pct: number;
-  token_b_pct: number;
+  target_allocation: number;
+  min_a_allocation: number;
+  min_b_allocation: number;
   risk: string;
   rebalance: string;
   model: string;
@@ -22,8 +23,9 @@ function toApi(row: TokenIndexRow) {
     userId: row.user_id,
     tokenA: row.token_a,
     tokenB: row.token_b,
-    tokenAPercent: row.token_a_pct,
-    tokenBPercent: row.token_b_pct,
+    targetAllocation: row.target_allocation,
+    minTokenAAllocation: row.min_a_allocation,
+    minTokenBAllocation: row.min_b_allocation,
     risk: row.risk,
     rebalance: row.rebalance,
     model: row.model,
@@ -72,8 +74,9 @@ export default async function indexRoutes(app: FastifyInstance) {
       userId: string;
       tokenA: string;
       tokenB: string;
-      tokenAPercent: number;
-      tokenBPercent: number;
+      targetAllocation: number;
+      minTokenAAllocation: number;
+      minTokenBAllocation: number;
       risk: string;
       rebalance: string;
       model: string;
@@ -81,15 +84,16 @@ export default async function indexRoutes(app: FastifyInstance) {
     };
     const id = randomUUID();
     db.prepare(
-      `INSERT INTO token_indexes (id, user_id, token_a, token_b, token_a_pct, token_b_pct, risk, rebalance, model, tvl, system_prompt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO token_indexes (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, tvl, system_prompt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       body.userId,
       body.tokenA,
       body.tokenB,
-      body.tokenAPercent,
-      body.tokenBPercent,
+      body.targetAllocation,
+      body.minTokenAAllocation,
+      body.minTokenBAllocation,
       body.risk,
       body.rebalance,
       body.model,
@@ -114,8 +118,9 @@ export default async function indexRoutes(app: FastifyInstance) {
       userId: string;
       tokenA: string;
       tokenB: string;
-      tokenAPercent: number;
-      tokenBPercent: number;
+      targetAllocation: number;
+      minTokenAAllocation: number;
+      minTokenBAllocation: number;
       risk: string;
       rebalance: string;
       model: string;
@@ -126,13 +131,14 @@ export default async function indexRoutes(app: FastifyInstance) {
       .get(id) as { id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     db.prepare(
-      `UPDATE token_indexes SET user_id = ?, token_a = ?, token_b = ?, token_a_pct = ?, token_b_pct = ?, risk = ?, rebalance = ?, model = ?, system_prompt = ? WHERE id = ?`
+      `UPDATE token_indexes SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, model = ?, system_prompt = ? WHERE id = ?`
     ).run(
       body.userId,
       body.tokenA,
       body.tokenB,
-      body.tokenAPercent,
-      body.tokenBPercent,
+      body.targetAllocation,
+      body.minTokenAAllocation,
+      body.minTokenBAllocation,
       body.risk,
       body.rebalance,
       body.model,
