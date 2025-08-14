@@ -95,19 +95,15 @@ export default function IndexForm() {
   const tokenB = watch('tokenB');
 
   const modelsQuery = useQuery<string[]>({
-    queryKey: ['openai-models', aiKeyQuery.data],
-    enabled: hasOpenAIKey,
+    queryKey: ['openai-models', user?.id],
+    enabled: !!user && hasOpenAIKey,
     queryFn: async () => {
-      const res = await fetch('https://api.openai.com/v1/models', {
-        headers: { Authorization: `Bearer ${aiKeyQuery.data}` },
-      });
-      if (!res.ok) return [];
-      const json = await res.json();
-      return (json.data as { id: string }[])
-        .map((m) => m.id)
-        .filter((id) => /^(gpt-5|o3|gpt-4\.1|gpt-4o)/.test(id));
+      const res = await api.get(`/users/${user!.id}/models`);
+      return res.data.models as string[];
     },
   });
+
+  const hasModels = !!modelsQuery.data?.length;
 
   useEffect(() => {
     if (modelsQuery.data && modelsQuery.data.length) {
@@ -122,12 +118,9 @@ export default function IndexForm() {
 
   return (
     <>
-      {user && (!hasOpenAIKey || !hasBinanceKey) && (
+      {user && !hasBinanceKey && (
         <div className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-xl mb-4">
-          {!hasOpenAIKey && <KeySection label="OpenAI API Key" />}
-          {!hasBinanceKey && (
-            <BinanceKeySection label="Binance API Credentials" />
-          )}
+          <BinanceKeySection label="Binance API Credentials" />
         </div>
       )}
       <form
@@ -245,23 +238,31 @@ export default function IndexForm() {
           <option value="1w">1 week</option>
         </select>
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="model">
-          Model
-        </label>
-        <select
-          id="model"
-          {...register('model')}
-          className="w-full border rounded p-2"
-          disabled={!hasOpenAIKey || modelsQuery.isLoading}
-        >
-          {modelsQuery.data?.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </div>
+      {modelsQuery.data && modelsQuery.data.length ? (
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="model">
+            Model
+          </label>
+          <select
+            id="model"
+            {...register('model')}
+            className="w-full border rounded p-2"
+          >
+            {modelsQuery.data.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            OpenAI key is required
+          </label>
+          {user && !hasOpenAIKey && <KeySection label="" />}
+        </div>
+      )}
       <div>
         <label
           className="block text-sm font-medium mb-1"
@@ -281,11 +282,11 @@ export default function IndexForm() {
       <button
         type="submit"
         className={`w-full py-2 rounded ${
-          user && hasOpenAIKey
+          user && hasModels
             ? 'bg-blue-600 text-white'
             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
         }`}
-        disabled={!user || !hasOpenAIKey}
+        disabled={!user || !hasModels}
       >
         Save
       </button>
