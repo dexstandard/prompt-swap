@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
+import { normalizeAllocations } from '../util/allocations.js';
 
 interface TokenIndexRow {
   id: string;
@@ -83,6 +84,11 @@ export default async function indexRoutes(app: FastifyInstance) {
       systemPrompt: string;
     };
     const id = randomUUID();
+    const { targetAllocation, minTokenAAllocation, minTokenBAllocation } = normalizeAllocations(
+      body.targetAllocation,
+      body.minTokenAAllocation,
+      body.minTokenBAllocation
+    );
     db.prepare(
       `INSERT INTO token_indexes (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, tvl, system_prompt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -91,16 +97,16 @@ export default async function indexRoutes(app: FastifyInstance) {
       body.userId,
       body.tokenA,
       body.tokenB,
-      body.targetAllocation,
-      body.minTokenAAllocation,
-      body.minTokenBAllocation,
+      targetAllocation,
+      minTokenAAllocation,
+      minTokenBAllocation,
       body.risk,
       body.rebalance,
       body.model,
       0,
       body.systemPrompt
     );
-    return { id, ...body, tvl: 0 };
+    return { id, ...body, targetAllocation, minTokenAAllocation, minTokenBAllocation, tvl: 0 };
   });
 
   app.get('/indexes/:id', async (req, reply) => {
@@ -130,15 +136,20 @@ export default async function indexRoutes(app: FastifyInstance) {
       .prepare('SELECT id FROM token_indexes WHERE id = ?')
       .get(id) as { id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
+    const { targetAllocation, minTokenAAllocation, minTokenBAllocation } = normalizeAllocations(
+      body.targetAllocation,
+      body.minTokenAAllocation,
+      body.minTokenBAllocation
+    );
     db.prepare(
       `UPDATE token_indexes SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, model = ?, system_prompt = ? WHERE id = ?`
     ).run(
       body.userId,
       body.tokenA,
       body.tokenB,
-      body.targetAllocation,
-      body.minTokenAAllocation,
-      body.minTokenBAllocation,
+      targetAllocation,
+      minTokenAAllocation,
+      minTokenBAllocation,
       body.risk,
       body.rebalance,
       body.model,

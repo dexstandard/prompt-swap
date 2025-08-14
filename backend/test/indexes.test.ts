@@ -19,8 +19,8 @@ describe('index routes', () => {
       tokenA: 'btc',
       tokenB: 'eth',
       targetAllocation: 60,
-      minTokenAAllocation: 50,
-      minTokenBAllocation: 50,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
       risk: 'low',
       rebalance: '1h',
       model: 'gpt-5',
@@ -57,6 +57,51 @@ describe('index routes', () => {
 
     res = await app.inject({ method: 'GET', url: `/indexes/${id}` });
     expect(res.statusCode).toBe(404);
+
+    await app.close();
+  });
+
+  it('auto-corrects allocation inputs', async () => {
+    const app = await buildServer();
+    db.prepare('INSERT INTO users (id) VALUES (?)').run('user2');
+
+    const base = {
+      userId: 'user2',
+      tokenA: 'btc',
+      tokenB: 'eth',
+      risk: 'low',
+      rebalance: '1h',
+      model: 'gpt-5',
+      systemPrompt: 'prompt',
+    };
+
+    let res = await app.inject({
+      method: 'POST',
+      url: '/indexes',
+      payload: { ...base, targetAllocation: 50, minTokenAAllocation: 80, minTokenBAllocation: 30 },
+    });
+    expect(res.json()).toMatchObject({ targetAllocation: 70, minTokenAAllocation: 70, minTokenBAllocation: 30 });
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/indexes',
+      payload: { ...base, targetAllocation: 50, minTokenAAllocation: 20, minTokenBAllocation: 90 },
+    });
+    expect(res.json()).toMatchObject({ targetAllocation: 20, minTokenAAllocation: 20, minTokenBAllocation: 80 });
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/indexes',
+      payload: { ...base, targetAllocation: 5, minTokenAAllocation: 10, minTokenBAllocation: 10 },
+    });
+    expect(res.json()).toMatchObject({ targetAllocation: 10, minTokenAAllocation: 10, minTokenBAllocation: 10 });
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/indexes',
+      payload: { ...base, targetAllocation: 95, minTokenAAllocation: 10, minTokenBAllocation: 10 },
+    });
+    expect(res.json()).toMatchObject({ targetAllocation: 90, minTokenAAllocation: 10, minTokenBAllocation: 10 });
 
     await app.close();
   });
