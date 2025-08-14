@@ -7,7 +7,10 @@ import { useUser } from '../../lib/user';
 
 export default function KeySection({ label }: { label: string }) {
   const { user } = useUser();
-  const form = useForm<{ key: string }>({ defaultValues: { key: '' } });
+  const form = useForm<{ key: string }>({
+    defaultValues: { key: '' },
+    mode: 'onChange',
+  });
   const id = user!.id;
   const query = useQuery<string | null>({
     queryKey: ['ai-key', id],
@@ -27,34 +30,10 @@ export default function KeySection({ label }: { label: string }) {
     form.setValue('key', query.data ?? '');
   }, [query.data, form]);
 
-  const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
   const [editing, setEditing] = useState(false);
-
   useEffect(() => {
     setEditing(!query.data);
-    setIsKeyValid(query.data ? true : null);
   }, [query.data]);
-
-  const keyValue = form.watch('key');
-
-  useEffect(() => {
-    if (!editing) return;
-    if (!keyValue) {
-      setIsKeyValid(null);
-      return;
-    }
-    const handle = setTimeout(async () => {
-      try {
-        const res = await fetch('https://api.openai.com/v1/models', {
-          headers: { Authorization: `Bearer ${keyValue}` },
-        });
-        setIsKeyValid(res.ok);
-      } catch {
-        setIsKeyValid(false);
-      }
-    }, 500);
-    return () => clearTimeout(handle);
-  }, [keyValue, editing]);
 
   const saveMut = useMutation({
     mutationFn: async (key: string) => {
@@ -67,9 +46,11 @@ export default function KeySection({ label }: { label: string }) {
       setEditing(false);
     },
     onError: (err) => {
-      if (axios.isAxiosError(err) && err.response?.data?.error === 'invalid key') {
-        alert('Invalid OpenAI API key');
-        setIsKeyValid(false);
+      if (
+        axios.isAxiosError(err) &&
+        err.response?.data?.error === 'verification failed'
+      ) {
+        alert('Key verification failed');
       }
     },
   });
@@ -82,8 +63,7 @@ export default function KeySection({ label }: { label: string }) {
   });
 
   const onSubmit = form.handleSubmit((data) => saveMut.mutate(data.key));
-
-  const buttonsDisabled = isKeyValid !== true;
+  const buttonsDisabled = !form.formState.isValid;
 
   return (
     <div className="space-y-2">
@@ -94,13 +74,15 @@ export default function KeySection({ label }: { label: string }) {
         <div className="space-y-2">
           <input
             type="text"
-            {...form.register('key')}
-            className={`border rounded p-2 w-full ${
-              isKeyValid === false ? 'border-red-500' : ''
-            }`}
+            {...form.register('key', { required: true, minLength: 10 })}
+            className="border rounded p-2 w-full"
           />
-          {isKeyValid === false && (
-            <p className="text-sm text-red-600">Invalid OpenAI key</p>
+          {form.formState.errors.key && (
+            <p className="text-sm text-red-600">
+              {form.formState.errors.key.type === 'required'
+                ? 'Key is required'
+                : 'Key too short'}
+            </p>
           )}
           <div className="flex gap-2">
             <button
@@ -119,7 +101,6 @@ export default function KeySection({ label }: { label: string }) {
                 onClick={() => {
                   setEditing(false);
                   form.setValue('key', query.data ?? '');
-                  setIsKeyValid(true);
                 }}
                 className="bg-gray-300 px-4 py-2 rounded"
               >
@@ -141,7 +122,6 @@ export default function KeySection({ label }: { label: string }) {
             onClick={() => {
               setEditing(true);
               form.setValue('key', '');
-              setIsKeyValid(null);
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded"
           >

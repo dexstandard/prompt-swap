@@ -5,25 +5,11 @@ import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/user';
 
-async function hmacSHA256(message: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
-  return Array.from(new Uint8Array(sig))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 export default function BinanceKeySection({ label }: { label: string }) {
   const { user } = useUser();
   const form = useForm<{ key: string; secret: string }>({
     defaultValues: { key: '', secret: '' },
+    mode: 'onChange',
   });
   const id = user!.id;
   const query = useQuery<{ key: string; secret: string } | null>({
@@ -44,39 +30,10 @@ export default function BinanceKeySection({ label }: { label: string }) {
     form.reset(query.data ?? { key: '', secret: '' });
   }, [query.data, form]);
 
-  const [isValid, setIsValid] = useState<boolean | null>(null);
   const [editing, setEditing] = useState(false);
-
   useEffect(() => {
     setEditing(!query.data);
-    setIsValid(query.data ? true : null);
   }, [query.data]);
-
-  const keyValue = form.watch('key');
-  const secretValue = form.watch('secret');
-
-  useEffect(() => {
-    if (!editing) return;
-    if (!keyValue || !secretValue) {
-      setIsValid(null);
-      return;
-    }
-    const handle = setTimeout(async () => {
-      try {
-        const timestamp = Date.now();
-        const qs = `timestamp=${timestamp}`;
-        const signature = await hmacSHA256(qs, secretValue);
-        const res = await fetch(
-          `https://api.binance.com/api/v3/account?${qs}&signature=${signature}`,
-          { headers: { 'X-MBX-APIKEY': keyValue } }
-        );
-        setIsValid(res.ok);
-      } catch {
-        setIsValid(false);
-      }
-    }, 500);
-    return () => clearTimeout(handle);
-  }, [keyValue, secretValue, editing]);
 
   const saveMut = useMutation({
     mutationFn: async (vals: { key: string; secret: string }) => {
@@ -89,9 +46,11 @@ export default function BinanceKeySection({ label }: { label: string }) {
       setEditing(false);
     },
     onError: (err) => {
-      if (axios.isAxiosError(err) && err.response?.data?.error === 'invalid key') {
-        alert('Invalid Binance API credentials');
-        setIsValid(false);
+      if (
+        axios.isAxiosError(err) &&
+        err.response?.data?.error === 'verification failed'
+      ) {
+        alert('Key verification failed');
       }
     },
   });
@@ -104,7 +63,7 @@ export default function BinanceKeySection({ label }: { label: string }) {
   });
 
   const onSubmit = form.handleSubmit((data) => saveMut.mutate(data));
-  const buttonsDisabled = isValid !== true;
+  const buttonsDisabled = !form.formState.isValid;
 
   return (
     <div className="space-y-2">
@@ -116,21 +75,19 @@ export default function BinanceKeySection({ label }: { label: string }) {
           <input
             type="text"
             placeholder="API Key"
-            {...form.register('key')}
-            className={`border rounded p-2 w-full ${
-              isValid === false ? 'border-red-500' : ''
-            }`}
+            {...form.register('key', { required: true, minLength: 10 })}
+            className="border rounded p-2 w-full"
           />
           <input
             type="text"
             placeholder="API Secret"
-            {...form.register('secret')}
-            className={`border rounded p-2 w-full ${
-              isValid === false ? 'border-red-500' : ''
-            }`}
+            {...form.register('secret', { required: true, minLength: 10 })}
+            className="border rounded p-2 w-full"
           />
-          {isValid === false && (
-            <p className="text-sm text-red-600">Invalid Binance credentials</p>
+          {(form.formState.errors.key || form.formState.errors.secret) && (
+            <p className="text-sm text-red-600">
+              Key and secret are required and must be at least 10 characters
+            </p>
           )}
           <div className="flex gap-2">
             <button
@@ -149,7 +106,6 @@ export default function BinanceKeySection({ label }: { label: string }) {
                 onClick={() => {
                   setEditing(false);
                   form.reset(query.data ?? { key: '', secret: '' });
-                  setIsValid(true);
                 }}
                 className="bg-gray-300 px-4 py-2 rounded"
               >
@@ -171,7 +127,6 @@ export default function BinanceKeySection({ label }: { label: string }) {
             onClick={() => {
               setEditing(true);
               form.reset({ key: '', secret: '' });
-              setIsValid(null);
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded"
           >
