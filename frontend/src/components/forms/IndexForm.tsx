@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -5,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/user';
+import KeySection from './KeySection';
 
 const schema = z
   .object({
@@ -20,7 +22,7 @@ const schema = z
       .max(99, 'Must be 99 or less'),
     risk: z.enum(['low', 'medium', 'high']),
     rebalance: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
-    model: z.enum(['gpt-5', 'o3', 'gpt-4.1', 'gpt-4o']),
+    model: z.string().min(1, 'Model is required'),
     systemPrompt: z
       .string()
       .min(1, 'System prompt is required'),
@@ -41,13 +43,6 @@ const tokens = [
   { value: 'eth', label: 'ETH' },
   { value: 'sol', label: 'SOL' },
   { value: 'usdt', label: 'USDT' },
-];
-
-const models = [
-  { value: 'gpt-5', label: 'gpt-5' },
-  { value: 'o3', label: 'o3' },
-  { value: 'gpt-4.1', label: 'gpt-4.1' },
-  { value: 'gpt-4o', label: 'gpt-4o' },
 ];
 
 export default function IndexForm() {
@@ -75,7 +70,7 @@ export default function IndexForm() {
       tokenBPercent: 50,
       risk: 'low',
       rebalance: '1h',
-      model: 'gpt-5',
+      model: '',
       systemPrompt:
         'Manage this index using the defined parameters. Use news and real market data to catch lows and highs.',
     },
@@ -84,17 +79,44 @@ export default function IndexForm() {
   const tokenA = watch('tokenA');
   const tokenB = watch('tokenB');
 
+  const modelsQuery = useQuery<string[]>({
+    queryKey: ['openai-models', keyQuery.data],
+    enabled: hasOpenAIKey,
+    queryFn: async () => {
+      const res = await fetch('https://api.openai.com/v1/models', {
+        headers: { Authorization: `Bearer ${keyQuery.data}` },
+      });
+      if (!res.ok) return [];
+      const json = await res.json();
+      return (json.data as { id: string }[])
+        .map((m) => m.id)
+        .filter((id) => /^(gpt-5|o3|gpt-4\.1|gpt-4o)/.test(id));
+    },
+  });
+
+  useEffect(() => {
+    if (modelsQuery.data && modelsQuery.data.length) {
+      setValue('model', modelsQuery.data[0]);
+    }
+  }, [modelsQuery.data, setValue]);
+
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
     await api.post('/indexes', { userId: user.id, ...values });
   });
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-xl"
-    >
-      <h2 className="text-xl font-bold">Create Index</h2>
+    <>
+      {user && !hasOpenAIKey && (
+        <div className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-xl mb-4">
+          <KeySection type="ai" label="OpenAI API Key" />
+        </div>
+      )}
+      <form
+        onSubmit={onSubmit}
+        className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-xl"
+      >
+        <h2 className="text-xl font-bold">Create Index</h2>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1" htmlFor="tokenA">
@@ -206,9 +228,6 @@ export default function IndexForm() {
         </select>
       </div>
       <div>
-        {user && !hasOpenAIKey && (
-          <p className="text-sm text-gray-600 mb-1">Add your openai key to continue</p>
-        )}
         <label className="block text-sm font-medium mb-1" htmlFor="model">
           Model
         </label>
@@ -216,11 +235,11 @@ export default function IndexForm() {
           id="model"
           {...register('model')}
           className="w-full border rounded p-2"
-          disabled={!hasOpenAIKey}
+          disabled={!hasOpenAIKey || modelsQuery.isLoading}
         >
-          {models.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
+          {modelsQuery.data?.map((m) => (
+            <option key={m} value={m}>
+              {m}
             </option>
           ))}
         </select>
@@ -241,9 +260,6 @@ export default function IndexForm() {
       {!user && (
         <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
       )}
-      {user && !hasOpenAIKey && (
-        <p className="text-sm text-gray-600 mb-2">Add your openai key to continue</p>
-      )}
       <button
         type="submit"
         className={`w-full py-2 rounded ${
@@ -256,5 +272,6 @@ export default function IndexForm() {
         Save
       </button>
     </form>
+    </>
   );
 }
