@@ -118,11 +118,6 @@ export default function IndexForm() {
 
   return (
     <>
-      {user && !hasBinanceKey && (
-        <div className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-xl mb-4">
-          <BinanceKeySection label="Binance API Credentials" />
-        </div>
-      )}
       <form
         onSubmit={onSubmit}
         className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-xl"
@@ -276,17 +271,25 @@ export default function IndexForm() {
           className="w-full border rounded p-2 h-32"
         />
       </div>
+      {!hasBinanceKey && (
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Binance keys are required
+          </label>
+          {user && <BinanceKeySection label="" />}
+        </div>
+      )}
       {!user && (
         <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
       )}
       <button
         type="submit"
         className={`w-full py-2 rounded ${
-          user && hasModels
+          user && hasModels && hasBinanceKey
             ? 'bg-blue-600 text-white'
             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
         }`}
-        disabled={!user || !hasModels}
+        disabled={!user || !hasModels || !hasBinanceKey}
       >
         Save
       </button>
