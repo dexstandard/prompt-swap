@@ -249,33 +249,39 @@ export default function IndexForm() {
           />
         </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="risk">
-          Risk Tolerance
-        </label>
-        <select id="risk" {...register('risk')} className="w-full border rounded p-2">
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="rebalance">
-          Rebalance Frequency
-        </label>
-        <select
-          id="rebalance"
-          {...register('rebalance')}
-          className="w-full border rounded p-2"
-        >
-          <option value="1h">1 hour</option>
-          <option value="3h">3 hours</option>
-          <option value="5h">5 hours</option>
-          <option value="12h">12 hours</option>
-          <option value="24h">1 day</option>
-          <option value="3d">3 days</option>
-          <option value="1w">1 week</option>
-        </select>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="risk">
+            Risk Tolerance
+          </label>
+          <select
+            id="risk"
+            {...register('risk')}
+            className="w-full border rounded p-2"
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="rebalance">
+            Rebalance Frequency
+          </label>
+          <select
+            id="rebalance"
+            {...register('rebalance')}
+            className="w-full border rounded p-2"
+          >
+            <option value="1h">1 hour</option>
+            <option value="3h">3 hours</option>
+            <option value="5h">5 hours</option>
+            <option value="12h">12 hours</option>
+            <option value="24h">1 day</option>
+            <option value="3d">3 days</option>
+            <option value="1w">1 week</option>
+          </select>
+        </div>
       </div>
       {modelsQuery.data && modelsQuery.data.length ? (
         <div>
