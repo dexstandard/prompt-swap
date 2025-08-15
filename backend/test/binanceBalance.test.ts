@@ -40,7 +40,7 @@ describe('binance balance route', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/users/user1/binance-balance',
+      url: '/api/users/user1/binance-balance',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
@@ -72,7 +72,7 @@ describe('binance balance route', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/users/user2/binance-balance/BTC',
+      url: '/api/users/user2/binance-balance/BTC',
       headers: { 'x-user-id': 'user2' },
     });
     expect(res.statusCode).toBe(200);
@@ -86,7 +86,7 @@ describe('binance balance route', () => {
     const app = await buildServer();
     const res = await app.inject({
       method: 'GET',
-      url: '/users/other/binance-balance',
+      url: '/api/users/other/binance-balance',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(403);

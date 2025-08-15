@@ -12,7 +12,7 @@ export default async function buildServer(): Promise<FastifyInstance> {
   for (const file of fs.readdirSync(routesDir)) {
     if (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) {
       const route = await import(pathToFileURL(path.join(routesDir, file)).href);
-      app.register(route.default);
+      app.register(route.default, { prefix: '/api' });
     }
   }
 

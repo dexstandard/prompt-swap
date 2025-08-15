@@ -10,10 +10,10 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
     },
     proxy: {
-      '/login': 'http://localhost:3000',
-      // Covers /users/:id/ai-key and /users/:id/binance-key
-      '/users': 'http://localhost:3000',
-      '/indexes': 'http://localhost:3000',
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
 });

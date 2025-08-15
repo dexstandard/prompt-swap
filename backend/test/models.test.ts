@@ -35,7 +35,7 @@ describe('model routes', () => {
       }),
     } as any);
 
-    const res = await app.inject({ method: 'GET', url: '/users/user1/models' });
+    const res = await app.inject({ method: 'GET', url: '/api/users/user1/models' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ models: ['gpt-4.1-mini', 'o3-mini', 'gpt-5'] });
 
@@ -46,7 +46,7 @@ describe('model routes', () => {
   it('requires a key', async () => {
     const app = await buildServer();
     db.prepare('INSERT INTO users (id) VALUES (?)').run('user2');
-    const res = await app.inject({ method: 'GET', url: '/users/user2/models' });
+    const res = await app.inject({ method: 'GET', url: '/api/users/user2/models' });
     expect(res.statusCode).toBe(404);
     await app.close();
   });
