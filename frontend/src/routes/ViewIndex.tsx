@@ -98,6 +98,16 @@ export default function ViewIndex() {
             ? 'Loading...'
             : (balanceB.data?.free ?? 0) + (balanceB.data?.locked ?? 0)}
         </p>
+        <p className="mt-2 text-sm text-red-600">
+          Trading agent will use all available balance for chosen tokens on spot
+          wallet. Move excess funds to futures before trading.
+        </p>
+        <button
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+          onClick={() => console.log('Start trading')}
+        >
+          Start trading
+        </button>
       </div>
     </div>
   );
