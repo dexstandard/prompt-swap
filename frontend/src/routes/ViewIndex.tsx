@@ -31,11 +31,11 @@ export default function ViewIndex() {
   });
 
   const balanceA = useQuery({
-    queryKey: ['binance-balance', user?.id, data?.tokenA],
+    queryKey: ['binance-balance', user?.id, data?.tokenA?.toUpperCase()],
     enabled: !!user && !!data?.tokenA,
     queryFn: async () => {
       const res = await api.get(
-        `/users/${user!.id}/binance-balance/${data!.tokenA}`,
+        `/users/${user!.id}/binance-balance/${data!.tokenA.toUpperCase()}`,
         { headers: { 'x-user-id': user!.id } }
       );
       return res.data as { asset: string; free: number; locked: number };
@@ -43,11 +43,11 @@ export default function ViewIndex() {
   });
 
   const balanceB = useQuery({
-    queryKey: ['binance-balance', user?.id, data?.tokenB],
+    queryKey: ['binance-balance', user?.id, data?.tokenB?.toUpperCase()],
     enabled: !!user && !!data?.tokenB,
     queryFn: async () => {
       const res = await api.get(
-        `/users/${user!.id}/binance-balance/${data!.tokenB}`,
+        `/users/${user!.id}/binance-balance/${data!.tokenB.toUpperCase()}`,
         { headers: { 'x-user-id': user!.id } }
       );
       return res.data as { asset: string; free: number; locked: number };
@@ -58,7 +58,7 @@ export default function ViewIndex() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">{`${data.tokenA}/${data.tokenB}`}</h1>
+      <h1 className="text-2xl font-bold mb-4">{`${data.tokenA.toUpperCase()}/${data.tokenB.toUpperCase()}`}</h1>
       <p>
         <strong>User:</strong> {data.userId}
       </p>
@@ -87,13 +87,13 @@ export default function ViewIndex() {
       <div className="mt-4">
         <h2 className="text-xl font-bold mb-2">Binance Balances</h2>
         <p>
-          <strong>{data.tokenA}:</strong>{' '}
+          <strong>{data.tokenA.toUpperCase()}:</strong>{' '}
           {balanceA.isLoading
             ? 'Loading...'
             : (balanceA.data?.free ?? 0) + (balanceA.data?.locked ?? 0)}
         </p>
         <p>
-          <strong>{data.tokenB}:</strong>{' '}
+          <strong>{data.tokenB.toUpperCase()}:</strong>{' '}
           {balanceB.isLoading
             ? 'Loading...'
             : (balanceB.data?.free ?? 0) + (balanceB.data?.locked ?? 0)}

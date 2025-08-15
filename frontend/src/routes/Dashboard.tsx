@@ -65,7 +65,7 @@ export default function Dashboard() {
           {data?.items.map((idx) => (
             <tr key={idx.id}>
               <td>{idx.userId}</td>
-              <td>{`${idx.tokenA}/${idx.tokenB}`}</td>
+              <td>{`${idx.tokenA.toUpperCase()}/${idx.tokenB.toUpperCase()}`}</td>
               <td>{`${idx.targetAllocation}%/${100 - idx.targetAllocation}%`}</td>
               <td>{idx.risk}</td>
               <td>
