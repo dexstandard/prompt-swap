@@ -22,8 +22,8 @@ function toApi(row: TokenIndexRow) {
   return {
     id: row.id,
     userId: row.user_id,
-    tokenA: row.token_a,
-    tokenB: row.token_b,
+    tokenA: row.token_a.toUpperCase(),
+    tokenB: row.token_b.toUpperCase(),
     targetAllocation: row.target_allocation,
     minTokenAAllocation: row.min_a_allocation,
     minTokenBAllocation: row.min_b_allocation,
