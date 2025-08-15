@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -77,7 +78,13 @@ export default function IndexForm() {
     },
   });
   const hasBinanceKey = !!binanceKeyQuery.data;
-  const { register, handleSubmit, watch, setValue } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { isSubmitting },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       tokenA: 'usdt',
@@ -145,9 +152,12 @@ export default function IndexForm() {
     setValue,
   ]);
 
+  const navigate = useNavigate();
+
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
-    await api.post('/indexes', { userId: user.id, ...values });
+    const res = await api.post('/indexes', { userId: user.id, ...values });
+    navigate(`/indexes/${res.data.id}`);
   });
 
   return (
@@ -335,11 +345,11 @@ export default function IndexForm() {
       <button
         type="submit"
         className={`w-full py-2 rounded ${
-          user && hasModels && hasBinanceKey
+          user && hasModels && hasBinanceKey && !isSubmitting
             ? 'bg-blue-600 text-white'
             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
         }`}
-        disabled={!user || !hasModels || !hasBinanceKey}
+        disabled={!user || !hasModels || !hasBinanceKey || isSubmitting}
       >
         Save
       </button>
