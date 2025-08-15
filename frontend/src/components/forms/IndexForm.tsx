@@ -82,9 +82,9 @@ export default function IndexForm() {
     defaultValues: {
       tokenA: 'usdt',
       tokenB: 'sol',
-      targetAllocation: 50,
-      minTokenAAllocation: 50,
-      minTokenBAllocation: 50,
+      targetAllocation: 20,
+      minTokenAAllocation: 0,
+      minTokenBAllocation: 30,
       risk: 'low',
       rebalance: '1h',
       model: '',
