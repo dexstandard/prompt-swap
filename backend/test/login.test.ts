@@ -18,7 +18,7 @@ describe('login route', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/login',
+      url: '/api/login',
       payload: { token: 'test-token' },
     });
     expect(res.statusCode).toBe(200);
