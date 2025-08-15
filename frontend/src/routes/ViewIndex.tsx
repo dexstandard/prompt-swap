@@ -67,18 +67,23 @@ export default function ViewIndex() {
 
     return (
         <div className="p-4">
-            <h1 className="text-2xl font-bold mb-4">{`${data.tokenA.toUpperCase()}/${data.tokenB.toUpperCase()}`}</h1>
+            <h1 className="text-2xl font-bold mb-4">
+                {`${data.tokenA.toUpperCase()} ${data.targetAllocation} / ${data.tokenB.toUpperCase()} ${100 - data.targetAllocation}`}
+            </h1>
             <p>
-                <strong>User:</strong> {data.userId}
+                <strong>User ID:</strong> {data.userId}
             </p>
             <p>
-                <strong>Target Allocation:</strong> {data.targetAllocation}%/{100 - data.targetAllocation}%
+                <strong>Target Allocation:</strong> {data.targetAllocation}/{100 - data.targetAllocation}
             </p>
             <p>
-                <strong>Minimum Allocation:</strong> {data.minTokenAAllocation}%/{data.minTokenBAllocation}%
+                <strong>Minimum {data.tokenA.toUpperCase()} Allocation:</strong> {data.minTokenAAllocation}%
             </p>
             <p>
-                <strong>Risk:</strong> {data.risk}
+                <strong>Minimum {data.tokenB.toUpperCase()} Allocation:</strong> {data.minTokenBAllocation}%
+            </p>
+            <p>
+                <strong>Risk Tolerance:</strong> {data.risk}
             </p>
             <p>
                 <strong>Rebalance Frequency:</strong> {data.rebalance}
@@ -86,11 +91,8 @@ export default function ViewIndex() {
             <p>
                 <strong>AI Model:</strong> {data.model}
             </p>
-            <p>
-                <strong>TVL:</strong> {data.tvl}
-            </p>
             <div className="mt-4">
-                <h2 className="text-xl font-bold mb-2">System Prompt</h2>
+                <h2 className="text-xl font-bold mb-2">Trading Agent Instructions</h2>
                 <pre className="whitespace-pre-wrap">{data.systemPrompt}</pre>
             </div>
             <div className="mt-4">
@@ -109,8 +111,8 @@ export default function ViewIndex() {
                 </p>
                 <WarningSign>
                     Trading agent will use all available balance
-                    for {data.tokenA.toUpperCase()} and {data.tokenB.toUpperCase()} in your Binance wallet. Move excess
-                    funds to futures before trading.
+                    for {data.tokenA.toUpperCase()} and {data.tokenB.toUpperCase()} in your Binance Spot wallet. Move excess
+                    funds to futures wallet before trading.
                     <br/>
                     <strong>DON&#39;T MOVE FUNDS ON SPOT WALLET DURING TRADING!</strong> It will confuse the trading
                     agent and may lead to unexpected results.
