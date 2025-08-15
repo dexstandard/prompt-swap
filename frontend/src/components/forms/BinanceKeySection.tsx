@@ -62,6 +62,17 @@ export default function BinanceKeySection({ label }: { label: string }) {
     onSuccess: () => query.refetch(),
   });
 
+  const balanceQuery = useQuery<{ totalUsd: number }>({
+    queryKey: ['binance-balance', id],
+    enabled: !!query.data && !editing,
+    queryFn: async () => {
+      const res = await api.get(`/users/${id}/binance-balance`, {
+        headers: { 'x-user-id': id },
+      });
+      return res.data as { totalUsd: number };
+    },
+  });
+
   const onSubmit = form.handleSubmit((data) => saveMut.mutate(data));
   const buttonsDisabled = !form.formState.isValid;
 
@@ -115,30 +126,39 @@ export default function BinanceKeySection({ label }: { label: string }) {
           </div>
         </div>
       ) : (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={query.data?.key ?? ''}
-            disabled
-            className="border rounded p-2 w-full"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(true);
-              form.reset({ key: '', secret: '' });
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => delMut.mutate()}
-            className="bg-red-600 text-white px-4 py-2 rounded"
-          >
-            Delete
-          </button>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={query.data?.key ?? ''}
+              disabled
+              className="border rounded p-2 w-full"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(true);
+                form.reset({ key: '', secret: '' });
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => delMut.mutate()}
+              className="bg-red-600 text-white px-4 py-2 rounded"
+            >
+              Delete
+            </button>
+          </div>
+          {balanceQuery.isLoading ? (
+            <p>Loading balance...</p>
+          ) : balanceQuery.data ? (
+            <p className="text-sm text-gray-600">
+              Total balance: ${balanceQuery.data.totalUsd.toFixed(2)}
+            </p>
+          ) : null}
         </div>
       )}
     </div>
