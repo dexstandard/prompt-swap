@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
+import { useUser } from '../lib/user';
 
 interface IndexDetails {
   id: string;
@@ -19,6 +20,7 @@ interface IndexDetails {
 
 export default function ViewIndex() {
   const { id } = useParams();
+  const { user } = useUser();
   const { data } = useQuery({
     queryKey: ['index', id],
     queryFn: async () => {
@@ -26,6 +28,30 @@ export default function ViewIndex() {
       return res.data as IndexDetails;
     },
     enabled: !!id,
+  });
+
+  const balanceA = useQuery({
+    queryKey: ['binance-balance', user?.id, data?.tokenA],
+    enabled: !!user && !!data?.tokenA,
+    queryFn: async () => {
+      const res = await api.get(
+        `/users/${user!.id}/binance-balance/${data!.tokenA}`,
+        { headers: { 'x-user-id': user!.id } }
+      );
+      return res.data as { asset: string; free: number; locked: number };
+    },
+  });
+
+  const balanceB = useQuery({
+    queryKey: ['binance-balance', user?.id, data?.tokenB],
+    enabled: !!user && !!data?.tokenB,
+    queryFn: async () => {
+      const res = await api.get(
+        `/users/${user!.id}/binance-balance/${data!.tokenB}`,
+        { headers: { 'x-user-id': user!.id } }
+      );
+      return res.data as { asset: string; free: number; locked: number };
+    },
   });
 
   if (!data) return <div className="p-4">Loading...</div>;
@@ -57,6 +83,21 @@ export default function ViewIndex() {
       <div className="mt-4">
         <h2 className="text-xl font-bold mb-2">System Prompt</h2>
         <pre className="whitespace-pre-wrap">{data.systemPrompt}</pre>
+      </div>
+      <div className="mt-4">
+        <h2 className="text-xl font-bold mb-2">Binance Balances</h2>
+        <p>
+          <strong>{data.tokenA}:</strong>{' '}
+          {balanceA.isLoading
+            ? 'Loading...'
+            : (balanceA.data?.free ?? 0) + (balanceA.data?.locked ?? 0)}
+        </p>
+        <p>
+          <strong>{data.tokenB}:</strong>{' '}
+          {balanceB.isLoading
+            ? 'Loading...'
+            : (balanceB.data?.free ?? 0) + (balanceB.data?.locked ?? 0)}
+        </p>
       </div>
     </div>
   );

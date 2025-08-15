@@ -84,6 +84,8 @@ export default async function indexRoutes(app: FastifyInstance) {
       systemPrompt: string;
     };
     const id = randomUUID();
+    const tokenA = body.tokenA.toUpperCase();
+    const tokenB = body.tokenB.toUpperCase();
     const { targetAllocation, minTokenAAllocation, minTokenBAllocation } = normalizeAllocations(
       body.targetAllocation,
       body.minTokenAAllocation,
@@ -95,8 +97,8 @@ export default async function indexRoutes(app: FastifyInstance) {
     ).run(
       id,
       body.userId,
-      body.tokenA,
-      body.tokenB,
+      tokenA,
+      tokenB,
       targetAllocation,
       minTokenAAllocation,
       minTokenBAllocation,
@@ -106,7 +108,16 @@ export default async function indexRoutes(app: FastifyInstance) {
       0,
       body.systemPrompt
     );
-    return { id, ...body, targetAllocation, minTokenAAllocation, minTokenBAllocation, tvl: 0 };
+    return {
+      id,
+      ...body,
+      tokenA,
+      tokenB,
+      targetAllocation,
+      minTokenAAllocation,
+      minTokenBAllocation,
+      tvl: 0,
+    };
   });
 
   app.get('/indexes/:id', async (req, reply) => {
@@ -136,6 +147,8 @@ export default async function indexRoutes(app: FastifyInstance) {
       .prepare('SELECT id FROM token_indexes WHERE id = ?')
       .get(id) as { id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
+    const tokenA = body.tokenA.toUpperCase();
+    const tokenB = body.tokenB.toUpperCase();
     const { targetAllocation, minTokenAAllocation, minTokenBAllocation } = normalizeAllocations(
       body.targetAllocation,
       body.minTokenAAllocation,
@@ -145,8 +158,8 @@ export default async function indexRoutes(app: FastifyInstance) {
       `UPDATE token_indexes SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, model = ?, system_prompt = ? WHERE id = ?`
     ).run(
       body.userId,
-      body.tokenA,
-      body.tokenB,
+      tokenA,
+      tokenB,
       targetAllocation,
       minTokenAAllocation,
       minTokenBAllocation,
