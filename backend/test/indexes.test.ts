@@ -16,8 +16,8 @@ describe('index routes', () => {
 
     const payload = {
       userId: 'user1',
-      tokenA: 'btc',
-      tokenB: 'eth',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
       targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
@@ -67,8 +67,8 @@ describe('index routes', () => {
 
     const base = {
       userId: 'user2',
-      tokenA: 'btc',
-      tokenB: 'eth',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
       risk: 'low',
       rebalance: '1h',
       model: 'gpt-5',

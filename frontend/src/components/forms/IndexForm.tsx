@@ -42,10 +42,10 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 const tokens = [
-  { value: 'btc', label: 'BTC' },
-  { value: 'eth', label: 'ETH' },
-  { value: 'sol', label: 'SOL' },
-  { value: 'usdt', label: 'USDT' },
+  { value: 'BTC', label: 'BTC' },
+  { value: 'ETH', label: 'ETH' },
+  { value: 'SOL', label: 'SOL' },
+  { value: 'USDT', label: 'USDT' },
 ];
 
 export default function IndexForm() {
@@ -87,8 +87,8 @@ export default function IndexForm() {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      tokenA: 'usdt',
-      tokenB: 'sol',
+      tokenA: 'USDT',
+      tokenB: 'SOL',
       targetAllocation: 20,
       minTokenAAllocation: 0,
       minTokenBAllocation: 30,
@@ -156,7 +156,12 @@ export default function IndexForm() {
 
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
-    const res = await api.post('/indexes', { userId: user.id, ...values });
+    const res = await api.post('/indexes', {
+      userId: user.id,
+      ...values,
+      tokenA: values.tokenA.toUpperCase(),
+      tokenB: values.tokenB.toUpperCase(),
+    });
     navigate(`/indexes/${res.data.id}`);
   });
 
