@@ -29,9 +29,6 @@ const schema = z
             .max(100, 'Must be 100 or less'),
         risk: z.enum(['low', 'medium', 'high']),
         rebalance: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
-        agentInstructions: z
-            .string()
-            .min(1, 'Trading agent instructions are required'),
     })
     .refine((data) => data.tokenA !== data.tokenB, {
         message: 'Tokens must be different',
@@ -63,6 +60,9 @@ const rebalanceOptions = [
     {value: '1w', label: '1 week'},
 ];
 
+const DEFAULT_AGENT_INSTRUCTIONS =
+    'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
+
 const defaultValues: FormValues = {
     tokenA: 'USDT',
     tokenB: 'SOL',
@@ -71,8 +71,6 @@ const defaultValues: FormValues = {
     minTokenBAllocation: 30,
     risk: 'low',
     rebalance: '1h',
-    agentInstructions:
-        'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.',
 };
 
 export default function IndexForm({
@@ -119,7 +117,6 @@ export default function IndexForm({
                 minTokenBAllocation: template.minTokenBAllocation,
                 risk: template.risk as any,
                 rebalance: template.rebalance as any,
-                agentInstructions: template.agentInstructions,
             });
         } else {
             reset(defaultValues);
@@ -181,6 +178,7 @@ export default function IndexForm({
                     ...values,
                     tokenA: values.tokenA.toUpperCase(),
                     tokenB: values.tokenB.toUpperCase(),
+                    agentInstructions: template.agentInstructions,
                 },
                 {headers: {'x-user-id': user.id}}
             );
@@ -195,6 +193,7 @@ export default function IndexForm({
                     ...values,
                     tokenA: values.tokenA.toUpperCase(),
                     tokenB: values.tokenB.toUpperCase(),
+                    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
                 },
                 {headers: {'x-user-id': user.id}}
             );
@@ -365,19 +364,6 @@ export default function IndexForm({
                             )}
                         />
                     </div>
-                </div>
-                <div>
-                    <label
-                        className="block text-sm font-medium mb-1"
-                        htmlFor="agentInstructions"
-                    >
-                        Trading Agent Instructions
-                    </label>
-                    <textarea
-                        id="agentInstructions"
-                        {...register('agentInstructions')}
-                        className="w-full border rounded p-2 h-28"
-                    />
                 </div>
                 {!user && (
                     <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
