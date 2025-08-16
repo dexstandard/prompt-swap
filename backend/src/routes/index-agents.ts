@@ -3,9 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 
 export enum IndexAgentStatus {
-  Idle = 'idle',
-  Running = 'running',
-  Error = 'error',
+  Active = 'active',
+  Inactive = 'inactive',
 }
 
 interface IndexAgentRow {
@@ -68,7 +67,7 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
       status?: IndexAgentStatus;
     };
     const id = randomUUID();
-    const status = body.status ?? IndexAgentStatus.Idle;
+    const status = body.status ?? IndexAgentStatus.Inactive;
     const createdAt = Date.now();
     db.prepare(
       `INSERT INTO index_agents (id, template_id, user_id, status, created_at) VALUES (?, ?, ?, ?, ?)`

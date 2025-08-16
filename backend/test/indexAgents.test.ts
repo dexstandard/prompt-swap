@@ -17,7 +17,7 @@ describe('index agent routes', () => {
       `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl1', 'user1', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'gpt-5', 'prompt');
 
-    const payload = { templateId: 'tmpl1', userId: 'user1', status: 'idle' };
+    const payload = { templateId: 'tmpl1', userId: 'user1', status: 'inactive' };
 
     let res = await app.inject({ method: 'POST', url: '/api/index-agents', payload });
     expect(res.statusCode).toBe(200);
@@ -39,7 +39,7 @@ describe('index agent routes', () => {
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
 
-    const update = { templateId: 'tmpl1', userId: 'user1', status: 'running' };
+    const update = { templateId: 'tmpl1', userId: 'user1', status: 'active' };
     res = await app.inject({ method: 'PUT', url: `/api/index-agents/${id}`, payload: update });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ id, ...update });
