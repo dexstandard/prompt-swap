@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
@@ -68,6 +69,7 @@ export default function Dashboard() {
                 <th className="text-left">Pair</th>
                 <th className="text-left">Model</th>
                 <th className="text-left">Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -75,20 +77,27 @@ export default function Dashboard() {
                 <tr key={agent.id}>
                   <td>{new Date(agent.createdAt).toLocaleString()}</td>
                   <td>
-                    <Link className="text-blue-600 underline" to={`/agents/${agent.id}`}>
-                      {agent.template ? (
-                        <>
-                          <TokenDisplay token={agent.template.tokenA} />/
-                          <TokenDisplay token={agent.template.tokenB} />
-                        </>
-                      ) : (
-                        '-'
-                      )}
-                    </Link>
+                    {agent.template ? (
+                      <span className="inline-flex items-center gap-1">
+                        <TokenDisplay token={agent.template.tokenA} /> /
+                        <TokenDisplay token={agent.template.tokenB} />
+                      </span>
+                    ) : (
+                      '-'
+                    )}
                   </td>
                   <td>{agent.model}</td>
                   <td>
                     <AgentStatusLabel status={agent.status} />
+                  </td>
+                  <td>
+                    <Link
+                      className="text-blue-600 underline inline-flex"
+                      to={`/agents/${agent.id}`}
+                      aria-label="View agent"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Link>
                   </td>
                 </tr>
               ))}
