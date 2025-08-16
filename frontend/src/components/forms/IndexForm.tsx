@@ -7,6 +7,8 @@ import api from '../../lib/axios';
 import {useUser} from '../../lib/useUser';
 import {normalizeAllocations} from '../../lib/allocations';
 import TokenSelect from './TokenSelect';
+import TextInput from './TextInput';
+import SelectInput from './SelectInput';
 
 const schema = z
     .object({
@@ -42,6 +44,22 @@ const tokens = [
     {value: 'ETH', label: 'ETH'},
     {value: 'SOL', label: 'SOL'},
     {value: 'USDT', label: 'USDT'},
+];
+
+const riskOptions = [
+    {value: 'low', label: 'Low'},
+    {value: 'medium', label: 'Medium'},
+    {value: 'high', label: 'High'},
+];
+
+const rebalanceOptions = [
+    {value: '1h', label: '1 hour'},
+    {value: '3h', label: '3 hours'},
+    {value: '5h', label: '5 hours'},
+    {value: '12h', label: '12 hours'},
+    {value: '24h', label: '1 day'},
+    {value: '3d', label: '3 days'},
+    {value: '1w', label: '1 week'},
 ];
 
 export default function IndexForm({
@@ -209,13 +227,25 @@ export default function IndexForm({
                         >
                             Min {tokenA.toUpperCase()} allocation
                         </label>
-                        <input
-                            id="minTokenAAllocation"
-                            type="number"
-                            {...register('minTokenAAllocation', {valueAsNumber: true})}
-                            min={0}
-                            max={100}
-                            className="w-full border rounded p-2"
+                        <Controller
+                            name="minTokenAAllocation"
+                            control={control}
+                            render={({field}) => (
+                                <TextInput
+                                    id="minTokenAAllocation"
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    {...field}
+                                    onChange={(e) =>
+                                        field.onChange(
+                                            e.target.value === ''
+                                                ? ''
+                                                : Number(e.target.value)
+                                        )
+                                    }
+                                />
+                            )}
                         />
                     </div>
                     <div>
@@ -225,13 +255,25 @@ export default function IndexForm({
                         >
                             Min {tokenB.toUpperCase()} allocation
                         </label>
-                        <input
-                            id="minTokenBAllocation"
-                            type="number"
-                            {...register('minTokenBAllocation', {valueAsNumber: true})}
-                            min={0}
-                            max={100}
-                            className="w-full border rounded p-2"
+                        <Controller
+                            name="minTokenBAllocation"
+                            control={control}
+                            render={({field}) => (
+                                <TextInput
+                                    id="minTokenBAllocation"
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    {...field}
+                                    onChange={(e) =>
+                                        field.onChange(
+                                            e.target.value === ''
+                                                ? ''
+                                                : Number(e.target.value)
+                                        )
+                                    }
+                                />
+                            )}
                         />
                     </div>
                 </div>
@@ -240,33 +282,35 @@ export default function IndexForm({
                         <label className="block text-sm font-medium mb-1" htmlFor="risk">
                             Risk Tolerance
                         </label>
-                        <select
-                            id="risk"
-                            {...register('risk')}
-                            className="w-full border rounded p-2"
-                        >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                        </select>
+                        <Controller
+                            name="risk"
+                            control={control}
+                            render={({field}) => (
+                                <SelectInput
+                                    id="risk"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    options={riskOptions}
+                                />
+                            )}
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1" htmlFor="rebalance">
                             Rebalance Frequency
                         </label>
-                        <select
-                            id="rebalance"
-                            {...register('rebalance')}
-                            className="w-full border rounded p-2"
-                        >
-                            <option value="1h">1 hour</option>
-                            <option value="3h">3 hours</option>
-                            <option value="5h">5 hours</option>
-                            <option value="12h">12 hours</option>
-                            <option value="24h">1 day</option>
-                            <option value="3d">3 days</option>
-                            <option value="1w">1 week</option>
-                        </select>
+                        <Controller
+                            name="rebalance"
+                            control={control}
+                            render={({field}) => (
+                                <SelectInput
+                                    id="rebalance"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    options={rebalanceOptions}
+                                />
+                            )}
+                        />
                     </div>
                 </div>
                 <div>
@@ -279,7 +323,7 @@ export default function IndexForm({
                     <textarea
                         id="agentInstructions"
                         {...register('agentInstructions')}
-                        className="w-full border rounded p-2 h-32"
+                        className="w-full border rounded p-2 h-28"
                     />
                 </div>
                 {!user && (
@@ -294,7 +338,7 @@ export default function IndexForm({
                     }`}
                     disabled={!user || isSubmitting}
                 >
-                    Save template
+                    Save Template
                 </button>
             </form>
         </>
