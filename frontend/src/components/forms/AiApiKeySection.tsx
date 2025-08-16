@@ -5,7 +5,7 @@ import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
 
-export default function KeySection({ label }: { label: string }) {
+export default function AiApiKeySection({ label }: { label: string }) {
   const { user } = useUser();
   const form = useForm<{ key: string }>({
     defaultValues: { key: '' },
@@ -66,17 +66,31 @@ export default function KeySection({ label }: { label: string }) {
   const buttonsDisabled = !form.formState.isValid;
 
   return (
-    <div className="space-y-2">
-      {label && <h2 className="text-lg font-bold">{label}</h2>}
+    <div className="space-y-2 w-full max-w-md">
+      {label && <h2 className="text-md font-bold">{label}</h2>}
       {query.isLoading ? (
         <p>Loading...</p>
       ) : editing ? (
         <div className="space-y-2">
           <input
             type="text"
+            autoComplete="off"
             {...form.register('key', { required: true, minLength: 10 })}
-            className="border rounded p-2 w-full"
+            className="border rounded px-2 py-1 w-full"
+            style={{ WebkitTextSecurity: 'disc' }}
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
+          <p className="text-sm text-gray-600 space-x-2">
+            <a
+              href="https://www.youtube.com/watch?v=WjVf80HUvYg"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              Video guide
+            </a>
+          </p>
           {form.formState.errors.key && (
             <p className="text-sm text-red-600">
               {form.formState.errors.key.type === 'required'
@@ -89,7 +103,7 @@ export default function KeySection({ label }: { label: string }) {
               type="button"
               onClick={onSubmit}
               disabled={buttonsDisabled}
-              className={`bg-blue-600 text-white px-4 py-2 rounded ${
+              className={`bg-blue-600 text-white px-2 py-1 rounded ${
                 buttonsDisabled ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -102,7 +116,7 @@ export default function KeySection({ label }: { label: string }) {
                   setEditing(false);
                   form.setValue('key', query.data ?? '');
                 }}
-                className="bg-gray-300 px-4 py-2 rounded"
+                className="bg-gray-300 px-2 py-1 rounded"
               >
                 Cancel
               </button>
@@ -115,7 +129,10 @@ export default function KeySection({ label }: { label: string }) {
             type="text"
             value={query.data ?? ''}
             disabled
-            className="border rounded p-2 w-full"
+            className="border rounded px-2 py-1 w-full"
+            style={{ WebkitTextSecurity: 'disc' }}
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
           <button
             type="button"
@@ -123,14 +140,14 @@ export default function KeySection({ label }: { label: string }) {
               setEditing(true);
               form.setValue('key', '');
             }}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
+            className="bg-blue-600 text-white px-2 py-1 rounded"
           >
             Edit
           </button>
           <button
             type="button"
             onClick={() => delMut.mutate()}
-            className="bg-red-600 text-white px-4 py-2 rounded"
+            className="bg-red-600 text-white px-2 py-1 rounded"
           >
             Delete
           </button>
