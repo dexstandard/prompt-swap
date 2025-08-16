@@ -26,32 +26,31 @@ function toApi(row: IndexAgentRow) {
 }
 
 export default async function indexAgentRoutes(app: FastifyInstance) {
-  app.get('/index-agents', async () => {
-    const rows = db.prepare<[], IndexAgentRow>('SELECT * FROM index_agents').all();
+  app.get('/index-agents', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId) return reply.code(403).send({ error: 'forbidden' });
+    const rows = db
+      .prepare<[], IndexAgentRow>('SELECT * FROM index_agents WHERE user_id = ?')
+      .all(userId);
     return rows.map(toApi);
   });
 
-  app.get('/index-agents/paginated', async (req) => {
-    const {
-      page = '1',
-      pageSize = '10',
-      userId,
-    } = req.query as { page?: string; pageSize?: string; userId?: string };
+  app.get('/index-agents/paginated', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId) return reply.code(403).send({ error: 'forbidden' });
+    const { page = '1', pageSize = '10' } = req.query as {
+      page?: string;
+      pageSize?: string;
+    };
     const p = Math.max(parseInt(page, 10), 1);
     const ps = Math.max(parseInt(pageSize, 10), 1);
     const offset = (p - 1) * ps;
-    const params: any[] = [];
-    let where = '';
-    if (userId) {
-      where = 'WHERE user_id = ?';
-      params.push(userId);
-    }
     const totalRow = db
-      .prepare(`SELECT COUNT(*) as count FROM index_agents ${where}`)
-      .get(...params) as { count: number };
+      .prepare('SELECT COUNT(*) as count FROM index_agents WHERE user_id = ?')
+      .get(userId) as { count: number };
     const rows = db
-      .prepare(`SELECT * FROM index_agents ${where} LIMIT ? OFFSET ?`)
-      .all(...params, ps, offset) as IndexAgentRow[];
+      .prepare('SELECT * FROM index_agents WHERE user_id = ? LIMIT ? OFFSET ?')
+      .all(userId, ps, offset) as IndexAgentRow[];
     return {
       items: rows.map(toApi),
       total: totalRow.count,
@@ -60,12 +59,15 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post('/index-agents', async (req) => {
+  app.post('/index-agents', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
     const body = req.body as {
       templateId: string;
       userId: string;
       status?: IndexAgentStatus;
     };
+    if (!userId || userId !== body.userId)
+      return reply.code(403).send({ error: 'forbidden' });
     const id = randomUUID();
     const status = body.status ?? IndexAgentStatus.INACTIVE;
     const createdAt = Date.now();
@@ -77,36 +79,44 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
 
   app.get('/index-agents/:id', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId) return reply.code(403).send({ error: 'forbidden' });
     const row = db
-      .prepare('SELECT * FROM index_agents WHERE id = ?')
-      .get(id) as IndexAgentRow | undefined;
+      .prepare('SELECT * FROM index_agents WHERE id = ? AND user_id = ?')
+      .get(id, userId) as IndexAgentRow | undefined;
     if (!row) return reply.code(404).send({ error: 'not found' });
     return toApi(row);
   });
 
   app.put('/index-agents/:id', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
     const body = req.body as {
       templateId: string;
       userId: string;
       status: IndexAgentStatus;
     };
+    if (!userId || userId !== body.userId)
+      return reply.code(403).send({ error: 'forbidden' });
     const existing = db
-      .prepare('SELECT id FROM index_agents WHERE id = ?')
-      .get(id) as { id: string } | undefined;
+      .prepare('SELECT id FROM index_agents WHERE id = ? AND user_id = ?')
+      .get(id, userId) as { id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     db.prepare(
       `UPDATE index_agents SET template_id = ?, user_id = ?, status = ? WHERE id = ?`
     ).run(body.templateId, body.userId, body.status, id);
     const row = db
-      .prepare('SELECT * FROM index_agents WHERE id = ?')
-      .get(id) as IndexAgentRow;
+      .prepare('SELECT * FROM index_agents WHERE id = ? AND user_id = ?')
+      .get(id, userId) as IndexAgentRow;
     return toApi(row);
   });
 
   app.delete('/index-agents/:id', async (req, reply) => {
     const id = (req.params as any).id;
-    const res = db.prepare('DELETE FROM index_agents WHERE id = ?').run(id);
+    const userId = req.headers['x-user-id'] as string | undefined;
+    const res = db
+      .prepare('DELETE FROM index_agents WHERE id = ? AND user_id = ?')
+      .run(id, userId);
     if (res.changes === 0) return reply.code(404).send({ error: 'not found' });
     return { ok: true };
   });

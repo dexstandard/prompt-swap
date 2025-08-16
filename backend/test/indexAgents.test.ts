@@ -22,35 +22,65 @@ describe('index agent routes', () => {
       status: 'active',
     };
 
-    let res = await app.inject({ method: 'POST', url: '/api/index-agents', payload });
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/index-agents',
+      payload,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
 
-    res = await app.inject({ method: 'GET', url: `/api/index-agents/${id}` });
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/index-agents/${id}`,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ id, ...payload });
 
-    res = await app.inject({ method: 'GET', url: '/api/index-agents' });
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/index-agents',
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toHaveLength(1);
 
+    res = await app.inject({ method: 'GET', url: '/api/index-agents' });
+    expect(res.statusCode).toBe(403);
+
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-agents/paginated?page=1&pageSize=10&userId=user1',
+      url: '/api/index-agents/paginated?page=1&pageSize=10',
+      headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
 
     const update = { templateId: 'tmpl1', userId: 'user1', status: 'inactive' };
-    res = await app.inject({ method: 'PUT', url: `/api/index-agents/${id}`, payload: update });
+    res = await app.inject({
+      method: 'PUT',
+      url: `/api/index-agents/${id}`,
+      payload: update,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ id, ...update });
 
-    res = await app.inject({ method: 'DELETE', url: `/api/index-agents/${id}` });
+    res = await app.inject({
+      method: 'DELETE',
+      url: `/api/index-agents/${id}`,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
 
-    res = await app.inject({ method: 'GET', url: `/api/index-agents/${id}` });
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/index-agents/${id}`,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(404);
 
     await app.close();
@@ -66,6 +96,7 @@ describe('index agent routes', () => {
       method: 'POST',
       url: '/api/index-agents',
       payload: { templateId: 'tmpl2', userId: 'user2' },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.json()).toMatchObject({ status: 'inactive' });
 
