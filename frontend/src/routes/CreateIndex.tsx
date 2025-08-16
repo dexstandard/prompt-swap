@@ -13,7 +13,7 @@ export default function CreateIndex() {
   }, []);
 
   return (
-    <div className="flex items-start p-3 gap-3 w-full">
+    <div className="flex items-start gap-3 w-full">
       <ErrorBoundary>
         <TokenPriceGraph tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
       </ErrorBoundary>

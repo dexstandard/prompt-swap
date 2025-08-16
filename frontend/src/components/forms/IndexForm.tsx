@@ -154,7 +154,7 @@ export default function IndexForm({
         <>
             <form
                 onSubmit={onSubmit}
-                className="bg-white shadow-md rounded p-6 space-y-4 w-full max-w-[30rem]"
+                className="bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem]"
             >
                 <h2 className="text-xl font-bold">Create Index</h2>
                 <div className="grid grid-cols-2 gap-4">

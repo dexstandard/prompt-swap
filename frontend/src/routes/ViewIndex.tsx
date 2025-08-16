@@ -1,4 +1,5 @@
-import {ReactNode, useEffect, useState} from 'react';
+import {useEffect, useState} from 'react';
+import type {ReactNode} from 'react';
 import {useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
