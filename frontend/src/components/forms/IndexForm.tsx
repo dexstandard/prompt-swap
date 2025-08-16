@@ -10,6 +10,7 @@ import { useUser } from '../../lib/user';
 import { normalizeAllocations } from '../../lib/allocations';
 import KeySection from './KeySection';
 import BinanceKeySection from './BinanceKeySection';
+import TokenPriceGraph from './TokenPriceGraph';
 
 const schema = z
   .object({
@@ -208,6 +209,12 @@ export default function IndexForm() {
           </select>
         </div>
       </div>
+      {hasBinanceKey && (
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <TokenPriceGraph token={tokenA} />
+          <TokenPriceGraph token={tokenB} />
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium mb-1" htmlFor="targetAllocation">
           Target Allocation
