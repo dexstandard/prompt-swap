@@ -7,6 +7,7 @@ import api from '../lib/axios';
 import {useUser} from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
+import TradingAgentInstructions from '../components/TradingAgentInstructions';
 
 interface IndexDetails {
     id: string;
@@ -71,11 +72,17 @@ export default function ViewIndex() {
         },
     });
     const [model, setModel] = useState('');
+    const [instructions, setInstructions] = useState('');
     useEffect(() => {
         if (modelsQuery.data && modelsQuery.data.length) {
             setModel(modelsQuery.data[0]);
         }
     }, [modelsQuery.data]);
+    useEffect(() => {
+        if (data?.agentInstructions) {
+            setInstructions(data.agentInstructions);
+        }
+    }, [data?.agentInstructions]);
 
     const balanceA = useQuery({
         queryKey: ['binance-balance', user?.id, data?.tokenA?.toUpperCase()],
@@ -137,10 +144,11 @@ export default function ViewIndex() {
             <p>
                 <strong>Rebalance Frequency:</strong> {data.rebalance}
             </p>
-            <div className="mt-4">
-                <h2 className="text-xl font-bold mb-2">Trading Agent Instructions</h2>
-                <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
-            </div>
+            <TradingAgentInstructions
+                templateId={data.id}
+                instructions={instructions}
+                onChange={setInstructions}
+            />
             {user && !hasOpenAIKey && (
                 <div className="mt-4">
                     <AiApiKeySection label="OpenAI API Key"/>
