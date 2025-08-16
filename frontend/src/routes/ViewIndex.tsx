@@ -1,7 +1,7 @@
 import {useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import api from '../lib/axios';
-import {useUser} from '../lib/user';
+import {useUser} from '../lib/useUser';
 import React from "react";
 
 interface IndexDetails {

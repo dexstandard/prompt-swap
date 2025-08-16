@@ -1,21 +1,44 @@
 import { useEffect, useRef } from 'react';
 import { LogOut } from 'lucide-react';
 import api from '../lib/axios';
-import { useUser } from '../lib/user';
+import { useUser } from '../lib/useUser';
+
+type CredentialResponse = { credential: string };
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: {
+            client_id: string;
+            callback: (resp: CredentialResponse) => void;
+          }) => void;
+          renderButton: (
+            elem: HTMLElement,
+            options: { theme: string; size: string; text: string }
+          ) => void;
+          disableAutoSelect?: () => void;
+        };
+      };
+    };
+  }
+}
 
 export default function GoogleLoginButton() {
   const btnRef = useRef<HTMLDivElement>(null);
   const { user, setUser } = useUser();
 
   useEffect(() => {
-    const google = (window as any).google;
+    const google = window.google;
     if (!google || !btnRef.current || user) return;
 
     google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: async (resp: any) => {
+      callback: async (resp: CredentialResponse) => {
         const res = await api.post('/login', { token: resp.credential });
         setUser(res.data);
+        btnRef.current.innerHTML = '';
       },
     });
     google.accounts.id.renderButton(btnRef.current, {
@@ -31,7 +54,7 @@ export default function GoogleLoginButton() {
         <span>{user.email}</span>
         <button
           onClick={() => {
-            const google = (window as any).google;
+            const google = window.google;
             google?.accounts.id.disableAutoSelect?.();
             setUser(null);
           }}
