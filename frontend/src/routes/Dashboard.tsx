@@ -1,15 +1,24 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
+import TokenDisplay from '../components/TokenDisplay';
 
 interface Agent {
   id: string;
   templateId: string;
   userId: string;
+  model: string;
   status: 'active' | 'inactive';
   createdAt: number;
+  template?: {
+    tokenA: string;
+    tokenB: string;
+    risk: string;
+  };
 }
 
 export default function Dashboard() {
@@ -56,21 +65,40 @@ export default function Dashboard() {
           <table className="w-full mb-4">
             <thead>
               <tr>
-                <th className="text-left">Agent ID</th>
-                <th className="text-left">Template</th>
-                <th className="text-left">Status</th>
                 <th className="text-left">Created</th>
+                <th className="text-left">Pair</th>
+                <th className="text-left">Model</th>
+                <th className="text-left">Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {items.map((agent) => (
                 <tr key={agent.id}>
-                  <td>{agent.id}</td>
-                  <td>{agent.templateId}</td>
+                  <td>{new Date(agent.createdAt).toLocaleString()}</td>
+                  <td>
+                    {agent.template ? (
+                      <span className="inline-flex items-center gap-1">
+                        <TokenDisplay token={agent.template.tokenA} /> /
+                        <TokenDisplay token={agent.template.tokenB} />
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td>{agent.model}</td>
                   <td>
                     <AgentStatusLabel status={agent.status} />
                   </td>
-                  <td>{new Date(agent.createdAt).toLocaleString()}</td>
+                  <td>
+                    <Link
+                      className="text-blue-600 underline inline-flex"
+                      to={`/agents/${agent.id}`}
+                      aria-label="View agent"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

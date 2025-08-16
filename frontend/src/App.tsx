@@ -4,6 +4,7 @@ import Dashboard from './routes/Dashboard';
 import AgentTemplates from './routes/AgentTemplates';
 import Keys from './routes/Keys';
 import ViewAgentTemplate from './routes/ViewAgentTemplate';
+import ViewAgent from './routes/ViewAgent';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/agent-templates" element={<AgentTemplates />} />
         <Route path="/keys" element={<Keys />} />
         <Route path="/agent-templates/:id" element={<ViewAgentTemplate />} />
+        <Route path="/agents/:id" element={<ViewAgent />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
