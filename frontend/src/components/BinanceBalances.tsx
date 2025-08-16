@@ -24,6 +24,20 @@ export default function BinanceBalances({ tokens }: Props) {
     },
   });
 
+  const balanceQueries = useQueries({
+    queries: tokens.map((token) => ({
+      queryKey: ['binance-balance', user?.id, token.toUpperCase()],
+      enabled: !!user && !!binanceKey,
+      queryFn: async () => {
+        const res = await api.get(
+          `/users/${user!.id}/binance-balance/${token.toUpperCase()}`,
+          { headers: { 'x-user-id': user!.id } }
+        );
+        return res.data as { asset: string; free: number; locked: number };
+      },
+    })),
+  });
+
   if (!user || !binanceKey) {
     return (
       <div>
@@ -32,19 +46,6 @@ export default function BinanceBalances({ tokens }: Props) {
       </div>
     );
   }
-
-  const balanceQueries = useQueries({
-    queries: tokens.map((token) => ({
-      queryKey: ['binance-balance', user.id, token.toUpperCase()],
-      queryFn: async () => {
-        const res = await api.get(
-          `/users/${user.id}/binance-balance/${token.toUpperCase()}`,
-          { headers: { 'x-user-id': user.id } }
-        );
-        return res.data as { asset: string; free: number; locked: number };
-      },
-    })),
-  });
 
   return (
     <div>
