@@ -38,7 +38,6 @@ export default function GoogleLoginButton() {
           className="text-xs text-blue-500 hover:underline flex items-center gap-1"
         >
           <LogOut className="w-4 h-4" />
-          <span>Log off</span>
         </button>
       </div>
     );
