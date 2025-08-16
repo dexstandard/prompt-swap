@@ -31,7 +31,7 @@ export default function AppShell() {
           </Link>
           <Link to="/agent-templates" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
             <FileText className="w-4 h-4" />
-            Agent Templates
+            Templates
           </Link>
           <Link to="/keys" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
             <Key className="w-4 h-4" />
