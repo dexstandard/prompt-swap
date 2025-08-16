@@ -9,7 +9,16 @@ export default function GoogleLoginButton() {
 
   useEffect(() => {
     const google = (window as any).google;
-    if (!google || !btnRef.current || user) return;
+    if (!google || !btnRef.current) return;
+
+    // Clear any previously rendered buttons (StrictMode runs effects twice)
+    btnRef.current.innerHTML = '';
+
+    if (user) {
+      // Remove the Google button once the user logs in so it doesn't overlay
+      // the navigation links.
+      return;
+    }
 
     google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
