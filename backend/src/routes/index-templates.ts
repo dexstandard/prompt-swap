@@ -34,32 +34,35 @@ function toApi(row: IndexTemplateRow) {
 }
 
 export default async function indexTemplateRoutes(app: FastifyInstance) {
-  app.get('/index-templates', async () => {
-    const rows = db.prepare<[], IndexTemplateRow>('SELECT * FROM index_templates').all();
+  app.get('/index-templates', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId)
+      return reply.code(403).send({ error: 'forbidden' });
+    const rows = db
+      .prepare<[string], IndexTemplateRow>(
+        'SELECT * FROM index_templates WHERE user_id = ?'
+      )
+      .all(userId);
     return rows.map(toApi);
   });
 
-  app.get('/index-templates/paginated', async (req) => {
-    const {
-      page = '1',
-      pageSize = '10',
-      userId,
-    } = req.query as { page?: string; pageSize?: string; userId?: string };
+  app.get('/index-templates/paginated', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId)
+      return reply.code(403).send({ error: 'forbidden' });
+    const { page = '1', pageSize = '10' } = req.query as {
+      page?: string;
+      pageSize?: string;
+    };
     const p = Math.max(parseInt(page, 10), 1);
     const ps = Math.max(parseInt(pageSize, 10), 1);
     const offset = (p - 1) * ps;
-    const params: any[] = [];
-    let where = '';
-    if (userId) {
-      where = 'WHERE user_id = ?';
-      params.push(userId);
-    }
     const totalRow = db
-      .prepare(`SELECT COUNT(*) as count FROM index_templates ${where}`)
-      .get(...params) as { count: number };
+      .prepare('SELECT COUNT(*) as count FROM index_templates WHERE user_id = ?')
+      .get(userId) as { count: number };
     const rows = db
-      .prepare(`SELECT * FROM index_templates ${where} LIMIT ? OFFSET ?`)
-      .all(...params, ps, offset) as IndexTemplateRow[];
+      .prepare('SELECT * FROM index_templates WHERE user_id = ? LIMIT ? OFFSET ?')
+      .all(userId, ps, offset) as IndexTemplateRow[];
     return {
       items: rows.map(toApi),
       total: totalRow.count,
@@ -68,7 +71,7 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post('/index-templates', async (req) => {
+  app.post('/index-templates', async (req, reply) => {
     const body = req.body as {
       userId: string;
       tokenA: string;
@@ -81,6 +84,9 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       model: string;
       agentInstructions: string;
     };
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || body.userId !== userId)
+      return reply.code(403).send({ error: 'forbidden' });
     const id = randomUUID();
     const tokenA = body.tokenA.toUpperCase();
     const tokenB = body.tokenB.toUpperCase();
@@ -117,15 +123,19 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
   });
 
   app.get('/index-templates/:id', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const row = db
       .prepare('SELECT * FROM index_templates WHERE id = ?')
       .get(id) as IndexTemplateRow | undefined;
     if (!row) return reply.code(404).send({ error: 'not found' });
+    if (!userId || row.user_id !== userId)
+      return reply.code(403).send({ error: 'forbidden' });
     return toApi(row);
   });
 
   app.put('/index-templates/:id', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const body = req.body as {
       userId: string;
@@ -140,9 +150,11 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       agentInstructions: string;
     };
     const existing = db
-      .prepare('SELECT id FROM index_templates WHERE id = ?')
-      .get(id) as { id: string } | undefined;
+      .prepare('SELECT * FROM index_templates WHERE id = ?')
+      .get(id) as IndexTemplateRow | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
+    if (!userId || existing.user_id !== userId || body.userId !== userId)
+      return reply.code(403).send({ error: 'forbidden' });
     const tokenA = body.tokenA.toUpperCase();
     const tokenB = body.tokenB.toUpperCase();
     const { targetAllocation, minTokenAAllocation, minTokenBAllocation } = normalizeAllocations(
@@ -172,9 +184,15 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
   });
 
   app.delete('/index-templates/:id', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
-    const res = db.prepare('DELETE FROM index_templates WHERE id = ?').run(id);
-    if (res.changes === 0) return reply.code(404).send({ error: 'not found' });
+    const existing = db
+      .prepare('SELECT user_id FROM index_templates WHERE id = ?')
+      .get(id) as { user_id: string } | undefined;
+    if (!existing) return reply.code(404).send({ error: 'not found' });
+    if (!userId || existing.user_id !== userId)
+      return reply.code(403).send({ error: 'forbidden' });
+    db.prepare('DELETE FROM index_templates WHERE id = ?').run(id);
     return { ok: true };
   });
 }
