@@ -101,12 +101,6 @@ export default function ViewAgentTemplate() {
                 {`${data.tokenA.toUpperCase()} ${data.targetAllocation} / ${data.tokenB.toUpperCase()} ${100 - data.targetAllocation}`}
             </h1>
             <p>
-                <strong>Template ID:</strong> {data.id}
-            </p>
-            <p>
-                <strong>User ID:</strong> {data.userId}
-            </p>
-            <p>
                 <strong>Target Allocation:</strong> {data.targetAllocation}/{100 - data.targetAllocation}
             </p>
             <p>

@@ -46,9 +46,6 @@ export default function ViewAgent() {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Agent</h1>
       <p>
-        <strong>Agent ID:</strong> {data.id}
-      </p>
-      <p>
         <strong>Model:</strong> {data.model}
       </p>
       <p>

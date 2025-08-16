@@ -61,7 +61,7 @@ const rebalanceOptions = [
 ];
 
 const DEFAULT_AGENT_INSTRUCTIONS =
-    'Manage this agent based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
+    'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
 
 const defaultValues: FormValues = {
     tokenA: 'USDT',
