@@ -73,12 +73,15 @@ export default function AiApiKeySection({ label }: { label: string }) {
       ) : editing ? (
         <div className="space-y-2">
           <input
-            type="password"
-            autoComplete="new-password"
+            type="text"
+            autoComplete="off"
             {...form.register('key', { required: true, minLength: 10 })}
             className="border rounded p-2 w-full h-10"
+            style={{ WebkitTextSecurity: 'disc' }}
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 space-x-2">
             <a
               href="https://platform.openai.com/account/api-keys"
               target="_blank"
@@ -86,6 +89,14 @@ export default function AiApiKeySection({ label }: { label: string }) {
               className="text-blue-600 underline"
             >
               How to create an API key
+            </a>
+            <a
+              href="https://www.youtube.com/watch?v=WjVf80HUvYg"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              Video guide
             </a>
           </p>
           {form.formState.errors.key && (
@@ -123,10 +134,13 @@ export default function AiApiKeySection({ label }: { label: string }) {
       ) : (
         <div className="flex gap-2">
           <input
-            type="password"
+            type="text"
             value={query.data ?? ''}
             disabled
             className="border rounded p-2 w-full h-10"
+            style={{ WebkitTextSecurity: 'disc' }}
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
           <button
             type="button"
