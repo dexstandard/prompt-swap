@@ -28,7 +28,7 @@ export default function AppShell() {
             Agents
           </Link>
           <Link to="/agent-templates" className="block mb-2 text-gray-700 hover:text-gray-900">
-            Agent Templates
+            Templates
           </Link>
           <Link to="/settings" className="block mb-2 text-gray-700 hover:text-gray-900">
             Settings

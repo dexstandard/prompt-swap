@@ -42,7 +42,7 @@ export default function WalletBalances({ tokens }: Props) {
     return (
       <div>
         <h3 className="text-xl font-bold mb-2">Binance Balances</h3>
-        <p>Binance Balances - Unavailable</p>
+        <p>Balances - Unavailable</p>
       </div>
     );
   }
