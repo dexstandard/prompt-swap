@@ -15,7 +15,6 @@ interface IndexDetails {
     risk: string;
     rebalance: string;
     model: string;
-    tvl: number;
     systemPrompt: string;
 }
 
@@ -23,9 +22,9 @@ export default function ViewIndex() {
     const {id} = useParams();
     const {user} = useUser();
     const {data} = useQuery({
-        queryKey: ['index', id],
+        queryKey: ['index-template', id],
         queryFn: async () => {
-            const res = await api.get(`/indexes/${id}`);
+            const res = await api.get(`/index-templates/${id}`);
             return res.data as IndexDetails;
         },
         enabled: !!id,

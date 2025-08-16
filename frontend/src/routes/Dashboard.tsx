@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { useUser } from '../lib/user';
 
-interface IndexItem {
+interface IndexTemplateItem {
   id: string;
   userId: string;
   tokenA: string;
@@ -19,13 +19,13 @@ export default function Dashboard() {
   const [onlyMine, setOnlyMine] = useState(false);
 
   const { data } = useQuery({
-    queryKey: ['indexes', page, onlyMine, user?.id],
+    queryKey: ['index-templates', page, onlyMine, user?.id],
     queryFn: async () => {
       const params: any = { page, pageSize: 10 };
       if (onlyMine && user?.id) params.userId = user.id;
-      const res = await api.get('/indexes/paginated', { params });
+      const res = await api.get('/index-templates/paginated', { params });
       return res.data as {
-        items: IndexItem[];
+        items: IndexTemplateItem[];
         total: number;
         page: number;
         pageSize: number;
@@ -48,14 +48,14 @@ export default function Dashboard() {
               setPage(1);
             }}
           />
-          Only my indexes
+          Only my index templates
         </label>
       )}
       <table className="w-full mb-4">
         <thead>
           <tr>
             <th className="text-left">User</th>
-            <th className="text-left">Index</th>
+            <th className="text-left">Index Template</th>
             <th className="text-left">Target</th>
             <th className="text-left">Risk</th>
             <th className="text-left">Actions</th>
@@ -70,7 +70,7 @@ export default function Dashboard() {
               <td>{idx.risk}</td>
               <td>
                 <Link
-                  to={`/indexes/${idx.id}`}
+                  to={`/index-templates/${idx.id}`}
                   className="px-2 py-1 border inline-block"
                 >
                   View

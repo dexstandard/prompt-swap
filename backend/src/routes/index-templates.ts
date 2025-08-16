@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 import { normalizeAllocations } from '../util/allocations.js';
 
-interface TokenIndexRow {
+interface IndexTemplateRow {
   id: string;
   user_id: string;
   token_a: string;
@@ -14,11 +14,10 @@ interface TokenIndexRow {
   risk: string;
   rebalance: string;
   model: string;
-  tvl: number;
   system_prompt: string;
 }
 
-function toApi(row: TokenIndexRow) {
+function toApi(row: IndexTemplateRow) {
   return {
     id: row.id,
     userId: row.user_id,
@@ -30,18 +29,17 @@ function toApi(row: TokenIndexRow) {
     risk: row.risk,
     rebalance: row.rebalance,
     model: row.model,
-    tvl: row.tvl,
     systemPrompt: row.system_prompt,
   };
 }
 
-export default async function indexRoutes(app: FastifyInstance) {
-  app.get('/indexes', async () => {
-    const rows = db.prepare<[], TokenIndexRow>('SELECT * FROM token_indexes').all();
+export default async function indexTemplateRoutes(app: FastifyInstance) {
+  app.get('/index-templates', async () => {
+    const rows = db.prepare<[], IndexTemplateRow>('SELECT * FROM index_templates').all();
     return rows.map(toApi);
   });
 
-  app.get('/indexes/paginated', async (req) => {
+  app.get('/index-templates/paginated', async (req) => {
     const {
       page = '1',
       pageSize = '10',
@@ -57,11 +55,11 @@ export default async function indexRoutes(app: FastifyInstance) {
       params.push(userId);
     }
     const totalRow = db
-      .prepare(`SELECT COUNT(*) as count FROM token_indexes ${where}`)
+      .prepare(`SELECT COUNT(*) as count FROM index_templates ${where}`)
       .get(...params) as { count: number };
     const rows = db
-      .prepare(`SELECT * FROM token_indexes ${where} LIMIT ? OFFSET ?`)
-      .all(...params, ps, offset) as TokenIndexRow[];
+      .prepare(`SELECT * FROM index_templates ${where} LIMIT ? OFFSET ?`)
+      .all(...params, ps, offset) as IndexTemplateRow[];
     return {
       items: rows.map(toApi),
       total: totalRow.count,
@@ -70,7 +68,7 @@ export default async function indexRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post('/indexes', async (req) => {
+  app.post('/index-templates', async (req) => {
     const body = req.body as {
       userId: string;
       tokenA: string;
@@ -92,8 +90,8 @@ export default async function indexRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `INSERT INTO token_indexes (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, tvl, system_prompt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, system_prompt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       body.userId,
@@ -105,7 +103,6 @@ export default async function indexRoutes(app: FastifyInstance) {
       body.risk,
       body.rebalance,
       body.model,
-      0,
       body.systemPrompt
     );
     return {
@@ -116,20 +113,19 @@ export default async function indexRoutes(app: FastifyInstance) {
       targetAllocation,
       minTokenAAllocation,
       minTokenBAllocation,
-      tvl: 0,
     };
   });
 
-  app.get('/indexes/:id', async (req, reply) => {
+  app.get('/index-templates/:id', async (req, reply) => {
     const id = (req.params as any).id;
     const row = db
-      .prepare('SELECT * FROM token_indexes WHERE id = ?')
-      .get(id) as TokenIndexRow | undefined;
+      .prepare('SELECT * FROM index_templates WHERE id = ?')
+      .get(id) as IndexTemplateRow | undefined;
     if (!row) return reply.code(404).send({ error: 'not found' });
     return toApi(row);
   });
 
-  app.put('/indexes/:id', async (req, reply) => {
+  app.put('/index-templates/:id', async (req, reply) => {
     const id = (req.params as any).id;
     const body = req.body as {
       userId: string;
@@ -144,7 +140,7 @@ export default async function indexRoutes(app: FastifyInstance) {
       systemPrompt: string;
     };
     const existing = db
-      .prepare('SELECT id FROM token_indexes WHERE id = ?')
+      .prepare('SELECT id FROM index_templates WHERE id = ?')
       .get(id) as { id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     const tokenA = body.tokenA.toUpperCase();
@@ -155,7 +151,7 @@ export default async function indexRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `UPDATE token_indexes SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, model = ?, system_prompt = ? WHERE id = ?`
+      `UPDATE index_templates SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, model = ?, system_prompt = ? WHERE id = ?`
     ).run(
       body.userId,
       tokenA,
@@ -170,15 +166,16 @@ export default async function indexRoutes(app: FastifyInstance) {
       id
     );
     const row = db
-      .prepare('SELECT * FROM token_indexes WHERE id = ?')
-      .get(id) as TokenIndexRow;
+      .prepare('SELECT * FROM index_templates WHERE id = ?')
+      .get(id) as IndexTemplateRow;
     return toApi(row);
   });
 
-  app.delete('/indexes/:id', async (req, reply) => {
+  app.delete('/index-templates/:id', async (req, reply) => {
     const id = (req.params as any).id;
-    const res = db.prepare('DELETE FROM token_indexes WHERE id = ?').run(id);
+    const res = db.prepare('DELETE FROM index_templates WHERE id = ?').run(id);
     if (res.changes === 0) return reply.code(404).send({ error: 'not found' });
     return { ok: true };
   });
 }
+

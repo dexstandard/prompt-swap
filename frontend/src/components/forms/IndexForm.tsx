@@ -156,13 +156,13 @@ export default function IndexForm() {
 
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
-    const res = await api.post('/indexes', {
+    const res = await api.post('/index-templates', {
       userId: user.id,
       ...values,
       tokenA: values.tokenA.toUpperCase(),
       tokenB: values.tokenB.toUpperCase(),
     });
-    navigate(`/indexes/${res.data.id}`);
+    navigate(`/index-templates/${res.data.id}`);
   });
 
   return (
