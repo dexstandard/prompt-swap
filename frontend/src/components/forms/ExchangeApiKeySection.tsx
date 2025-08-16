@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
+
+const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
+  WebkitTextSecurity: 'disc',
+};
 
 interface Props {
   exchange: string;
@@ -98,7 +102,7 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
             placeholder="API key"
             {...form.register('key', { required: true, minLength: 10 })}
             className="border rounded px-2 py-1 w-full"
-            style={{ WebkitTextSecurity: keyValue ? 'disc' : 'none' }}
+            style={keyValue ? textSecurityStyle : undefined}
             data-lpignore="true"
             data-1p-ignore="true"
           />
@@ -108,7 +112,7 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
             placeholder="API secret"
             {...form.register('secret', { required: true, minLength: 10 })}
             className="border rounded px-2 py-1 w-full"
-            style={{ WebkitTextSecurity: secretValue ? 'disc' : 'none' }}
+            style={secretValue ? textSecurityStyle : undefined}
             data-lpignore="true"
             data-1p-ignore="true"
           />
@@ -150,7 +154,7 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
               value={query.data?.key ?? ''}
               disabled
               className="border rounded px-2 py-1 w-full"
-              style={{ WebkitTextSecurity: 'disc' }}
+              style={textSecurityStyle}
               data-lpignore="true"
               data-1p-ignore="true"
             />
