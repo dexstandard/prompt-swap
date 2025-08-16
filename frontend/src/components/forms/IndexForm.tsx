@@ -1,6 +1,6 @@
 import {useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
-import {useForm} from 'react-hook-form';
+import {Controller, useForm} from 'react-hook-form';
 import {z} from 'zod';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {useQuery} from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import {useUser} from '../../lib/user';
 import {normalizeAllocations} from '../../lib/allocations';
 import KeySection from './KeySection';
 import BinanceKeySection from './BinanceKeySection';
+import TokenSelect from './TokenSelect';
 
 const schema = z
     .object({
@@ -87,6 +88,7 @@ export default function IndexForm({
         handleSubmit,
         watch,
         setValue,
+        control,
         formState: {isSubmitting},
     } = useForm<FormValues>({
         resolver: zodResolver(schema),
@@ -185,35 +187,39 @@ export default function IndexForm({
                         <label className="block text-sm font-medium mb-1" htmlFor="tokenA">
                             Token A
                         </label>
-                        <select id="tokenA" {...register('tokenA')} className="w-full border rounded p-2">
-                            <option value="" disabled>
-                                Select a token
-                            </option>
-                            {tokens
-                                .filter((t) => t.value === tokenA || t.value !== tokenB)
-                                .map((t) => (
-                                    <option key={t.value} value={t.value}>
-                                        {t.label}
-                                    </option>
-                                ))}
-                        </select>
+                        <Controller
+                            name="tokenA"
+                            control={control}
+                            render={({field}) => (
+                                <TokenSelect
+                                    id="tokenA"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    options={tokens.filter(
+                                        (t) => t.value === tokenA || t.value !== tokenB
+                                    )}
+                                />
+                            )}
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1" htmlFor="tokenB">
                             Token B
                         </label>
-                        <select id="tokenB" {...register('tokenB')} className="w-full border rounded p-2">
-                            <option value="" disabled>
-                                Select a token
-                            </option>
-                            {tokens
-                                .filter((t) => t.value === tokenB || t.value !== tokenA)
-                                .map((t) => (
-                                    <option key={t.value} value={t.value}>
-                                        {t.label}
-                                    </option>
-                                ))}
-                        </select>
+                        <Controller
+                            name="tokenB"
+                            control={control}
+                            render={({field}) => (
+                                <TokenSelect
+                                    id="tokenB"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    options={tokens.filter(
+                                        (t) => t.value === tokenB || t.value !== tokenA
+                                    )}
+                                />
+                            )}
+                        />
                     </div>
                 </div>
                 <div>
