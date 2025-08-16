@@ -7,6 +7,7 @@ import api from '../lib/axios';
 import {useUser} from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
+import WalletBalances from '../components/WalletBalances';
 import TradingAgentInstructions from '../components/TradingAgentInstructions';
 
 interface IndexDetails {
@@ -84,30 +85,6 @@ export default function ViewIndex() {
         }
     }, [data?.agentInstructions]);
 
-    const balanceA = useQuery({
-        queryKey: ['binance-balance', user?.id, data?.tokenA?.toUpperCase()],
-        enabled: !!user && hasBinanceKey && !!data?.tokenA,
-        queryFn: async () => {
-            const res = await api.get(
-                `/users/${user!.id}/binance-balance/${data!.tokenA.toUpperCase()}`,
-                {headers: {'x-user-id': user!.id}}
-            );
-            return res.data as { asset: string; free: number; locked: number };
-        },
-    });
-
-    const balanceB = useQuery({
-        queryKey: ['binance-balance', user?.id, data?.tokenB?.toUpperCase()],
-        enabled: !!user && hasBinanceKey && !!data?.tokenB,
-        queryFn: async () => {
-            const res = await api.get(
-                `/users/${user!.id}/binance-balance/${data!.tokenB.toUpperCase()}`,
-                {headers: {'x-user-id': user!.id}}
-            );
-            return res.data as { asset: string; free: number; locked: number };
-        },
-    });
-
     if (!data) return <div className="p-4">Loading...</div>;
 
     function WarningSign({children}: { children: ReactNode }) {
@@ -178,19 +155,7 @@ export default function ViewIndex() {
             )}
 
             <div className="mt-4">
-                <h2 className="text-xl font-bold mb-2">Binance Balances</h2>
-                <p>
-                    <strong>{data.tokenA.toUpperCase()}:</strong>{' '}
-                    {balanceA.isLoading
-                        ? 'Loading...'
-                        : (balanceA.data?.free ?? 0) + (balanceA.data?.locked ?? 0)}
-                </p>
-                <p>
-                    <strong>{data.tokenB.toUpperCase()}:</strong>{' '}
-                    {balanceB.isLoading
-                        ? 'Loading...'
-                        : (balanceB.data?.free ?? 0) + (balanceB.data?.locked ?? 0)}
-                </p>
+                <WalletBalances tokens={[data.tokenA, data.tokenB]} />
                 <WarningSign>
                     Trading agent will use all available balance
                     for {data.tokenA.toUpperCase()} and {data.tokenB.toUpperCase()} in your Binance Spot wallet. Move

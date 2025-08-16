@@ -1,4 +1,3 @@
-import React from 'react';
 
 const ICONS: Record<string, string> = {
   BTC: '/tokens/bitcoin-btc-logo.svg',

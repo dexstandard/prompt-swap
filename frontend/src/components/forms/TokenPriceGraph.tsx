@@ -41,8 +41,8 @@ export default function TokenPriceGraph({
   tokenB: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const seriesARef = useRef<ISeriesApi<'Line'>>();
-  const seriesBRef = useRef<ISeriesApi<'Line'>>();
+  const seriesARef = useRef<ISeriesApi<'Line'> | null>(null);
+  const seriesBRef = useRef<ISeriesApi<'Line'> | null>(null);
 
   const query = useQuery<{ [key: string]: PricePoint[] }>({
     queryKey: ['price-history', tokenA, tokenB],

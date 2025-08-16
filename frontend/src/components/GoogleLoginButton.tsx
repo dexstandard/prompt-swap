@@ -38,7 +38,7 @@ export default function GoogleLoginButton() {
       callback: async (resp: CredentialResponse) => {
         const res = await api.post('/login', { token: resp.credential });
         setUser(res.data);
-        btnRef.current.innerHTML = '';
+        if (btnRef.current) btnRef.current.innerHTML = '';
       },
     });
     google.accounts.id.renderButton(btnRef.current, {
