@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
+
+const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
+  WebkitTextSecurity: 'disc',
+};
 
 export default function AiApiKeySection({ label }: { label: string }) {
   const { user } = useUser();
@@ -11,6 +15,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
     defaultValues: { key: '' },
     mode: 'onChange',
   });
+  const keyValue = form.watch('key');
   const id = user!.id;
   const query = useQuery<string | null>({
     queryKey: ['ai-key', id],
@@ -75,9 +80,10 @@ export default function AiApiKeySection({ label }: { label: string }) {
           <input
             type="text"
             autoComplete="off"
+            placeholder="API key"
             {...form.register('key', { required: true, minLength: 10 })}
             className="border rounded px-2 py-1 w-full"
-            style={{ WebkitTextSecurity: 'disc' }}
+            style={keyValue ? textSecurityStyle : undefined}
             data-lpignore="true"
             data-1p-ignore="true"
           />
@@ -130,7 +136,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
             value={query.data ?? ''}
             disabled
             className="border rounded px-2 py-1 w-full"
-            style={{ WebkitTextSecurity: 'disc' }}
+            style={textSecurityStyle}
             data-lpignore="true"
             data-1p-ignore="true"
           />

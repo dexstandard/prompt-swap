@@ -1,6 +1,6 @@
 import { useUser } from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
-import BinanceKeySection from '../components/forms/BinanceKeySection';
+import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 
 export default function Settings() {
   const { user } = useUser();
@@ -8,7 +8,7 @@ export default function Settings() {
   return (
     <div className="space-y-8 max-w-md">
       <AiApiKeySection label="OpenAI API Key" />
-      <BinanceKeySection label="Binance API Credentials" />
+      <ExchangeApiKeySection exchange="binance" label="Binance API Credentials" />
     </div>
   );
 }

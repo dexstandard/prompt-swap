@@ -1,23 +1,36 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
 
-export default function BinanceKeySection({ label }: { label: string }) {
+const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
+  WebkitTextSecurity: 'disc',
+};
+
+interface Props {
+  exchange: string;
+  label: string;
+}
+
+export default function ExchangeApiKeySection({ exchange, label }: Props) {
   const { user } = useUser();
   const form = useForm<{ key: string; secret: string }>({
     defaultValues: { key: '', secret: '' },
     mode: 'onChange',
   });
+  const keyValue = form.watch('key');
+  const secretValue = form.watch('secret');
   const id = user!.id;
+  const keyPath = `/users/${id}/${exchange}-key`;
+  const balancePath = `/users/${id}/${exchange}-balance`;
   const query = useQuery<{ key: string; secret: string } | null>({
-    queryKey: ['binance-key', id],
+    queryKey: [`${exchange}-key`, id],
     enabled: !!user,
     queryFn: async () => {
       try {
-        const res = await api.get(`/users/${id}/binance-key`);
+        const res = await api.get(keyPath);
         return res.data as { key: string; secret: string };
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 404) return null;
@@ -38,7 +51,7 @@ export default function BinanceKeySection({ label }: { label: string }) {
   const saveMut = useMutation({
     mutationFn: async (vals: { key: string; secret: string }) => {
       const method = query.data ? 'put' : 'post';
-      const res = await api[method](`/users/${id}/binance-key`, vals);
+      const res = await api[method](keyPath, vals);
       return res.data as { key: string; secret: string };
     },
     onSuccess: () => {
@@ -57,16 +70,16 @@ export default function BinanceKeySection({ label }: { label: string }) {
 
   const delMut = useMutation({
     mutationFn: async () => {
-      await api.delete(`/users/${id}/binance-key`);
+      await api.delete(keyPath);
     },
     onSuccess: () => query.refetch(),
   });
 
   const balanceQuery = useQuery<{ totalUsd: number }>({
-    queryKey: ['binance-balance', id],
+    queryKey: [`${exchange}-balance`, id],
     enabled: !!query.data && !editing,
     queryFn: async () => {
-      const res = await api.get(`/users/${id}/binance-balance`, {
+      const res = await api.get(balancePath, {
         headers: { 'x-user-id': id },
       });
       return res.data as { totalUsd: number };
@@ -77,23 +90,31 @@ export default function BinanceKeySection({ label }: { label: string }) {
   const buttonsDisabled = !form.formState.isValid;
 
   return (
-    <div className="space-y-2">
-      {label && <h2 className="text-lg font-bold">{label}</h2>}
+    <div className="space-y-2 w-full max-w-md">
+      {label && <h2 className="text-md font-bold">{label}</h2>}
       {query.isLoading ? (
         <p>Loading...</p>
       ) : editing ? (
         <div className="space-y-2">
           <input
             type="text"
-            placeholder="API Key"
+            autoComplete="off"
+            placeholder="API key"
             {...form.register('key', { required: true, minLength: 10 })}
-            className="border rounded p-2 w-full"
+            className="border rounded px-2 py-1 w-full"
+            style={keyValue ? textSecurityStyle : undefined}
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
           <input
             type="text"
-            placeholder="API Secret"
+            autoComplete="off"
+            placeholder="API secret"
             {...form.register('secret', { required: true, minLength: 10 })}
-            className="border rounded p-2 w-full"
+            className="border rounded px-2 py-1 w-full"
+            style={secretValue ? textSecurityStyle : undefined}
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
           {(form.formState.errors.key || form.formState.errors.secret) && (
             <p className="text-sm text-red-600">
@@ -105,7 +126,7 @@ export default function BinanceKeySection({ label }: { label: string }) {
               type="button"
               onClick={onSubmit}
               disabled={buttonsDisabled}
-              className={`bg-blue-600 text-white px-4 py-2 rounded ${
+              className={`bg-blue-600 text-white px-2 py-1 rounded ${
                 buttonsDisabled ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -118,7 +139,7 @@ export default function BinanceKeySection({ label }: { label: string }) {
                   setEditing(false);
                   form.reset(query.data ?? { key: '', secret: '' });
                 }}
-                className="bg-gray-300 px-4 py-2 rounded"
+                className="bg-gray-300 px-2 py-1 rounded"
               >
                 Cancel
               </button>
@@ -132,7 +153,10 @@ export default function BinanceKeySection({ label }: { label: string }) {
               type="text"
               value={query.data?.key ?? ''}
               disabled
-              className="border rounded p-2 w-full"
+              className="border rounded px-2 py-1 w-full"
+              style={textSecurityStyle}
+              data-lpignore="true"
+              data-1p-ignore="true"
             />
             <button
               type="button"
@@ -140,14 +164,14 @@ export default function BinanceKeySection({ label }: { label: string }) {
                 setEditing(true);
                 form.reset({ key: '', secret: '' });
               }}
-              className="bg-blue-600 text-white px-4 py-2 rounded"
+              className="bg-blue-600 text-white px-2 py-1 rounded"
             >
               Edit
             </button>
             <button
               type="button"
               onClick={() => delMut.mutate()}
-              className="bg-red-600 text-white px-4 py-2 rounded"
+              className="bg-red-600 text-white px-2 py-1 rounded"
             >
               Delete
             </button>
@@ -164,3 +188,4 @@ export default function BinanceKeySection({ label }: { label: string }) {
     </div>
   );
 }
+
