@@ -131,7 +131,9 @@ export default function IndexForm({
 
     useEffect(() => {
         onTokensChange?.(tokenA, tokenB);
-    }, [tokenA, tokenB, onTokensChange]);
+        // onTokensChange is stable via useCallback in parent
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tokenA, tokenB]);
 
     useEffect(() => {
         const currentTarget = Number.isFinite(targetAllocation) ? targetAllocation : 0;
