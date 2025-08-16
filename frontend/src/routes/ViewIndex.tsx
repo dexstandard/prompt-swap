@@ -4,7 +4,7 @@ import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../lib/axios';
 import {useUser} from '../lib/useUser';
-import KeySection from '../components/forms/KeySection';
+import AiApiKeySection from '../components/forms/AiApiKeySection';
 import BinanceKeySection from '../components/forms/BinanceKeySection';
 
 interface IndexDetails {
@@ -139,7 +139,7 @@ export default function ViewIndex() {
             </div>
             {user && !hasOpenAIKey && (
                 <div className="mt-4">
-                    <KeySection label="OpenAI API Key"/>
+                    <AiApiKeySection label="OpenAI API Key"/>
                 </div>
             )}
             {user && hasOpenAIKey && modelsQuery.data && modelsQuery.data.length > 0 && (

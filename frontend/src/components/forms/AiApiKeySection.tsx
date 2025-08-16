@@ -5,7 +5,7 @@ import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
 
-export default function KeySection({ label }: { label: string }) {
+export default function AiApiKeySection({ label }: { label: string }) {
   const { user } = useUser();
   const form = useForm<{ key: string }>({
     defaultValues: { key: '' },
@@ -73,10 +73,21 @@ export default function KeySection({ label }: { label: string }) {
       ) : editing ? (
         <div className="space-y-2">
           <input
-            type="text"
+            type="password"
+            autoComplete="new-password"
             {...form.register('key', { required: true, minLength: 10 })}
-            className="border rounded p-2 w-full"
+            className="border rounded p-2 w-full h-10"
           />
+          <p className="text-sm text-gray-600">
+            <a
+              href="https://platform.openai.com/account/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              How to create an API key
+            </a>
+          </p>
           {form.formState.errors.key && (
             <p className="text-sm text-red-600">
               {form.formState.errors.key.type === 'required'
@@ -112,10 +123,10 @@ export default function KeySection({ label }: { label: string }) {
       ) : (
         <div className="flex gap-2">
           <input
-            type="text"
+            type="password"
             value={query.data ?? ''}
             disabled
-            className="border rounded p-2 w-full"
+            className="border rounded p-2 w-full h-10"
           />
           <button
             type="button"
