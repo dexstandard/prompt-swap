@@ -107,9 +107,9 @@ export default function PriceChart({
   }, [query.data, tokenA, tokenB]);
 
   return (
-    <div className="bg-white shadow-md border border-gray-200 rounded p-6 flex-1 min-w-0">
+    <div className="bg-white shadow-md border border-gray-200 rounded p-6 flex-1 min-w-0 flex flex-col">
       <h2 className="text-xl font-bold mb-4">Price History</h2>
-      <div className="h-[512px] relative">
+      <div className="flex-1 relative">
         <div ref={containerRef} className="absolute inset-0" />
         {query.isLoading && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-500">

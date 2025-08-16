@@ -30,29 +30,29 @@ export default function AgentTemplates() {
   }, []);
 
   return (
-    <div className="flex items-start gap-3 w-full">
-      <div className="flex-1 min-w-0 flex flex-col gap-3">
+    <div className="flex flex-col gap-3 w-full">
+      <div className="flex gap-3 items-stretch">
         <ErrorBoundary>
           <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
         </ErrorBoundary>
-        <ErrorBoundary>
-          <AgentTemplatesTable
-            onEdit={async (id) => {
-              if (!user) return;
-              const res = await api.get(`/agent-templates/${id}`, {
-                headers: { 'x-user-id': user.id },
-              });
-              setEditing(res.data);
-            }}
-          />
-        </ErrorBoundary>
+        <AgentTemplateForm
+          onTokensChange={handleTokensChange}
+          template={editing ?? undefined}
+          onSubmitSuccess={() => setEditing(null)}
+          onCancel={() => setEditing(null)}
+        />
       </div>
-      <AgentTemplateForm
-        onTokensChange={handleTokensChange}
-        template={editing ?? undefined}
-        onSubmitSuccess={() => setEditing(null)}
-        onCancel={() => setEditing(null)}
-      />
+      <ErrorBoundary>
+        <AgentTemplatesTable
+          onEdit={async (id) => {
+            if (!user) return;
+            const res = await api.get(`/agent-templates/${id}`, {
+              headers: { 'x-user-id': user.id },
+            });
+            setEditing(res.data);
+          }}
+        />
+      </ErrorBoundary>
     </div>
   );
 }
