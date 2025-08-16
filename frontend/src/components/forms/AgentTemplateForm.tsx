@@ -400,7 +400,7 @@ export default function AgentTemplateForm({
                         }`}
                         disabled={!user || isSubmitting}
                     >
-                        Save Agent Template
+                        Save Template
                     </button>
                 )}
             </form>
