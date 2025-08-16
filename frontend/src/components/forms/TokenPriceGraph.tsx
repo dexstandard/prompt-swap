@@ -1,15 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import api from '../../lib/axios';
-import { useUser } from '../../lib/user';
+import axios from 'axios';
 
 export default function TokenPriceGraph({ token }: { token: string }) {
-  const { user } = useUser();
   const { data, isError } = useQuery<{ time: number; close: number }[]>({
-    queryKey: ['price-history', user?.id, token],
-    enabled: !!user && token !== 'USDT',
+    queryKey: ['price-history', token],
+    enabled: token !== 'USDT',
     queryFn: async () => {
-      const res = await api.get(`/users/${user!.id}/binance-prices/${token}`);
-      return res.data.prices as { time: number; close: number }[];
+      const symbol = token.toUpperCase();
+      const res = await axios.get(
+        `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=1d&limit=30`
+      );
+      return (res.data as any[]).map((d) => ({ time: d[0], close: Number(d[4]) }));
     },
   });
 
