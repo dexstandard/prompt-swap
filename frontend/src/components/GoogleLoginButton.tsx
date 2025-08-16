@@ -26,7 +26,19 @@ export default function GoogleLoginButton() {
 
   if (user)
     return (
-      <div className="h-5 flex items-center text-sm">{user.email}</div>
+      <div className="h-5 flex items-center text-sm gap-2">
+        <span>{user.email}</span>
+        <button
+          onClick={() => {
+            const google = (window as any).google;
+            google?.accounts.id.disableAutoSelect?.();
+            setUser(null);
+          }}
+          className="text-xs text-blue-500 hover:underline"
+        >
+          Log off
+        </button>
+      </div>
     );
   return <div ref={btnRef} className="h-5 capitalize" />;
 }
