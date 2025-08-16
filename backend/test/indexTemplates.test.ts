@@ -71,6 +71,15 @@ describe('index template routes', () => {
     expect(res.json()).toMatchObject({ id, ...update });
 
     res = await app.inject({
+      method: 'PATCH',
+      url: `/api/index-templates/${id}/instructions`,
+      headers: { 'x-user-id': 'user1' },
+      payload: { userId: 'user1', agentInstructions: 'new prompt' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ id, agentInstructions: 'new prompt' });
+
+    res = await app.inject({
       method: 'DELETE',
       url: `/api/index-templates/${id}`,
       headers: { 'x-user-id': 'user1' },

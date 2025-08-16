@@ -132,6 +132,24 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
     return toApi(row);
   });
 
+  app.patch('/index-templates/:id/instructions', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
+    const id = (req.params as any).id;
+    const body = req.body as { userId: string; agentInstructions: string };
+    const existing = db
+      .prepare('SELECT user_id FROM index_templates WHERE id = ?')
+      .get(id) as { user_id: string } | undefined;
+    if (!existing) return reply.code(404).send({ error: 'not found' });
+    if (!userId || existing.user_id !== userId || body.userId !== userId)
+      return reply.code(403).send({ error: 'forbidden' });
+    db.prepare('UPDATE index_templates SET agent_instructions = ? WHERE id = ?')
+      .run(body.agentInstructions, id);
+    const row = db
+      .prepare('SELECT * FROM index_templates WHERE id = ?')
+      .get(id) as IndexTemplateRow;
+    return toApi(row);
+  });
+
   app.put('/index-templates/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
