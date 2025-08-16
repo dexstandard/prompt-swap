@@ -66,7 +66,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
   const buttonsDisabled = !form.formState.isValid;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 w-full max-w-md">
       {label && <h2 className="text-lg font-bold">{label}</h2>}
       {query.isLoading ? (
         <p>Loading...</p>
@@ -76,7 +76,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
             type="text"
             autoComplete="off"
             {...form.register('key', { required: true, minLength: 10 })}
-            className="border rounded p-2 w-full h-10"
+            className="border rounded px-2 py-1 w-full"
             style={{ WebkitTextSecurity: 'disc' }}
             data-lpignore="true"
             data-1p-ignore="true"
@@ -111,7 +111,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
               type="button"
               onClick={onSubmit}
               disabled={buttonsDisabled}
-              className={`bg-blue-600 text-white px-4 py-2 rounded ${
+              className={`bg-blue-600 text-white px-2 py-1 rounded ${
                 buttonsDisabled ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -124,7 +124,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
                   setEditing(false);
                   form.setValue('key', query.data ?? '');
                 }}
-                className="bg-gray-300 px-4 py-2 rounded"
+                className="bg-gray-300 px-2 py-1 rounded"
               >
                 Cancel
               </button>
@@ -137,7 +137,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
             type="text"
             value={query.data ?? ''}
             disabled
-            className="border rounded p-2 w-full h-10"
+            className="border rounded px-2 py-1 w-full"
             style={{ WebkitTextSecurity: 'disc' }}
             data-lpignore="true"
             data-1p-ignore="true"
@@ -148,14 +148,14 @@ export default function AiApiKeySection({ label }: { label: string }) {
               setEditing(true);
               form.setValue('key', '');
             }}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
+            className="bg-blue-600 text-white px-2 py-1 rounded"
           >
             Edit
           </button>
           <button
             type="button"
             onClick={() => delMut.mutate()}
-            className="bg-red-600 text-white px-4 py-2 rounded"
+            className="bg-red-600 text-white px-2 py-1 rounded"
           >
             Delete
           </button>
