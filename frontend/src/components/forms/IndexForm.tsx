@@ -3,6 +3,7 @@ import {useNavigate} from 'react-router-dom';
 import {Controller, useForm} from 'react-hook-form';
 import {z} from 'zod';
 import {zodResolver} from '@hookform/resolvers/zod';
+import {useQueryClient} from '@tanstack/react-query';
 import api from '../../lib/axios';
 import {useUser} from '../../lib/useUser';
 import {normalizeAllocations} from '../../lib/allocations';
@@ -62,33 +63,68 @@ const rebalanceOptions = [
     {value: '1w', label: '1 week'},
 ];
 
+const defaultValues: FormValues = {
+    tokenA: 'USDT',
+    tokenB: 'SOL',
+    targetAllocation: 20,
+    minTokenAAllocation: 0,
+    minTokenBAllocation: 30,
+    risk: 'low',
+    rebalance: '1h',
+    agentInstructions:
+        'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.',
+};
+
 export default function IndexForm({
                                       onTokensChange,
+                                      template,
+                                      onSubmitSuccess,
                                   }: {
     onTokensChange?: (tokenA: string, tokenB: string) => void;
+    template?: {
+        id: string;
+        tokenA: string;
+        tokenB: string;
+        targetAllocation: number;
+        minTokenAAllocation: number;
+        minTokenBAllocation: number;
+        risk: string;
+        rebalance: string;
+        agentInstructions: string;
+    };
+    onSubmitSuccess?: () => void;
 }) {
     const {user} = useUser();
+    const queryClient = useQueryClient();
     const {
         register,
         handleSubmit,
         watch,
         setValue,
         control,
+        reset,
         formState: {isSubmitting},
     } = useForm<FormValues>({
         resolver: zodResolver(schema),
-        defaultValues: {
-            tokenA: 'USDT',
-            tokenB: 'SOL',
-            targetAllocation: 20,
-            minTokenAAllocation: 0,
-            minTokenBAllocation: 30,
-            risk: 'low',
-            rebalance: '1h',
-            agentInstructions:
-                'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.',
-        },
+        defaultValues,
     });
+
+    useEffect(() => {
+        if (template) {
+            reset({
+                tokenA: template.tokenA,
+                tokenB: template.tokenB,
+                targetAllocation: template.targetAllocation,
+                minTokenAAllocation: template.minTokenAAllocation,
+                minTokenBAllocation: template.minTokenBAllocation,
+                risk: template.risk as any,
+                rebalance: template.rebalance as any,
+                agentInstructions: template.agentInstructions,
+            });
+        } else {
+            reset(defaultValues);
+        }
+    }, [template, reset]);
 
     const tokenA = watch('tokenA');
     const tokenB = watch('tokenB');
@@ -137,17 +173,34 @@ export default function IndexForm({
 
     const onSubmit = handleSubmit(async (values) => {
         if (!user) return;
-        const res = await api.post(
-            '/index-templates',
-            {
-                userId: user.id,
-                ...values,
-                tokenA: values.tokenA.toUpperCase(),
-                tokenB: values.tokenB.toUpperCase(),
-            },
-            {headers: {'x-user-id': user.id}}
-        );
-        navigate(`/index-templates/${res.data.id}`);
+        if (template) {
+            const res = await api.put(
+                `/index-templates/${template.id}`,
+                {
+                    userId: user.id,
+                    ...values,
+                    tokenA: values.tokenA.toUpperCase(),
+                    tokenB: values.tokenB.toUpperCase(),
+                },
+                {headers: {'x-user-id': user.id}}
+            );
+            queryClient.invalidateQueries({queryKey: ['index-templates']});
+            onSubmitSuccess?.();
+            navigate(`/index-templates/${res.data.id}`);
+        } else {
+            const res = await api.post(
+                '/index-templates',
+                {
+                    userId: user.id,
+                    ...values,
+                    tokenA: values.tokenA.toUpperCase(),
+                    tokenB: values.tokenB.toUpperCase(),
+                },
+                {headers: {'x-user-id': user.id}}
+            );
+            queryClient.invalidateQueries({queryKey: ['index-templates']});
+            navigate(`/index-templates/${res.data.id}`);
+        }
     });
 
     return (
@@ -156,7 +209,7 @@ export default function IndexForm({
                 onSubmit={onSubmit}
                 className="bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem]"
             >
-                <h2 className="text-xl font-bold">Create Index</h2>
+                <h2 className="text-xl font-bold">{template ? 'Edit Index' : 'Create Index'}</h2>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium mb-1" htmlFor="tokenA">
