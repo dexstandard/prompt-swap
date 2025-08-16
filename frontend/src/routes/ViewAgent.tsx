@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
+import TokenDisplay from '../components/TokenDisplay';
 
 interface Agent {
   id: string;
@@ -43,20 +44,25 @@ export default function ViewAgent() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Agent {data.id}</h1>
+      <h1 className="text-2xl font-bold mb-4">Agent</h1>
+      <p>
+        <strong>Agent ID:</strong> {data.id}
+      </p>
+      <p>
+        <strong>Model:</strong> {data.model}
+      </p>
+      <p>
+        <strong>Status:</strong> <AgentStatusLabel status={data.status} />
+      </p>
+      <p>
+        <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
+      </p>
       {template ? (
         <>
           <p>
-            <strong>Pair:</strong> {template.tokenA}/{template.tokenB}
-          </p>
-          <p>
-            <strong>Model:</strong> {data.model}
-          </p>
-          <p>
-            <strong>Status:</strong> <AgentStatusLabel status={data.status} />
-          </p>
-          <p>
-            <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
+            <strong>Pair:</strong>{' '}
+            <TokenDisplay token={template.tokenA} />/
+            <TokenDisplay token={template.tokenB} />
           </p>
           <p>
             <strong>Risk:</strong> {template.risk}

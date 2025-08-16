@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
+import TokenDisplay from '../components/TokenDisplay';
 
 interface Agent {
   id: string;
@@ -63,31 +64,32 @@ export default function Dashboard() {
           <table className="w-full mb-4">
             <thead>
               <tr>
-                <th className="text-left">Agent ID</th>
+                <th className="text-left">Created</th>
                 <th className="text-left">Pair</th>
                 <th className="text-left">Model</th>
                 <th className="text-left">Status</th>
-                <th className="text-left">Created</th>
               </tr>
             </thead>
             <tbody>
               {items.map((agent) => (
                 <tr key={agent.id}>
+                  <td>{new Date(agent.createdAt).toLocaleString()}</td>
                   <td>
                     <Link className="text-blue-600 underline" to={`/agents/${agent.id}`}>
-                      {agent.id}
+                      {agent.template ? (
+                        <>
+                          <TokenDisplay token={agent.template.tokenA} />/
+                          <TokenDisplay token={agent.template.tokenB} />
+                        </>
+                      ) : (
+                        '-'
+                      )}
                     </Link>
-                  </td>
-                  <td>
-                    {agent.template
-                      ? `${agent.template.tokenA}/${agent.template.tokenB}`
-                      : '-'}
                   </td>
                   <td>{agent.model}</td>
                   <td>
                     <AgentStatusLabel status={agent.status} />
                   </td>
-                  <td>{new Date(agent.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
