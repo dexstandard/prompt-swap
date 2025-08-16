@@ -12,7 +12,7 @@ interface Agent {
   model: string;
   status: 'active' | 'inactive';
   createdAt: number;
-  template: {
+  template?: {
     tokenA: string;
     tokenB: string;
     risk: string;
@@ -79,7 +79,9 @@ export default function Dashboard() {
                     </Link>
                   </td>
                   <td>
-                    {agent.template.tokenA}/{agent.template.tokenB}
+                    {agent.template
+                      ? `${agent.template.tokenA}/${agent.template.tokenB}`
+                      : '-'}
                   </td>
                   <td>{agent.model}</td>
                   <td>

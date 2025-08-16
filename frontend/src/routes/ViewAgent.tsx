@@ -11,7 +11,7 @@ interface Agent {
   model: string;
   status: 'active' | 'inactive';
   createdAt: number;
-  template: {
+  template?: {
     tokenA: string;
     tokenB: string;
     targetAllocation: number;
@@ -39,42 +39,48 @@ export default function ViewAgent() {
 
   if (!data) return <div className="p-4">Loading...</div>;
 
+  const template = data.template;
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Agent {data.id}</h1>
-      <p>
-        <strong>Pair:</strong> {data.template.tokenA}/{data.template.tokenB}
-      </p>
-      <p>
-        <strong>Model:</strong> {data.model}
-      </p>
-      <p>
-        <strong>Status:</strong> <AgentStatusLabel status={data.status} />
-      </p>
-      <p>
-        <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
-      </p>
-      <p>
-        <strong>Risk:</strong> {data.template.risk}
-      </p>
-      <p>
-        <strong>Rebalance:</strong> {data.template.rebalance}
-      </p>
-      <p>
-        <strong>Target Allocation:</strong> {data.template.targetAllocation}/
-        {100 - data.template.targetAllocation}
-      </p>
-      <p>
-        <strong>Minimum {data.template.tokenA} Allocation:</strong>{' '}
-        {data.template.minTokenAAllocation}%
-      </p>
-      <p>
-        <strong>Minimum {data.template.tokenB} Allocation:</strong>{' '}
-        {data.template.minTokenBAllocation}%
-      </p>
-      <p>
-        <strong>Instructions:</strong> {data.template.agentInstructions}
-      </p>
+      {template ? (
+        <>
+          <p>
+            <strong>Pair:</strong> {template.tokenA}/{template.tokenB}
+          </p>
+          <p>
+            <strong>Model:</strong> {data.model}
+          </p>
+          <p>
+            <strong>Status:</strong> <AgentStatusLabel status={data.status} />
+          </p>
+          <p>
+            <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
+          </p>
+          <p>
+            <strong>Risk:</strong> {template.risk}
+          </p>
+          <p>
+            <strong>Rebalance:</strong> {template.rebalance}
+          </p>
+          <p>
+            <strong>Target Allocation:</strong> {template.targetAllocation}/
+            {100 - template.targetAllocation}
+          </p>
+          <p>
+            <strong>Minimum {template.tokenA} Allocation:</strong> {template.minTokenAAllocation}%
+          </p>
+          <p>
+            <strong>Minimum {template.tokenB} Allocation:</strong> {template.minTokenBAllocation}%
+          </p>
+          <p>
+            <strong>Instructions:</strong> {template.agentInstructions}
+          </p>
+        </>
+      ) : (
+        <p>No template information available.</p>
+      )}
     </div>
   );
 }
