@@ -1,21 +1,17 @@
+import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import { createChart, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 
-type PricePoint = { time: number; close: number };
+type PricePoint = { time: number; open: number; high: number; low: number; close: number };
 
 function generateStablecoinData(): PricePoint[] {
   const now = Date.now();
-  return Array.from({ length: 30 }, (_, i) => ({
-    time: now - (29 - i) * 24 * 60 * 60 * 1000,
+  return Array.from({ length: 365 }, (_, i) => ({
+    time: now - (364 - i) * 24 * 60 * 60 * 1000,
+    open: 1,
+    high: 1,
+    low: 1,
     close: 1,
   }));
 }
@@ -23,9 +19,15 @@ function generateStablecoinData(): PricePoint[] {
 async function fetchHistory(token: string): Promise<PricePoint[]> {
   const symbol = token.toUpperCase();
   const res = await axios.get(
-    `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=1d&limit=30`
+    `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=1d&limit=365`
   );
-  return (res.data as any[]).map((d) => ({ time: d[0], close: Number(d[4]) }));
+  return (res.data as any[]).map((d) => ({
+    time: d[0],
+    open: Number(d[1]),
+    high: Number(d[2]),
+    low: Number(d[3]),
+    close: Number(d[4]),
+  }));
 }
 
 export default function TokenPriceGraph({
@@ -35,57 +37,87 @@ export default function TokenPriceGraph({
   tokenA: string;
   tokenB: string;
 }) {
-  const query = useQuery<{ time: number; [key: string]: number }[]>({
+  const containerRef = useRef<HTMLDivElement>(null);
+  const seriesARef = useRef<ISeriesApi<'Candlestick'>>();
+  const seriesBRef = useRef<ISeriesApi<'Candlestick'>>();
+
+  const query = useQuery<{ [key: string]: PricePoint[] }>({
     queryKey: ['price-history', tokenA, tokenB],
     queryFn: async () => {
       const dataA =
         tokenA === 'USDT' ? generateStablecoinData() : await fetchHistory(tokenA);
       const dataB =
         tokenB === 'USDT' ? generateStablecoinData() : await fetchHistory(tokenB);
-      const times = dataA.map((d) => d.time);
-      return times.map((time, i) => ({
-        time,
-        [tokenA]: dataA[i].close,
-        [tokenB]: dataB[i].close,
-      }));
+      return { [tokenA]: dataA, [tokenB]: dataB };
     },
   });
 
-  if (!query.data?.length || query.isError) return null;
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-  const data = query.data.map((d) => ({
-    time: new Date(d.time).toLocaleDateString(),
-    [tokenA]: d[tokenA],
-    [tokenB]: d[tokenB],
-  }));
+    const chart = createChart(containerRef.current, {
+      width: containerRef.current.clientWidth,
+      height: containerRef.current.clientHeight,
+      rightPriceScale: { visible: true },
+      leftPriceScale: { visible: true },
+      layout: { background: { color: 'transparent' }, textColor: 'black' },
+    });
+
+    const seriesA = chart.addCandlestickSeries({ priceScaleId: 'left' });
+    const seriesB = chart.addCandlestickSeries({ priceScaleId: 'right' });
+    seriesARef.current = seriesA;
+    seriesBRef.current = seriesB;
+
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      chart.resize(width, height);
+    });
+    ro.observe(containerRef.current);
+
+    return () => {
+      ro.disconnect();
+      chart.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!query.data || !seriesARef.current || !seriesBRef.current) return;
+
+    seriesARef.current.setData(
+      query.data[tokenA].map((d) => ({
+        time: (d.time / 1000) as UTCTimestamp,
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+      }))
+    );
+    seriesBRef.current.setData(
+      query.data[tokenB].map((d) => ({
+        time: (d.time / 1000) as UTCTimestamp,
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+      }))
+    );
+  }, [query.data, tokenA, tokenB]);
 
   return (
     <div className="bg-white shadow-md rounded p-6 w-full max-w-xl">
       <h2 className="text-xl font-bold mb-4">Price History</h2>
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-            <XAxis dataKey="time" />
-            <YAxis yAxisId="left" stroke="#8884d8" />
-            <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-            <Tooltip />
-            <Legend />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey={tokenA}
-              stroke="#8884d8"
-              dot={false}
-            />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey={tokenB}
-              stroke="#82ca9d"
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      <div className="h-72 relative">
+        <div ref={containerRef} className="absolute inset-0" />
+        {query.isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+            Loading...
+          </div>
+        )}
+        {query.isError && (
+          <div className="absolute inset-0 flex items-center justify-center text-red-500">
+            Failed to load price data
+          </div>
+        )}
       </div>
     </div>
   );
