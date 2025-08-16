@@ -65,7 +65,7 @@ export default function Dashboard() {
           <table className="w-full mb-4">
             <thead>
               <tr>
-                <th className="text-left">Pair</th>
+                <th className="text-left">Tokens</th>
                 <th className="text-left">Balance (USD)</th>
                 <th className="text-left">Model</th>
                 <th className="text-left">Status</th>
