@@ -67,7 +67,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
 
   return (
     <div className="space-y-2 w-full max-w-md">
-      {label && <h2 className="text-lg font-bold">{label}</h2>}
+      {label && <h2 className="text-md font-bold">{label}</h2>}
       {query.isLoading ? (
         <p>Loading...</p>
       ) : editing ? (
@@ -82,14 +82,6 @@ export default function AiApiKeySection({ label }: { label: string }) {
             data-1p-ignore="true"
           />
           <p className="text-sm text-gray-600 space-x-2">
-            <a
-              href="https://platform.openai.com/account/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline"
-            >
-              How to create an API key
-            </a>
             <a
               href="https://www.youtube.com/watch?v=WjVf80HUvYg"
               target="_blank"
