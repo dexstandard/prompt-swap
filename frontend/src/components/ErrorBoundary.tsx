@@ -23,7 +23,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="bg-white shadow-md rounded p-6 w-full max-w-xl">
           <h2 className="text-xl font-bold mb-4">Price History</h2>
-          <div className="h-[600px] flex items-center justify-center text-red-500">
+          <div className="h-[512px] flex items-center justify-center text-red-500">
             Failed to render chart
           </div>
         </div>

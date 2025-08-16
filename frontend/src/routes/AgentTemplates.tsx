@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useUser } from '../lib/useUser';
 import api from '../lib/axios';
 import AgentTemplateForm from '../components/forms/AgentTemplateForm';
-import TokenPriceGraph from '../components/forms/TokenPriceGraph';
+import PriceChart from '../components/forms/PriceChart';
 import AgentTemplatesTable from '../components/AgentTemplatesTable';
 import ErrorBoundary from '../components/ErrorBoundary';
 
@@ -33,7 +33,7 @@ export default function AgentTemplates() {
     <div className="flex items-start gap-3 w-full">
       <div className="flex-1 min-w-0 flex flex-col gap-3">
         <ErrorBoundary>
-          <TokenPriceGraph tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
+          <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
         </ErrorBoundary>
         <ErrorBoundary>
           <AgentTemplatesTable
