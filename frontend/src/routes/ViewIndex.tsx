@@ -139,7 +139,7 @@ export default function ViewIndex() {
             </div>
             {user && !hasOpenAIKey && (
                 <div className="mt-4">
-                    <KeySection label=""/>
+                    <KeySection label="OpenAI API Key"/>
                 </div>
             )}
             {user && hasOpenAIKey && modelsQuery.data && modelsQuery.data.length > 0 && (
@@ -161,7 +161,7 @@ export default function ViewIndex() {
             )}
             {user && !hasBinanceKey && (
                 <div className="mt-4">
-                    <BinanceKeySection label=""/>
+                    <BinanceKeySection label="Binance API Credentials"/>
                 </div>
             )}
 
