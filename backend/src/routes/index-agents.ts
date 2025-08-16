@@ -30,7 +30,7 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId) return reply.code(403).send({ error: 'forbidden' });
     const rows = db
-      .prepare<[], IndexAgentRow>('SELECT * FROM index_agents WHERE user_id = ?')
+      .prepare<[string], IndexAgentRow>('SELECT * FROM index_agents WHERE user_id = ?')
       .all(userId);
     return rows.map(toApi);
   });

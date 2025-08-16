@@ -38,7 +38,9 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId) return reply.code(403).send({ error: 'forbidden' });
     const rows = db
-      .prepare<[], IndexTemplateRow>('SELECT * FROM index_templates WHERE user_id = ?')
+      .prepare<[string], IndexTemplateRow>(
+        'SELECT * FROM index_templates WHERE user_id = ?'
+      )
       .all(userId);
     return rows.map(toApi);
   });
