@@ -1,4 +1,4 @@
-import {useState, useEffect, ReactNode} from 'react';
+import {ReactNode, useEffect, useState} from 'react';
 import {useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
@@ -133,6 +133,10 @@ export default function ViewIndex() {
             <p>
                 <strong>Rebalance Frequency:</strong> {data.rebalance}
             </p>
+            <div className="mt-4">
+                <h2 className="text-xl font-bold mb-2">Trading Agent Instructions</h2>
+                <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
+            </div>
             {user && !hasOpenAIKey && (
                 <div className="mt-4">
                     <KeySection label=""/>
@@ -160,10 +164,7 @@ export default function ViewIndex() {
                     <BinanceKeySection label=""/>
                 </div>
             )}
-            <div className="mt-4">
-                <h2 className="text-xl font-bold mb-2">Trading Agent Instructions</h2>
-                <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
-            </div>
+
             <div className="mt-4">
                 <h2 className="text-xl font-bold mb-2">Binance Balances</h2>
                 <p>
@@ -180,8 +181,8 @@ export default function ViewIndex() {
                 </p>
                 <WarningSign>
                     Trading agent will use all available balance
-                    for {data.tokenA.toUpperCase()} and {data.tokenB.toUpperCase()} in your Binance Spot wallet. Move excess
-                    funds to futures wallet before trading.
+                    for {data.tokenA.toUpperCase()} and {data.tokenB.toUpperCase()} in your Binance Spot wallet. Move
+                    excess funds to futures wallet before trading.
                     <br/>
                     <strong>DON&#39;T MOVE FUNDS ON SPOT WALLET DURING TRADING!</strong> It will confuse the trading
                     agent and may lead to unexpected results.
