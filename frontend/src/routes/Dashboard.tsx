@@ -6,6 +6,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
+import AgentBalance from '../components/AgentBalance';
 
 interface Agent {
   id: string;
@@ -13,7 +14,6 @@ interface Agent {
   userId: string;
   model: string;
   status: 'active' | 'inactive';
-  createdAt: number;
   template?: {
     tokenA: string;
     tokenB: string;
@@ -65,8 +65,8 @@ export default function Dashboard() {
           <table className="w-full mb-4">
             <thead>
               <tr>
-                <th className="text-left">Created</th>
                 <th className="text-left">Pair</th>
+                <th className="text-left">Balance (USD)</th>
                 <th className="text-left">Model</th>
                 <th className="text-left">Status</th>
                 <th></th>
@@ -75,13 +75,22 @@ export default function Dashboard() {
             <tbody>
               {items.map((agent) => (
                 <tr key={agent.id}>
-                  <td>{new Date(agent.createdAt).toLocaleString()}</td>
                   <td>
                     {agent.template ? (
                       <span className="inline-flex items-center gap-1">
                         <TokenDisplay token={agent.template.tokenA} /> /
                         <TokenDisplay token={agent.template.tokenB} />
                       </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td>
+                    {agent.template ? (
+                      <AgentBalance
+                        tokenA={agent.template.tokenA}
+                        tokenB={agent.template.tokenB}
+                      />
                     ) : (
                       '-'
                     )}
