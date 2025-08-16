@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
-import { useUser } from '../../lib/user';
+import { useUser } from '../../lib/useUser';
 
 export default function KeySection({ label }: { label: string }) {
   const { user } = useUser();

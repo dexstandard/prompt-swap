@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
-import { useUser } from '../lib/user';
+import { useUser } from '../lib/useUser';
 
 interface IndexTemplateItem {
   id: string;
@@ -21,7 +21,10 @@ export default function Dashboard() {
   const { data } = useQuery({
     queryKey: ['index-templates', page, onlyMine, user?.id],
     queryFn: async () => {
-      const params: any = { page, pageSize: 10 };
+      const params: { page: number; pageSize: number; userId?: string } = {
+        page,
+        pageSize: 10,
+      };
       if (onlyMine && user?.id) params.userId = user.id;
       const res = await api.get('/index-templates/paginated', { params });
       return res.data as {

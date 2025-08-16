@@ -6,7 +6,7 @@ import {zodResolver} from '@hookform/resolvers/zod';
 import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
-import {useUser} from '../../lib/user';
+import {useUser} from '../../lib/useUser';
 import {normalizeAllocations} from '../../lib/allocations';
 import KeySection from './KeySection';
 import BinanceKeySection from './BinanceKeySection';

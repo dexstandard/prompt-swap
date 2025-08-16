@@ -1,4 +1,4 @@
-import { useUser } from '../lib/user';
+import { useUser } from '../lib/useUser';
 import KeySection from '../components/forms/KeySection';
 import BinanceKeySection from '../components/forms/BinanceKeySection';
 

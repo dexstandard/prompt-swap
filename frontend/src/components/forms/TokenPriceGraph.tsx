@@ -17,12 +17,14 @@ function generateStablecoinData(): PricePoint[] {
   }));
 }
 
+type Kline = [number, string, string, string, string, ...unknown[]];
+
 async function fetchHistory(token: string): Promise<PricePoint[]> {
   const symbol = token.toUpperCase();
-  const res = await axios.get(
+  const res = await axios.get<Kline[]>(
     `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=1d&limit=365`
   );
-  return (res.data as any[]).map((d) => ({
+  return res.data.map((d) => ({
     time: d[0],
     open: Number(d[1]),
     high: Number(d[2]),

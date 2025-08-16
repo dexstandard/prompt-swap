@@ -5,7 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import queryClient from './lib/queryClient';
 import { setupMocks } from './lib/mocks';
-import { UserProvider } from './lib/user';
+import { UserProvider } from './lib/UserProvider';
 import './index.css';
 
 setupMocks();
