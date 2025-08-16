@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { LogOut } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/user';
 
@@ -34,9 +35,10 @@ export default function GoogleLoginButton() {
             google?.accounts.id.disableAutoSelect?.();
             setUser(null);
           }}
-          className="text-xs text-blue-500 hover:underline"
+          className="text-xs text-blue-500 hover:underline flex items-center gap-1"
         >
-          Log off
+          <LogOut className="w-4 h-4" />
+          <span>Log off</span>
         </button>
       </div>
     );
