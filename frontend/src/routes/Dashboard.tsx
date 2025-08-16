@@ -20,6 +20,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const res = await api.get('/index-agents/paginated', {
         params: { page, pageSize: 10, userId: user!.id },
+        headers: { 'x-user-id': user!.id },
       });
       return res.data as {
         items: IndexAgent[];
