@@ -51,12 +51,15 @@ export default function WalletBalances({ tokens }: Props) {
     <div>
       <h3 className="text-xl font-bold mb-2">Binance Balances</h3>
       {tokens.map((token, idx) => (
-        <p key={token}>
-          <TokenDisplay token={token} className="font-bold" />:{' '}
-          {balanceQueries[idx].isLoading
-            ? 'Loading...'
-            : (balanceQueries[idx].data?.free ?? 0) +
-              (balanceQueries[idx].data?.locked ?? 0)}
+        <p key={token} className="flex items-center gap-1">
+          <TokenDisplay token={token} className="font-bold" />
+          <span>:</span>
+          <span>
+            {balanceQueries[idx].isLoading
+              ? 'Loading...'
+              : (balanceQueries[idx].data?.free ?? 0) +
+                (balanceQueries[idx].data?.locked ?? 0)}
+          </span>
         </p>
       ))}
     </div>
