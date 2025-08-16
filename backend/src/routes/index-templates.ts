@@ -39,7 +39,7 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
     if (!userId)
       return reply.code(403).send({ error: 'forbidden' });
     const rows = db
-      .prepare<[], IndexTemplateRow>(
+      .prepare<[string], IndexTemplateRow>(
         'SELECT * FROM index_templates WHERE user_id = ?'
       )
       .all(userId);
