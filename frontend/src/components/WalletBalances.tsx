@@ -8,7 +8,7 @@ interface Props {
   tokens: string[];
 }
 
-export default function BinanceBalances({ tokens }: Props) {
+export default function WalletBalances({ tokens }: Props) {
   const { user } = useUser();
   const { data: binanceKey } = useQuery<string | null>({
     queryKey: ['binance-key', user?.id],
@@ -41,7 +41,7 @@ export default function BinanceBalances({ tokens }: Props) {
   if (!user || !binanceKey) {
     return (
       <div>
-        <h2 className="text-xl font-bold mb-2">Binance Balances</h2>
+        <h3 className="text-xl font-bold mb-2">Binance Balances</h3>
         <p>Binance Balances - Unavailable</p>
       </div>
     );
@@ -49,7 +49,7 @@ export default function BinanceBalances({ tokens }: Props) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-2">Binance Balances</h2>
+      <h3 className="text-xl font-bold mb-2">Binance Balances</h3>
       {tokens.map((token, idx) => (
         <p key={token}>
           <TokenDisplay token={token} className="font-bold" />:{' '}

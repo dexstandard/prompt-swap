@@ -7,7 +7,7 @@ import api from '../lib/axios';
 import {useUser} from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
-import BinanceBalances from '../components/BinanceBalances';
+import WalletBalances from '../components/WalletBalances';
 import TradingAgentInstructions from '../components/TradingAgentInstructions';
 
 interface IndexDetails {
@@ -155,7 +155,7 @@ export default function ViewIndex() {
             )}
 
             <div className="mt-4">
-                <BinanceBalances tokens={[data.tokenA, data.tokenB]} />
+                <WalletBalances tokens={[data.tokenA, data.tokenB]} />
                 <WarningSign>
                     Trading agent will use all available balance
                     for {data.tokenA.toUpperCase()} and {data.tokenB.toUpperCase()} in your Binance Spot wallet. Move
