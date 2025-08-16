@@ -38,6 +38,8 @@ async function isValidBinanceKey(key: string, secret: string) {
 export default async function apiKeyRoutes(app: FastifyInstance) {
   app.post('/users/:id/ai-key', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const { key } = req.body as { key: string };
     const row = db
       .prepare<[string], { ai_api_key_enc?: string }>(
@@ -55,6 +57,8 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
 
   app.get('/users/:id/ai-key', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
       .get(id) as { ai_api_key_enc?: string } | undefined;
@@ -66,6 +70,8 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
 
   app.put('/users/:id/ai-key', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const { key } = req.body as { key: string };
     const row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
@@ -81,6 +87,8 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
 
   app.delete('/users/:id/ai-key', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
       .get(id) as { ai_api_key_enc?: string } | undefined;
@@ -92,6 +100,8 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
 
   app.post('/users/:id/binance-key', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const { key, secret } = req.body as { key: string; secret: string };
     const row = db
       .prepare<
@@ -114,6 +124,8 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
 
   app.get('/users/:id/binance-key', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const row = db
       .prepare(
         'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
@@ -130,6 +142,8 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
 
   app.put('/users/:id/binance-key', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const { key, secret } = req.body as { key: string; secret: string };
     const row = db
       .prepare(
@@ -152,6 +166,8 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
 
   app.delete('/users/:id/binance-key', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const row = db
       .prepare(
         'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
