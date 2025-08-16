@@ -91,7 +91,7 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
   });
 
   const onSubmit = form.handleSubmit((data) => saveMut.mutate(data));
-  const buttonsDisabled = !form.formState.isValid;
+  const saveDisabled = !form.formState.isValid || saveMut.isPending;
 
   return (
     <div className="space-y-2 w-full max-w-md">
@@ -141,9 +141,9 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
             <button
               type="button"
               onClick={onSubmit}
-              disabled={buttonsDisabled}
+              disabled={saveDisabled}
               className={`bg-blue-600 text-white px-2 py-1 rounded ${
-                buttonsDisabled ? 'opacity-50 cursor-not-allowed' : ''
+                saveDisabled ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               {query.data ? 'Update' : 'Save'}
@@ -155,7 +155,10 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
                   setEditing(false);
                   form.reset(query.data ?? { key: '', secret: '' });
                 }}
-                className="bg-gray-300 px-2 py-1 rounded"
+                disabled={saveMut.isPending}
+                className={`bg-gray-300 px-2 py-1 rounded ${
+                  saveMut.isPending ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 Cancel
               </button>
@@ -180,14 +183,20 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
                 setEditing(true);
                 form.reset({ key: '', secret: '' });
               }}
-              className="bg-blue-600 text-white px-2 py-1 rounded"
+              disabled={delMut.isPending}
+              className={`bg-blue-600 text-white px-2 py-1 rounded ${
+                delMut.isPending ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
               Edit
             </button>
             <button
               type="button"
               onClick={() => delMut.mutate()}
-              className="bg-red-600 text-white px-2 py-1 rounded"
+              disabled={delMut.isPending}
+              className={`bg-red-600 text-white px-2 py-1 rounded ${
+                delMut.isPending ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
               Delete
             </button>
