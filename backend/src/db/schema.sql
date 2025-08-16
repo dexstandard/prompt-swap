@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS index_templates(
   min_b_allocation INTEGER,
   risk TEXT,
   rebalance TEXT,
-  model TEXT,
   agent_instructions TEXT
 );
 
@@ -34,6 +33,7 @@ CREATE TABLE IF NOT EXISTS index_agents(
   id TEXT PRIMARY KEY,
   template_id TEXT,
   user_id TEXT,
+  model TEXT,
   status TEXT,
   created_at INTEGER
 );

@@ -12,12 +12,14 @@ migrate();
 describe('index agent routes', () => {
   it('performs CRUD operations', async () => {
     const app = await buildServer();
-    db.prepare('INSERT INTO users (id) VALUES (?)').run('user1');
     db.prepare(
-      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run('tmpl1', 'user1', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'gpt-5', 'prompt');
+      'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
+    ).run('user1', 'a', 'b', 'c');
+    db.prepare(
+      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('tmpl1', 'user1', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
 
-    const payload = { templateId: 'tmpl1', userId: 'user1', status: 'inactive' };
+    const payload = { templateId: 'tmpl1', userId: 'user1', model: 'gpt-5', status: 'inactive' };
 
     let res = await app.inject({
       method: 'POST',
@@ -53,7 +55,7 @@ describe('index agent routes', () => {
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
 
-    const update = { templateId: 'tmpl1', userId: 'user1', status: 'active' };
+    const update = { templateId: 'tmpl1', userId: 'user1', model: 'o3', status: 'active' };
     res = await app.inject({
       method: 'PUT',
       url: `/api/index-agents/${id}`,
@@ -82,20 +84,24 @@ describe('index agent routes', () => {
 
   it('enforces user ownership', async () => {
     const app = await buildServer();
-    db.prepare('INSERT INTO users (id) VALUES (?)').run('user2');
-    db.prepare('INSERT INTO users (id) VALUES (?)').run('user3');
     db.prepare(
-      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run('tmpl2', 'user2', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'gpt-5', 'prompt');
+      'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
+    ).run('user2', 'a', 'b', 'c');
     db.prepare(
-      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run('tmpl3', 'user3', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'gpt-5', 'prompt');
+      'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
+    ).run('user3', 'a', 'b', 'c');
+    db.prepare(
+      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('tmpl2', 'user2', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
+    db.prepare(
+      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('tmpl3', 'user3', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
 
     let res = await app.inject({
       method: 'POST',
       url: '/api/index-agents',
       headers: { 'x-user-id': 'user2' },
-      payload: { templateId: 'tmpl2', userId: 'user2', status: 'inactive' },
+      payload: { templateId: 'tmpl2', userId: 'user2', model: 'm1', status: 'inactive' },
     });
     const id1 = res.json().id as string;
 
@@ -103,7 +109,7 @@ describe('index agent routes', () => {
       method: 'POST',
       url: '/api/index-agents',
       headers: { 'x-user-id': 'user3' },
-      payload: { templateId: 'tmpl3', userId: 'user3', status: 'inactive' },
+      payload: { templateId: 'tmpl3', userId: 'user3', model: 'm1', status: 'inactive' },
     });
     const id2 = res.json().id as string;
 
@@ -126,7 +132,7 @@ describe('index agent routes', () => {
       method: 'POST',
       url: '/api/index-agents',
       headers: { 'x-user-id': 'user2' },
-      payload: { templateId: 'tmpl2', userId: 'user3', status: 'inactive' },
+      payload: { templateId: 'tmpl2', userId: 'user3', model: 'm1', status: 'inactive' },
     });
     expect(res.statusCode).toBe(403);
 
