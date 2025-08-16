@@ -10,7 +10,6 @@ import { useUser } from '../../lib/user';
 import { normalizeAllocations } from '../../lib/allocations';
 import KeySection from './KeySection';
 import BinanceKeySection from './BinanceKeySection';
-import TokenPriceGraph from './TokenPriceGraph';
 
 const schema = z
   .object({
@@ -49,7 +48,11 @@ const tokens = [
   { value: 'USDT', label: 'USDT' },
 ];
 
-export default function IndexForm() {
+export default function IndexForm({
+  onTokensChange,
+}: {
+  onTokensChange?: (tokenA: string, tokenB: string) => void;
+}) {
   const { user } = useUser();
   const aiKeyQuery = useQuery<string | null>({
     queryKey: ['ai-key', user?.id],
@@ -123,6 +126,10 @@ export default function IndexForm() {
       setValue('model', modelsQuery.data[0]);
     }
   }, [modelsQuery.data, setValue]);
+
+  useEffect(() => {
+    onTokensChange?.(tokenA, tokenB);
+  }, [tokenA, tokenB, onTokensChange]);
 
   useEffect(() => {
     const currentTarget = Number.isFinite(targetAllocation) ? targetAllocation : 0;
@@ -208,10 +215,6 @@ export default function IndexForm() {
               ))}
           </select>
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <TokenPriceGraph token={tokenA} />
-        <TokenPriceGraph token={tokenB} />
       </div>
       <div>
         <label className="block text-sm font-medium mb-1" htmlFor="targetAllocation">
