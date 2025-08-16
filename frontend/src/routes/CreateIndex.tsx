@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import IndexForm from '../components/forms/IndexForm';
 import TokenPriceGraph from '../components/forms/TokenPriceGraph';
+import IndexTemplatesTable from '../components/IndexTemplatesTable';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function CreateIndex() {
@@ -14,9 +15,14 @@ export default function CreateIndex() {
 
   return (
     <div className="flex items-start gap-3 w-full">
-      <ErrorBoundary>
-        <TokenPriceGraph tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
-      </ErrorBoundary>
+      <div className="flex-1 min-w-0 flex flex-col gap-3">
+        <ErrorBoundary>
+          <TokenPriceGraph tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <IndexTemplatesTable />
+        </ErrorBoundary>
+      </div>
       <IndexForm onTokensChange={handleTokensChange} />
     </div>
   );

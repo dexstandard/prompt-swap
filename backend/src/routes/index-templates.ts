@@ -38,7 +38,7 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'forbidden' });
     const rows = db
       .prepare<[string], IndexTemplateRow>(
-        'SELECT * FROM index_templates WHERE user_id = ?'
+        'SELECT * FROM index_templates WHERE user_id = ? ORDER BY rowid DESC'
       )
       .all(userId);
     return rows.map(toApi);
@@ -59,7 +59,9 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       .prepare('SELECT COUNT(*) as count FROM index_templates WHERE user_id = ?')
       .get(userId) as { count: number };
     const rows = db
-      .prepare('SELECT * FROM index_templates WHERE user_id = ? LIMIT ? OFFSET ?')
+      .prepare(
+        'SELECT * FROM index_templates WHERE user_id = ? ORDER BY rowid DESC LIMIT ? OFFSET ?'
+      )
       .all(userId, ps, offset) as IndexTemplateRow[];
     return {
       items: rows.map(toApi),
