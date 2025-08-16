@@ -3,7 +3,6 @@ import {useQuery} from '@tanstack/react-query';
 import api from '../lib/axios';
 import {useUser} from '../lib/user';
 import React from "react";
-import PriceChart from '../components/PriceChart';
 
 interface IndexDetails {
     id: string;
@@ -70,9 +69,6 @@ export default function ViewIndex() {
             <h1 className="text-2xl font-bold mb-4">
                 {`${data.tokenA.toUpperCase()} ${data.targetAllocation} / ${data.tokenB.toUpperCase()} ${100 - data.targetAllocation}`}
             </h1>
-            <PriceChart
-                symbol={`${data.tokenA.toUpperCase()}${data.tokenB.toUpperCase()}`}
-            />
             <p>
                 <strong>User ID:</strong> {data.userId}
             </p>
