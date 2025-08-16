@@ -24,12 +24,14 @@ export default function ViewIndex() {
     const {id} = useParams();
     const {user} = useUser();
     const {data} = useQuery({
-        queryKey: ['index-template', id],
+        queryKey: ['index-template', id, user?.id],
         queryFn: async () => {
-            const res = await api.get(`/index-templates/${id}`);
+            const res = await api.get(`/index-templates/${id}`, {
+                headers: {'x-user-id': user!.id},
+            });
             return res.data as IndexDetails;
         },
-        enabled: !!id,
+        enabled: !!id && !!user,
     });
     const aiKeyQuery = useQuery<string | null>({
         queryKey: ['ai-key', user?.id],
@@ -196,11 +198,15 @@ export default function ViewIndex() {
                     disabled={!user || !hasOpenAIKey || !hasBinanceKey || !modelsQuery.data?.length}
                     onClick={async () => {
                         if (!user) return;
-                        await api.post('/index-agents', {
-                            templateId: id,
-                            userId: user.id,
-                            model,
-                        });
+                        await api.post(
+                            '/index-agents',
+                            {
+                                templateId: id,
+                                userId: user.id,
+                                model,
+                            },
+                            {headers: {'x-user-id': user.id}}
+                        );
                     }}
                 >
                     Start trading
