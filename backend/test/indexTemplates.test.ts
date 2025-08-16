@@ -193,4 +193,49 @@ describe('index template routes', () => {
 
     await app.close();
   });
+
+  it('returns templates in reverse order', async () => {
+    const app = await buildServer();
+    db.prepare('INSERT INTO users (id) VALUES (?)').run('user6');
+
+    const base = {
+      userId: 'user6',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      rebalance: '1h',
+      agentInstructions: 'prompt',
+    };
+
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/index-templates',
+      headers: { 'x-user-id': 'user6' },
+      payload: base,
+    });
+    const id1 = res.json().id as string;
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/index-templates',
+      headers: { 'x-user-id': 'user6' },
+      payload: base,
+    });
+    const id2 = res.json().id as string;
+
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/index-templates/paginated?page=1&pageSize=2',
+      headers: { 'x-user-id': 'user6' },
+    });
+    expect(res.statusCode).toBe(200);
+    const items = res.json().items as { id: string }[];
+    expect(items[0].id).toBe(id2);
+    expect(items[1].id).toBe(id1);
+
+    await app.close();
+  });
 });
