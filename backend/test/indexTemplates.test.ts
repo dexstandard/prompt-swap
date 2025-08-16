@@ -24,7 +24,7 @@ describe('index template routes', () => {
       risk: 'low',
       rebalance: '1h',
       model: 'gpt-5',
-      systemPrompt: 'prompt',
+      agentInstructions: 'prompt',
     };
 
     let res = await app.inject({ method: 'POST', url: '/api/index-templates', payload });
@@ -72,7 +72,7 @@ describe('index template routes', () => {
       risk: 'low',
       rebalance: '1h',
       model: 'gpt-5',
-      systemPrompt: 'prompt',
+      agentInstructions: 'prompt',
     };
 
     let res = await app.inject({

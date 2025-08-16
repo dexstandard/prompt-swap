@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS index_templates(
   risk TEXT,
   rebalance TEXT,
   model TEXT,
-  system_prompt TEXT
+  agent_instructions TEXT
 );
 
 CREATE TABLE IF NOT EXISTS index_instances(

@@ -30,9 +30,9 @@ const schema = z
     risk: z.enum(['low', 'medium', 'high']),
     rebalance: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
     model: z.string().min(1, 'Model is required'),
-    systemPrompt: z
+    agentInstructions: z
       .string()
-      .min(1, 'System prompt is required'),
+      .min(1, 'Trading agent instructions are required'),
   })
   .refine((data) => data.tokenA !== data.tokenB, {
     message: 'Tokens must be different',
@@ -95,7 +95,7 @@ export default function IndexForm() {
       risk: 'low',
       rebalance: '1h',
       model: '',
-      systemPrompt:
+      agentInstructions:
         'Manage this index using the defined parameters. Use news and real market data to catch lows and highs.',
     },
   });
@@ -326,13 +326,13 @@ export default function IndexForm() {
       <div>
         <label
           className="block text-sm font-medium mb-1"
-          htmlFor="systemPrompt"
+          htmlFor="agentInstructions"
         >
-          System Prompt
+          Trading Agent Instructions
         </label>
         <textarea
-          id="systemPrompt"
-          {...register('systemPrompt')}
+          id="agentInstructions"
+          {...register('agentInstructions')}
           className="w-full border rounded p-2 h-32"
         />
       </div>
