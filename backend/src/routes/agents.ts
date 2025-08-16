@@ -14,6 +14,14 @@ interface AgentRow {
   model: string;
   status: string;
   created_at: number;
+  token_a: string;
+  token_b: string;
+  target_allocation: number;
+  min_a_allocation: number;
+  min_b_allocation: number;
+  risk: string;
+  rebalance: string;
+  agent_instructions: string;
 }
 
 function toApi(row: AgentRow) {
@@ -24,7 +32,29 @@ function toApi(row: AgentRow) {
     model: row.model,
     status: row.status as AgentStatus,
     createdAt: row.created_at,
+    template: {
+      id: row.template_id,
+      tokenA: row.token_a,
+      tokenB: row.token_b,
+      targetAllocation: row.target_allocation,
+      minTokenAAllocation: row.min_a_allocation,
+      minTokenBAllocation: row.min_b_allocation,
+      risk: row.risk,
+      rebalance: row.rebalance,
+      agentInstructions: row.agent_instructions,
+    },
   };
+}
+
+const baseSelect =
+  'SELECT a.id, a.template_id, a.user_id, a.model, a.status, a.created_at, ' +
+  't.token_a, t.token_b, t.target_allocation, t.min_a_allocation, t.min_b_allocation, ' +
+  't.risk, t.rebalance, t.agent_instructions FROM agents a JOIN agent_templates t ON a.template_id = t.id';
+
+function getAgent(id: string) {
+  return db
+    .prepare<[string], AgentRow>(`${baseSelect} WHERE a.id = ?`)
+    .get(id) as AgentRow | undefined;
 }
 
 export default async function agentRoutes(app: FastifyInstance) {
@@ -33,9 +63,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     if (!userId)
       return reply.code(403).send({ error: 'forbidden' });
     const rows = db
-      .prepare<[string], AgentRow>(
-        'SELECT * FROM agents WHERE user_id = ?'
-      )
+      .prepare<[string], AgentRow>(`${baseSelect} WHERE a.user_id = ?`)
       .all(userId);
     return rows.map(toApi);
   });
@@ -55,7 +83,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       .prepare('SELECT COUNT(*) as count FROM agents WHERE user_id = ?')
       .get(userId) as { count: number };
     const rows = db
-      .prepare('SELECT * FROM agents WHERE user_id = ? LIMIT ? OFFSET ?')
+      .prepare(`${baseSelect} WHERE a.user_id = ? LIMIT ? OFFSET ?`)
       .all(userId, ps, offset) as AgentRow[];
     return {
       items: rows.map(toApi),
@@ -103,22 +131,14 @@ export default async function agentRoutes(app: FastifyInstance) {
     db.prepare(
       `INSERT INTO agents (id, template_id, user_id, model, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`
     ).run(id, body.templateId, body.userId, body.model, status, createdAt);
-    return {
-      id,
-      templateId: body.templateId,
-      userId: body.userId,
-      model: body.model,
-      status,
-      createdAt,
-    };
+    const row = getAgent(id)!;
+    return toApi(row);
   });
 
   app.get('/agents/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
-    const row = db
-      .prepare('SELECT * FROM agents WHERE id = ?')
-      .get(id) as AgentRow | undefined;
+    const row = getAgent(id);
     if (!row) return reply.code(404).send({ error: 'not found' });
     if (!userId || row.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
@@ -135,8 +155,8 @@ export default async function agentRoutes(app: FastifyInstance) {
       status: AgentStatus;
     };
     const existing = db
-      .prepare('SELECT * FROM agents WHERE id = ?')
-      .get(id) as AgentRow | undefined;
+      .prepare('SELECT user_id FROM agents WHERE id = ?')
+      .get(id) as { user_id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
@@ -148,9 +168,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     db.prepare(
       `UPDATE agents SET template_id = ?, user_id = ?, model = ?, status = ? WHERE id = ?`
     ).run(body.templateId, body.userId, body.model, body.status, id);
-    const row = db
-      .prepare('SELECT * FROM agents WHERE id = ?')
-      .get(id) as AgentRow;
+    const row = getAgent(id)!;
     return toApi(row);
   });
 

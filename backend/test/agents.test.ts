@@ -29,6 +29,7 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
+    expect(res.json().template).toMatchObject({ tokenA: 'BTC', tokenB: 'ETH' });
 
     res = await app.inject({
       method: 'GET',
@@ -36,7 +37,7 @@ describe('agent routes', () => {
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...payload });
+    expect(res.json()).toMatchObject({ id, ...payload, template: { tokenA: 'BTC', tokenB: 'ETH' } });
 
     res = await app.inject({
       method: 'GET',
@@ -45,6 +46,7 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toHaveLength(1);
+    expect(res.json()[0].template).toMatchObject({ tokenA: 'BTC', tokenB: 'ETH' });
 
     res = await app.inject({
       method: 'GET',
@@ -54,6 +56,7 @@ describe('agent routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
+    expect(res.json().items[0].template).toMatchObject({ tokenA: 'BTC', tokenB: 'ETH' });
 
     const update = { templateId: 'tmpl1', userId: 'user1', model: 'o3', status: 'active' };
     res = await app.inject({
@@ -63,7 +66,7 @@ describe('agent routes', () => {
       payload: update,
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...update });
+    expect(res.json()).toMatchObject({ id, ...update, template: { tokenA: 'BTC', tokenB: 'ETH' } });
 
     res = await app.inject({
       method: 'DELETE',

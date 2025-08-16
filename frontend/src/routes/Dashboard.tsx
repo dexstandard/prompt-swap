@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
@@ -8,8 +9,14 @@ interface Agent {
   id: string;
   templateId: string;
   userId: string;
+  model: string;
   status: 'active' | 'inactive';
   createdAt: number;
+  template: {
+    tokenA: string;
+    tokenB: string;
+    risk: string;
+  };
 }
 
 export default function Dashboard() {
@@ -57,7 +64,8 @@ export default function Dashboard() {
             <thead>
               <tr>
                 <th className="text-left">Agent ID</th>
-                <th className="text-left">Template</th>
+                <th className="text-left">Pair</th>
+                <th className="text-left">Model</th>
                 <th className="text-left">Status</th>
                 <th className="text-left">Created</th>
               </tr>
@@ -65,8 +73,15 @@ export default function Dashboard() {
             <tbody>
               {items.map((agent) => (
                 <tr key={agent.id}>
-                  <td>{agent.id}</td>
-                  <td>{agent.templateId}</td>
+                  <td>
+                    <Link className="text-blue-600 underline" to={`/agents/${agent.id}`}>
+                      {agent.id}
+                    </Link>
+                  </td>
+                  <td>
+                    {agent.template.tokenA}/{agent.template.tokenB}
+                  </td>
+                  <td>{agent.model}</td>
                   <td>
                     <AgentStatusLabel status={agent.status} />
                   </td>
