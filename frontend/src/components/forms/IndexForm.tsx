@@ -3,13 +3,9 @@ import {useNavigate} from 'react-router-dom';
 import {Controller, useForm} from 'react-hook-form';
 import {z} from 'zod';
 import {zodResolver} from '@hookform/resolvers/zod';
-import {useQuery} from '@tanstack/react-query';
-import axios from 'axios';
 import api from '../../lib/axios';
 import {useUser} from '../../lib/useUser';
 import {normalizeAllocations} from '../../lib/allocations';
-import KeySection from './KeySection';
-import BinanceKeySection from './BinanceKeySection';
 import TokenSelect from './TokenSelect';
 
 const schema = z
@@ -30,7 +26,6 @@ const schema = z
             .max(100, 'Must be 100 or less'),
         risk: z.enum(['low', 'medium', 'high']),
         rebalance: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
-        model: z.string().min(1, 'Model is required'),
         agentInstructions: z
             .string()
             .min(1, 'Trading agent instructions are required'),
@@ -55,34 +50,6 @@ export default function IndexForm({
     onTokensChange?: (tokenA: string, tokenB: string) => void;
 }) {
     const {user} = useUser();
-    const aiKeyQuery = useQuery<string | null>({
-        queryKey: ['ai-key', user?.id],
-        enabled: !!user,
-        queryFn: async () => {
-            try {
-                const res = await api.get(`/users/${user!.id}/ai-key`);
-                return res.data.key as string;
-            } catch (err) {
-                if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-                throw err;
-            }
-        },
-    });
-    const hasOpenAIKey = !!aiKeyQuery.data;
-    const binanceKeyQuery = useQuery<string | null>({
-        queryKey: ['binance-key', user?.id],
-        enabled: !!user,
-        queryFn: async () => {
-            try {
-                const res = await api.get(`/users/${user!.id}/binance-key`);
-                return res.data.key as string;
-            } catch (err) {
-                if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-                throw err;
-            }
-        },
-    });
-    const hasBinanceKey = !!binanceKeyQuery.data;
     const {
         register,
         handleSubmit,
@@ -100,7 +67,6 @@ export default function IndexForm({
             minTokenBAllocation: 30,
             risk: 'low',
             rebalance: '1h',
-            model: '',
             agentInstructions:
                 'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.',
         },
@@ -112,22 +78,7 @@ export default function IndexForm({
     const minTokenAAllocation = watch('minTokenAAllocation');
     const minTokenBAllocation = watch('minTokenBAllocation');
 
-    const modelsQuery = useQuery<string[]>({
-        queryKey: ['openai-models', user?.id],
-        enabled: !!user && hasOpenAIKey,
-        queryFn: async () => {
-            const res = await api.get(`/users/${user!.id}/models`);
-            return res.data.models as string[];
-        },
-    });
-
-    const hasModels = !!modelsQuery.data?.length;
-
-    useEffect(() => {
-        if (modelsQuery.data && modelsQuery.data.length) {
-            setValue('model', modelsQuery.data[0]);
-        }
-    }, [modelsQuery.data, setValue]);
+    
 
     useEffect(() => {
         onTokensChange?.(tokenA, tokenB);
@@ -168,12 +119,16 @@ export default function IndexForm({
 
     const onSubmit = handleSubmit(async (values) => {
         if (!user) return;
-        const res = await api.post('/index-templates', {
-            userId: user.id,
-            ...values,
-            tokenA: values.tokenA.toUpperCase(),
-            tokenB: values.tokenB.toUpperCase(),
-        });
+        const res = await api.post(
+            '/index-templates',
+            {
+                userId: user.id,
+                ...values,
+                tokenA: values.tokenA.toUpperCase(),
+                tokenB: values.tokenB.toUpperCase(),
+            },
+            {headers: {'x-user-id': user.id}}
+        );
         navigate(`/index-templates/${res.data.id}`);
     });
 
@@ -327,53 +282,19 @@ export default function IndexForm({
                         className="w-full border rounded p-2 h-32"
                     />
                 </div>
-                {modelsQuery.data && modelsQuery.data.length ? (
-                    <div>
-                        <label className="block text-sm font-medium mb-1" htmlFor="model">
-                            Model
-                        </label>
-                        <select
-                            id="model"
-                            {...register('model')}
-                            className="w-full border rounded p-2"
-                        >
-                            {modelsQuery.data.map((m) => (
-                                <option key={m} value={m}>
-                                    {m}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                ) : (
-                    <div>
-                        <label className="block text-sm font-medium mb-1">
-                            OpenAI key is required
-                        </label>
-                        {user && !hasOpenAIKey && <KeySection label=""/>}
-                    </div>
-                )}
-                {!hasBinanceKey && (
-                    <div>
-                        <label className="block text-sm font-medium mb-1">
-                            Binance keys are required
-                        </label>
-                        {user && <BinanceKeySection label=""/>}
-                    </div>
-                )}
-
                 {!user && (
                     <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
                 )}
                 <button
                     type="submit"
                     className={`w-full py-2 rounded ${
-                        user && hasModels && hasBinanceKey && !isSubmitting
+                        user && !isSubmitting
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
-                    disabled={!user || !hasModels || !hasBinanceKey || isSubmitting}
+                    disabled={!user || isSubmitting}
                 >
-                    Save
+                    Save template
                 </button>
             </form>
         </>

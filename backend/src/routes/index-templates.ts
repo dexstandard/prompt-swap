@@ -13,7 +13,6 @@ interface IndexTemplateRow {
   min_b_allocation: number;
   risk: string;
   rebalance: string;
-  model: string;
   agent_instructions: string;
 }
 
@@ -28,7 +27,6 @@ function toApi(row: IndexTemplateRow) {
     minTokenBAllocation: row.min_b_allocation,
     risk: row.risk,
     rebalance: row.rebalance,
-    model: row.model,
     agentInstructions: row.agent_instructions,
   };
 }
@@ -81,7 +79,6 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation: number;
       risk: string;
       rebalance: string;
-      model: string;
       agentInstructions: string;
     };
     const userId = req.headers['x-user-id'] as string | undefined;
@@ -96,8 +93,8 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, model, agent_instructions)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       body.userId,
@@ -108,7 +105,6 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation,
       body.risk,
       body.rebalance,
-      body.model,
       body.agentInstructions
     );
     return {
@@ -146,7 +142,6 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation: number;
       risk: string;
       rebalance: string;
-      model: string;
       agentInstructions: string;
     };
     const existing = db
@@ -163,7 +158,7 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `UPDATE index_templates SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, model = ?, agent_instructions = ? WHERE id = ?`
+      `UPDATE index_templates SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, agent_instructions = ? WHERE id = ?`
     ).run(
       body.userId,
       tokenA,
@@ -173,7 +168,6 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation,
       body.risk,
       body.rebalance,
-      body.model,
       body.agentInstructions,
       id
     );

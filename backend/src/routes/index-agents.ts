@@ -11,6 +11,7 @@ interface IndexAgentRow {
   id: string;
   template_id: string;
   user_id: string;
+  model: string;
   status: string;
   created_at: number;
 }
@@ -20,6 +21,7 @@ function toApi(row: IndexAgentRow) {
     id: row.id,
     templateId: row.template_id,
     userId: row.user_id,
+    model: row.model,
     status: row.status as IndexAgentStatus,
     createdAt: row.created_at,
   };
@@ -67,6 +69,7 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     const body = req.body as {
       templateId: string;
       userId: string;
+      model: string;
       status?: IndexAgentStatus;
     };
     const userId = req.headers['x-user-id'] as string | undefined;
@@ -77,16 +80,34 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
       .get(body.templateId) as { user_id: string } | undefined;
     if (!template || template.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    const userRow = db
+      .prepare(
+        'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
+      )
+      .get(userId) as
+      | {
+          ai_api_key_enc?: string;
+          binance_api_key_enc?: string;
+          binance_api_secret_enc?: string;
+        }
+      | undefined;
+    if (
+      !userRow?.ai_api_key_enc ||
+      !userRow.binance_api_key_enc ||
+      !userRow.binance_api_secret_enc
+    )
+      return reply.code(400).send({ error: 'missing api keys' });
     const id = randomUUID();
     const status = body.status ?? IndexAgentStatus.Inactive;
     const createdAt = Date.now();
     db.prepare(
-      `INSERT INTO index_agents (id, template_id, user_id, status, created_at) VALUES (?, ?, ?, ?, ?)`
-    ).run(id, body.templateId, body.userId, status, createdAt);
+      `INSERT INTO index_agents (id, template_id, user_id, model, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(id, body.templateId, body.userId, body.model, status, createdAt);
     return {
       id,
       templateId: body.templateId,
       userId: body.userId,
+      model: body.model,
       status,
       createdAt,
     };
@@ -110,6 +131,7 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     const body = req.body as {
       templateId: string;
       userId: string;
+      model: string;
       status: IndexAgentStatus;
     };
     const existing = db
@@ -124,8 +146,8 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     if (!template || template.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
     db.prepare(
-      `UPDATE index_agents SET template_id = ?, user_id = ?, status = ? WHERE id = ?`
-    ).run(body.templateId, body.userId, body.status, id);
+      `UPDATE index_agents SET template_id = ?, user_id = ?, model = ?, status = ? WHERE id = ?`
+    ).run(body.templateId, body.userId, body.model, body.status, id);
     const row = db
       .prepare('SELECT * FROM index_agents WHERE id = ?')
       .get(id) as IndexAgentRow;
