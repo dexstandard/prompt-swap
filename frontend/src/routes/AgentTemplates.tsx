@@ -51,6 +51,7 @@ export default function AgentTemplates() {
         onTokensChange={handleTokensChange}
         template={editing ?? undefined}
         onSubmitSuccess={() => setEditing(null)}
+        onCancel={() => setEditing(null)}
       />
     </div>
   );
