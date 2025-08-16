@@ -1,20 +1,28 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
+import TokenDisplay from './TokenDisplay';
 
 interface IndexTemplate {
   id: string;
   tokenA: string;
   tokenB: string;
+  targetAllocation: number;
   risk: string;
   rebalance: string;
 }
 
-export default function IndexTemplatesTable() {
+export default function IndexTemplatesTable({
+  onEdit,
+}: {
+  onEdit?: (id: string) => void;
+}) {
   const { user } = useUser();
   const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
 
   const { data } = useQuery({
     queryKey: ['index-templates', page, user?.id],
@@ -55,32 +63,74 @@ export default function IndexTemplatesTable() {
           <table className="w-full mb-4">
             <thead>
               <tr>
-                <th className="text-left">ID</th>
                 <th className="text-left">Tokens</th>
+                <th className="text-left">Target Allocation</th>
                 <th className="text-left">Risk</th>
                 <th className="text-left">Rebalance</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {items.map((t) => (
-                <tr key={t.id}>
-                  <td className="break-all">{t.id}</td>
-                  <td>
-                    {t.tokenA}/{t.tokenB}
-                  </td>
-                  <td>{t.risk}</td>
-                  <td>{t.rebalance}</td>
-                  <td>
-                    <Link
-                      to={`/index/${t.id}`}
-                      className="text-blue-600 underline"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {items.map((t) => {
+                const risk = t.risk
+                  ? t.risk.charAt(0).toUpperCase() + t.risk.slice(1)
+                  : '';
+                const rebalanceMap: Record<string, string> = {
+                  '1h': '1 hour',
+                  '3h': '3 hours',
+                  '5h': '5 hours',
+                  '12h': '12 hours',
+                  '24h': '1 day',
+                  '3d': '3 days',
+                  '1w': '1 week',
+                };
+                const rebalance = rebalanceMap[t.rebalance] || t.rebalance;
+                const handleDelete = async () => {
+                  if (!user) return;
+                  await api.delete(`/index-templates/${t.id}`, {
+                    headers: { 'x-user-id': user.id },
+                  });
+                  queryClient.invalidateQueries({ queryKey: ['index-templates'] });
+                };
+                return (
+                  <tr key={t.id}>
+                    <td>
+                      <span className="inline-flex items-center gap-1">
+                        <TokenDisplay token={t.tokenA} />/
+                        <TokenDisplay token={t.tokenB} />
+                      </span>
+                    </td>
+                    <td>{`${t.targetAllocation}/${100 - t.targetAllocation}`}</td>
+                    <td>{risk}</td>
+                    <td>{rebalance}</td>
+                    <td className="flex gap-2">
+                      <Link
+                        to={`/index-templates/${t.id}`}
+                        className="text-blue-600 underline inline-flex"
+                        aria-label="View template"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => onEdit?.(t.id)}
+                        aria-label="Edit template"
+                        className="text-blue-600 underline inline-flex"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        aria-label="Delete template"
+                        className="text-red-600 underline inline-flex"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {totalPages > 1 && (
