@@ -5,19 +5,26 @@ import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
 
-export default function BinanceKeySection({ label }: { label: string }) {
+interface Props {
+  exchange: string;
+  label: string;
+}
+
+export default function ExchangeApiKeySection({ exchange, label }: Props) {
   const { user } = useUser();
   const form = useForm<{ key: string; secret: string }>({
     defaultValues: { key: '', secret: '' },
     mode: 'onChange',
   });
   const id = user!.id;
+  const keyPath = `/users/${id}/${exchange}-key`;
+  const balancePath = `/users/${id}/${exchange}-balance`;
   const query = useQuery<{ key: string; secret: string } | null>({
-    queryKey: ['binance-key', id],
+    queryKey: [`${exchange}-key`, id],
     enabled: !!user,
     queryFn: async () => {
       try {
-        const res = await api.get(`/users/${id}/binance-key`);
+        const res = await api.get(keyPath);
         return res.data as { key: string; secret: string };
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 404) return null;
@@ -38,7 +45,7 @@ export default function BinanceKeySection({ label }: { label: string }) {
   const saveMut = useMutation({
     mutationFn: async (vals: { key: string; secret: string }) => {
       const method = query.data ? 'put' : 'post';
-      const res = await api[method](`/users/${id}/binance-key`, vals);
+      const res = await api[method](keyPath, vals);
       return res.data as { key: string; secret: string };
     },
     onSuccess: () => {
@@ -57,16 +64,16 @@ export default function BinanceKeySection({ label }: { label: string }) {
 
   const delMut = useMutation({
     mutationFn: async () => {
-      await api.delete(`/users/${id}/binance-key`);
+      await api.delete(keyPath);
     },
     onSuccess: () => query.refetch(),
   });
 
   const balanceQuery = useQuery<{ totalUsd: number }>({
-    queryKey: ['binance-balance', id],
+    queryKey: [`${exchange}-balance`, id],
     enabled: !!query.data && !editing,
     queryFn: async () => {
-      const res = await api.get(`/users/${id}/binance-balance`, {
+      const res = await api.get(balancePath, {
         headers: { 'x-user-id': id },
       });
       return res.data as { totalUsd: number };
@@ -164,3 +171,4 @@ export default function BinanceKeySection({ label }: { label: string }) {
     </div>
   );
 }
+

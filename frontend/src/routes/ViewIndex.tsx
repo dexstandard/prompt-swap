@@ -6,7 +6,7 @@ import axios from 'axios';
 import api from '../lib/axios';
 import {useUser} from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
-import BinanceKeySection from '../components/forms/BinanceKeySection';
+import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 
 interface IndexDetails {
     id: string;
@@ -162,7 +162,7 @@ export default function ViewIndex() {
             )}
             {user && !hasBinanceKey && (
                 <div className="mt-4">
-                    <BinanceKeySection label="Binance API Credentials"/>
+                    <ExchangeApiKeySection exchange="binance" label="Binance API Credentials"/>
                 </div>
             )}
 
