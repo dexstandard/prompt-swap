@@ -6,7 +6,7 @@ import GoogleLoginButton from '../GoogleLoginButton';
 function ApiStatus() {
   const { isSuccess } = useQuery({
     queryKey: ['api-status'],
-    queryFn: () => axios.get('/indexes'),
+    queryFn: () => axios.get('/index-templates'),
   });
 
   return <span className="text-sm">API: {isSuccess ? 'Online' : 'Offline'}</span>;

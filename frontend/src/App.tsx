@@ -12,7 +12,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/create-index" element={<CreateIndex />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/indexes/:id" element={<ViewIndex />} />
+        <Route path="/index-templates/:id" element={<ViewIndex />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

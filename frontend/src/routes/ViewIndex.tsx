@@ -15,17 +15,16 @@ interface IndexDetails {
     risk: string;
     rebalance: string;
     model: string;
-    tvl: number;
-    systemPrompt: string;
+    agentInstructions: string;
 }
 
 export default function ViewIndex() {
     const {id} = useParams();
     const {user} = useUser();
     const {data} = useQuery({
-        queryKey: ['index', id],
+        queryKey: ['index-template', id],
         queryFn: async () => {
-            const res = await api.get(`/indexes/${id}`);
+            const res = await api.get(`/index-templates/${id}`);
             return res.data as IndexDetails;
         },
         enabled: !!id,
@@ -93,7 +92,7 @@ export default function ViewIndex() {
             </p>
             <div className="mt-4">
                 <h2 className="text-xl font-bold mb-2">Trading Agent Instructions</h2>
-                <pre className="whitespace-pre-wrap">{data.systemPrompt}</pre>
+                <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
             </div>
             <div className="mt-4">
                 <h2 className="text-xl font-bold mb-2">Binance Balances</h2>
