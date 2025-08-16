@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { createChart, UTCTimestamp } from 'lightweight-charts';
-import type { ISeriesApi } from 'lightweight-charts';
+import { createChart } from 'lightweight-charts';
+import type { ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 
 type PricePoint = { time: number; open: number; high: number; low: number; close: number };
 
