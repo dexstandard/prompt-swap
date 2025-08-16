@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Eye } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
+import TokenDisplay from './TokenDisplay';
 
 interface IndexTemplate {
   id: string;
@@ -63,24 +65,37 @@ export default function IndexTemplatesTable() {
               </tr>
             </thead>
             <tbody>
-              {items.map((t) => (
-                <tr key={t.id}>
-                  <td className="break-all">{t.id}</td>
-                  <td>
-                    {t.tokenA}/{t.tokenB}
-                  </td>
-                  <td>{t.risk}</td>
-                  <td>{t.rebalance}</td>
-                  <td>
-                    <Link
-                      to={`/index/${t.id}`}
-                      className="text-blue-600 underline"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {items.map((t) => {
+                const truncatedId =
+                  t.id.length > 8 ? `${t.id.slice(0, 8)}…` : t.id;
+                const risk = t.risk
+                  ? t.risk.charAt(0).toUpperCase() + t.risk.slice(1)
+                  : '';
+                return (
+                  <tr key={t.id}>
+                    <td className="font-mono" title={t.id}>
+                      {truncatedId}
+                    </td>
+                    <td>
+                      <span className="inline-flex items-center gap-1">
+                        <TokenDisplay token={t.tokenA} />/
+                        <TokenDisplay token={t.tokenB} />
+                      </span>
+                    </td>
+                    <td>{risk}</td>
+                    <td>{t.rebalance}</td>
+                    <td>
+                      <Link
+                        to={`/index-templates/${t.id}`}
+                        className="text-blue-600 underline inline-flex"
+                        aria-label="View template"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {totalPages > 1 && (
