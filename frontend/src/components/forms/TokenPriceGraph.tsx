@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { createChart, CandlestickSeries } from 'lightweight-charts';
+import { createChart, LineSeries } from 'lightweight-charts';
 import type { ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 
 type PricePoint = { time: number; open: number; high: number; low: number; close: number };
@@ -39,8 +39,8 @@ export default function TokenPriceGraph({
   tokenB: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const seriesARef = useRef<ISeriesApi<'Candlestick'>>();
-  const seriesBRef = useRef<ISeriesApi<'Candlestick'>>();
+  const seriesARef = useRef<ISeriesApi<'Line'>>();
+  const seriesBRef = useRef<ISeriesApi<'Line'>>();
 
   const query = useQuery<{ [key: string]: PricePoint[] }>({
     queryKey: ['price-history', tokenA, tokenB],
@@ -64,8 +64,14 @@ export default function TokenPriceGraph({
       layout: { background: { color: 'transparent' }, textColor: 'black' },
     });
 
-    const seriesA = chart.addSeries(CandlestickSeries, { priceScaleId: 'left' });
-    const seriesB = chart.addSeries(CandlestickSeries, { priceScaleId: 'right' });
+    const seriesA = chart.addSeries(LineSeries, {
+      priceScaleId: 'left',
+      color: '#2962FF',
+    });
+    const seriesB = chart.addSeries(LineSeries, {
+      priceScaleId: 'right',
+      color: '#D32F2F',
+    });
     seriesARef.current = seriesA;
     seriesBRef.current = seriesB;
 
@@ -87,25 +93,19 @@ export default function TokenPriceGraph({
     seriesARef.current.setData(
       query.data[tokenA].map((d) => ({
         time: (d.time / 1000) as UTCTimestamp,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
+        value: d.close,
       }))
     );
     seriesBRef.current.setData(
       query.data[tokenB].map((d) => ({
         time: (d.time / 1000) as UTCTimestamp,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
+        value: d.close,
       }))
     );
   }, [query.data, tokenA, tokenB]);
 
   return (
-    <div className="bg-white shadow-md rounded p-6 w-full max-w-xl">
+    <div className="bg-white shadow-md rounded p-6 flex-1 min-w-0">
       <h2 className="text-xl font-bold mb-4">Price History</h2>
       <div className="h-72 relative">
         <div ref={containerRef} className="absolute inset-0" />
