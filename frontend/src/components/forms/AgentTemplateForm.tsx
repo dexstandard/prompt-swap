@@ -77,6 +77,7 @@ export default function AgentTemplateForm({
                                       onTokensChange,
                                       template,
                                       onSubmitSuccess,
+                                      onCancel,
                                   }: {
     onTokensChange?: (tokenA: string, tokenB: string) => void;
     template?: {
@@ -91,6 +92,7 @@ export default function AgentTemplateForm({
         agentInstructions: string;
     };
     onSubmitSuccess?: () => void;
+    onCancel?: () => void;
 }) {
     const {user} = useUser();
     const queryClient = useQueryClient();
@@ -171,7 +173,7 @@ export default function AgentTemplateForm({
     const onSubmit = handleSubmit(async (values) => {
         if (!user) return;
         if (template) {
-            const res = await api.put(
+            await api.put(
                 `/agent-templates/${template.id}`,
                 {
                     userId: user.id,
@@ -184,7 +186,6 @@ export default function AgentTemplateForm({
             );
             queryClient.invalidateQueries({queryKey: ['agent-templates']});
             onSubmitSuccess?.();
-            navigate(`/agent-templates/${res.data.id}`);
         } else {
             const res = await api.post(
                 '/agent-templates',
@@ -368,17 +369,40 @@ export default function AgentTemplateForm({
                 {!user && (
                     <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
                 )}
-                <button
-                    type="submit"
-                    className={`w-full py-2 rounded ${
-                        user && !isSubmitting
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                    disabled={!user || isSubmitting}
-                >
-                    Save Agent Template
-                </button>
+                {template ? (
+                    <div className="flex gap-2">
+                        <button
+                            type="submit"
+                            className={`flex-1 py-2 rounded ${
+                                user && !isSubmitting
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                            disabled={!user || isSubmitting}
+                        >
+                            Update
+                        </button>
+                        <button
+                            type="button"
+                            className="flex-1 py-2 rounded border border-gray-300"
+                            onClick={onCancel}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        type="submit"
+                        className={`w-full py-2 rounded ${
+                            user && !isSubmitting
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        disabled={!user || isSubmitting}
+                    >
+                        Save Agent Template
+                    </button>
+                )}
             </form>
         </>
     );
