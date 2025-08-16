@@ -27,35 +27,65 @@ describe('index template routes', () => {
       agentInstructions: 'prompt',
     };
 
-    let res = await app.inject({ method: 'POST', url: '/api/index-templates', payload });
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/index-templates',
+      payload,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
 
-    res = await app.inject({ method: 'GET', url: `/api/index-templates/${id}` });
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/index-templates/${id}`,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ id, ...payload });
 
     res = await app.inject({ method: 'GET', url: '/api/index-templates' });
+    expect(res.statusCode).toBe(403);
+
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/index-templates',
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toHaveLength(1);
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-templates/paginated?page=1&pageSize=10&userId=user1',
+      url: '/api/index-templates/paginated?page=1&pageSize=10',
+      headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
 
     const update = { ...payload, targetAllocation: 70, risk: 'medium', model: 'o3' };
-    res = await app.inject({ method: 'PUT', url: `/api/index-templates/${id}`, payload: update });
+    res = await app.inject({
+      method: 'PUT',
+      url: `/api/index-templates/${id}`,
+      payload: update,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ id, ...update });
 
-    res = await app.inject({ method: 'DELETE', url: `/api/index-templates/${id}` });
+    res = await app.inject({
+      method: 'DELETE',
+      url: `/api/index-templates/${id}`,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
 
-    res = await app.inject({ method: 'GET', url: `/api/index-templates/${id}` });
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/index-templates/${id}`,
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(404);
 
     await app.close();
@@ -78,28 +108,52 @@ describe('index template routes', () => {
     let res = await app.inject({
       method: 'POST',
       url: '/api/index-templates',
-      payload: { ...base, targetAllocation: 50, minTokenAAllocation: 80, minTokenBAllocation: 30 },
+      payload: {
+        ...base,
+        targetAllocation: 50,
+        minTokenAAllocation: 80,
+        minTokenBAllocation: 30,
+      },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.json()).toMatchObject({ targetAllocation: 70, minTokenAAllocation: 70, minTokenBAllocation: 30 });
 
     res = await app.inject({
       method: 'POST',
       url: '/api/index-templates',
-      payload: { ...base, targetAllocation: 50, minTokenAAllocation: 20, minTokenBAllocation: 90 },
+      payload: {
+        ...base,
+        targetAllocation: 50,
+        minTokenAAllocation: 20,
+        minTokenBAllocation: 90,
+      },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.json()).toMatchObject({ targetAllocation: 20, minTokenAAllocation: 20, minTokenBAllocation: 80 });
 
     res = await app.inject({
       method: 'POST',
       url: '/api/index-templates',
-      payload: { ...base, targetAllocation: 5, minTokenAAllocation: 10, minTokenBAllocation: 10 },
+      payload: {
+        ...base,
+        targetAllocation: 5,
+        minTokenAAllocation: 10,
+        minTokenBAllocation: 10,
+      },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.json()).toMatchObject({ targetAllocation: 10, minTokenAAllocation: 10, minTokenBAllocation: 10 });
 
     res = await app.inject({
       method: 'POST',
       url: '/api/index-templates',
-      payload: { ...base, targetAllocation: 95, minTokenAAllocation: 10, minTokenBAllocation: 10 },
+      payload: {
+        ...base,
+        targetAllocation: 95,
+        minTokenAAllocation: 10,
+        minTokenBAllocation: 10,
+      },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.json()).toMatchObject({ targetAllocation: 90, minTokenAAllocation: 10, minTokenBAllocation: 10 });
 

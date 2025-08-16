@@ -26,6 +26,7 @@ describe('AI API key routes', () => {
       method: 'POST',
       url: '/api/users/user1/ai-key',
       payload: { key: 'bad' },
+      headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
@@ -39,6 +40,7 @@ describe('AI API key routes', () => {
       method: 'POST',
       url: '/api/users/user1/ai-key',
       payload: { key: key1 },
+      headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ key: 'aike...7890' });
@@ -48,6 +50,13 @@ describe('AI API key routes', () => {
     expect(row.ai_api_key_enc).not.toBe(key1);
 
     res = await app.inject({ method: 'GET', url: '/api/users/user1/ai-key' });
+    expect(res.statusCode).toBe(403);
+
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/users/user1/ai-key',
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ key: 'aike...7890' });
 
@@ -55,6 +64,7 @@ describe('AI API key routes', () => {
       method: 'POST',
       url: '/api/users/user1/ai-key',
       payload: { key: 'dup' },
+      headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(400);
 
@@ -63,10 +73,15 @@ describe('AI API key routes', () => {
       method: 'PUT',
       url: '/api/users/user1/ai-key',
       payload: { key: 'bad2' },
+      headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
-    res = await app.inject({ method: 'GET', url: '/api/users/user1/ai-key' });
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/users/user1/ai-key',
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.json()).toMatchObject({ key: 'aike...7890' });
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
@@ -74,14 +89,23 @@ describe('AI API key routes', () => {
       method: 'PUT',
       url: '/api/users/user1/ai-key',
       payload: { key: key2 },
+      headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ key: 'aike...ghij' });
 
-    res = await app.inject({ method: 'DELETE', url: '/api/users/user1/ai-key' });
+    res = await app.inject({
+      method: 'DELETE',
+      url: '/api/users/user1/ai-key',
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(200);
 
-    res = await app.inject({ method: 'GET', url: '/api/users/user1/ai-key' });
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/users/user1/ai-key',
+      headers: { 'x-user-id': 'user1' },
+    });
     expect(res.statusCode).toBe(404);
 
     await app.close();
@@ -108,6 +132,7 @@ describe('Binance API key routes', () => {
       method: 'POST',
       url: '/api/users/user2/binance-key',
       payload: { key: 'bad', secret: 'bad' },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
@@ -124,6 +149,7 @@ describe('Binance API key routes', () => {
       method: 'POST',
       url: '/api/users/user2/binance-key',
       payload: { key: key1, secret: secret1 },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
@@ -139,6 +165,12 @@ describe('Binance API key routes', () => {
     expect(row.binance_api_secret_enc).not.toBe(secret1);
 
     res = await app.inject({ method: 'GET', url: '/api/users/user2/binance-key' });
+    expect(res.statusCode).toBe(403);
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/users/user2/binance-key',
+      headers: { 'x-user-id': 'user2' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
       key: 'bkey...7890',
@@ -149,6 +181,7 @@ describe('Binance API key routes', () => {
       method: 'POST',
       url: '/api/users/user2/binance-key',
       payload: { key: 'dup', secret: 'dup' },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.statusCode).toBe(400);
 
@@ -157,10 +190,15 @@ describe('Binance API key routes', () => {
       method: 'PUT',
       url: '/api/users/user2/binance-key',
       payload: { key: 'bad2', secret: 'bad2' },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
-    res = await app.inject({ method: 'GET', url: '/api/users/user2/binance-key' });
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/users/user2/binance-key',
+      headers: { 'x-user-id': 'user2' },
+    });
     expect(res.json()).toMatchObject({
       key: 'bkey...7890',
       secret: 'bsec...7890',
@@ -171,6 +209,7 @@ describe('Binance API key routes', () => {
       method: 'PUT',
       url: '/api/users/user2/binance-key',
       payload: { key: key2, secret: secret2 },
+      headers: { 'x-user-id': 'user2' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
@@ -178,10 +217,18 @@ describe('Binance API key routes', () => {
       secret: 'bsec...ghij',
     });
 
-    res = await app.inject({ method: 'DELETE', url: '/api/users/user2/binance-key' });
+    res = await app.inject({
+      method: 'DELETE',
+      url: '/api/users/user2/binance-key',
+      headers: { 'x-user-id': 'user2' },
+    });
     expect(res.statusCode).toBe(200);
 
-    res = await app.inject({ method: 'GET', url: '/api/users/user2/binance-key' });
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/users/user2/binance-key',
+      headers: { 'x-user-id': 'user2' },
+    });
     expect(res.statusCode).toBe(404);
 
     await app.close();

@@ -6,6 +6,8 @@ import { decrypt } from '../util/crypto.js';
 export default async function modelsRoutes(app: FastifyInstance) {
   app.get('/users/:id/models', async (req, reply) => {
     const id = (req.params as any).id;
+    const userId = req.headers['x-user-id'] as string | undefined;
+    if (!userId || userId !== id) return reply.code(403).send({ error: 'forbidden' });
     const row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
       .get(id) as { ai_api_key_enc?: string } | undefined;

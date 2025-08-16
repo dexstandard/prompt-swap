@@ -30,16 +30,17 @@ CREATE TABLE IF NOT EXISTS index_templates(
   agent_instructions TEXT
 );
 
-CREATE TABLE IF NOT EXISTS index_instances(
+CREATE TABLE IF NOT EXISTS index_agents(
   id TEXT PRIMARY KEY,
   template_id TEXT,
   user_id TEXT,
+  status TEXT,
   created_at INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS index_exec_log(
   id TEXT PRIMARY KEY,
-  instance_id TEXT,
+  agent_id TEXT,
   log TEXT,
   created_at INTEGER
 );
