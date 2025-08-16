@@ -2,12 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 
-export enum IndexAgentStatus {
+export enum AgentStatus {
   Active = 'active',
   Inactive = 'inactive',
 }
 
-interface IndexAgentRow {
+interface AgentRow {
   id: string;
   template_id: string;
   user_id: string;
@@ -16,31 +16,31 @@ interface IndexAgentRow {
   created_at: number;
 }
 
-function toApi(row: IndexAgentRow) {
+function toApi(row: AgentRow) {
   return {
     id: row.id,
     templateId: row.template_id,
     userId: row.user_id,
     model: row.model,
-    status: row.status as IndexAgentStatus,
+    status: row.status as AgentStatus,
     createdAt: row.created_at,
   };
 }
 
-export default async function indexAgentRoutes(app: FastifyInstance) {
-  app.get('/index-agents', async (req, reply) => {
+export default async function agentRoutes(app: FastifyInstance) {
+  app.get('/agents', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId)
       return reply.code(403).send({ error: 'forbidden' });
     const rows = db
-      .prepare<[string], IndexAgentRow>(
-        'SELECT * FROM index_agents WHERE user_id = ?'
+      .prepare<[string], AgentRow>(
+        'SELECT * FROM agents WHERE user_id = ?'
       )
       .all(userId);
     return rows.map(toApi);
   });
 
-  app.get('/index-agents/paginated', async (req, reply) => {
+  app.get('/agents/paginated', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId)
       return reply.code(403).send({ error: 'forbidden' });
@@ -52,11 +52,11 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     const ps = Math.max(parseInt(pageSize, 10), 1);
     const offset = (p - 1) * ps;
     const totalRow = db
-      .prepare('SELECT COUNT(*) as count FROM index_agents WHERE user_id = ?')
+      .prepare('SELECT COUNT(*) as count FROM agents WHERE user_id = ?')
       .get(userId) as { count: number };
     const rows = db
-      .prepare('SELECT * FROM index_agents WHERE user_id = ? LIMIT ? OFFSET ?')
-      .all(userId, ps, offset) as IndexAgentRow[];
+      .prepare('SELECT * FROM agents WHERE user_id = ? LIMIT ? OFFSET ?')
+      .all(userId, ps, offset) as AgentRow[];
     return {
       items: rows.map(toApi),
       total: totalRow.count,
@@ -65,18 +65,18 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post('/index-agents', async (req, reply) => {
+  app.post('/agents', async (req, reply) => {
     const body = req.body as {
       templateId: string;
       userId: string;
       model: string;
-      status?: IndexAgentStatus;
+      status?: AgentStatus;
     };
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
     const template = db
-      .prepare('SELECT user_id FROM index_templates WHERE id = ?')
+      .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(body.templateId) as { user_id: string } | undefined;
     if (!template || template.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
@@ -98,10 +98,10 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     )
       return reply.code(400).send({ error: 'missing api keys' });
     const id = randomUUID();
-    const status = body.status ?? IndexAgentStatus.Inactive;
+    const status = body.status ?? AgentStatus.Inactive;
     const createdAt = Date.now();
     db.prepare(
-      `INSERT INTO index_agents (id, template_id, user_id, model, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agents (id, template_id, user_id, model, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`
     ).run(id, body.templateId, body.userId, body.model, status, createdAt);
     return {
       id,
@@ -113,57 +113,57 @@ export default async function indexAgentRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/index-agents/:id', async (req, reply) => {
+  app.get('/agents/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const row = db
-      .prepare('SELECT * FROM index_agents WHERE id = ?')
-      .get(id) as IndexAgentRow | undefined;
+      .prepare('SELECT * FROM agents WHERE id = ?')
+      .get(id) as AgentRow | undefined;
     if (!row) return reply.code(404).send({ error: 'not found' });
     if (!userId || row.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
     return toApi(row);
   });
 
-  app.put('/index-agents/:id', async (req, reply) => {
+  app.put('/agents/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const body = req.body as {
       templateId: string;
       userId: string;
       model: string;
-      status: IndexAgentStatus;
+      status: AgentStatus;
     };
     const existing = db
-      .prepare('SELECT * FROM index_agents WHERE id = ?')
-      .get(id) as IndexAgentRow | undefined;
+      .prepare('SELECT * FROM agents WHERE id = ?')
+      .get(id) as AgentRow | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
     const template = db
-      .prepare('SELECT user_id FROM index_templates WHERE id = ?')
+      .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(body.templateId) as { user_id: string } | undefined;
     if (!template || template.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
     db.prepare(
-      `UPDATE index_agents SET template_id = ?, user_id = ?, model = ?, status = ? WHERE id = ?`
+      `UPDATE agents SET template_id = ?, user_id = ?, model = ?, status = ? WHERE id = ?`
     ).run(body.templateId, body.userId, body.model, body.status, id);
     const row = db
-      .prepare('SELECT * FROM index_agents WHERE id = ?')
-      .get(id) as IndexAgentRow;
+      .prepare('SELECT * FROM agents WHERE id = ?')
+      .get(id) as AgentRow;
     return toApi(row);
   });
 
-  app.delete('/index-agents/:id', async (req, reply) => {
+  app.delete('/agents/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const existing = db
-      .prepare('SELECT user_id FROM index_agents WHERE id = ?')
+      .prepare('SELECT user_id FROM agents WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
-    db.prepare('DELETE FROM index_agents WHERE id = ?').run(id);
+    db.prepare('DELETE FROM agents WHERE id = ?').run(id);
     return { ok: true };
   });
 }

@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useUser } from '../lib/useUser';
 import api from '../lib/axios';
-import IndexForm from '../components/forms/IndexForm';
+import AgentTemplateForm from '../components/forms/AgentTemplateForm';
 import TokenPriceGraph from '../components/forms/TokenPriceGraph';
-import IndexTemplatesTable from '../components/IndexTemplatesTable';
+import AgentTemplatesTable from '../components/AgentTemplatesTable';
 import ErrorBoundary from '../components/ErrorBoundary';
 
-interface IndexTemplateDetails {
+interface AgentTemplateDetails {
   id: string;
   tokenA: string;
   tokenB: string;
@@ -18,10 +18,10 @@ interface IndexTemplateDetails {
   agentInstructions: string;
 }
 
-export default function CreateIndex() {
+export default function AgentTemplates() {
   const { user } = useUser();
   const [tokens, setTokens] = useState({ tokenA: 'USDT', tokenB: 'SOL' });
-  const [editing, setEditing] = useState<IndexTemplateDetails | null>(null);
+  const [editing, setEditing] = useState<AgentTemplateDetails | null>(null);
 
   const handleTokensChange = useCallback((a: string, b: string) => {
     setTokens((prev) =>
@@ -36,10 +36,10 @@ export default function CreateIndex() {
           <TokenPriceGraph tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
         </ErrorBoundary>
         <ErrorBoundary>
-          <IndexTemplatesTable
+          <AgentTemplatesTable
             onEdit={async (id) => {
               if (!user) return;
-              const res = await api.get(`/index-templates/${id}`, {
+              const res = await api.get(`/agent-templates/${id}`, {
                 headers: { 'x-user-id': user.id },
               });
               setEditing(res.data);
@@ -47,7 +47,7 @@ export default function CreateIndex() {
           />
         </ErrorBoundary>
       </div>
-      <IndexForm
+      <AgentTemplateForm
         onTokensChange={handleTokensChange}
         template={editing ?? undefined}
         onSubmitSuccess={() => setEditing(null)}

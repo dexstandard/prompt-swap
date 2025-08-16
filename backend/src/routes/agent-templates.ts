@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 import { normalizeAllocations } from '../util/allocations.js';
 
-interface IndexTemplateRow {
+interface AgentTemplateRow {
   id: string;
   user_id: string;
   token_a: string;
@@ -16,7 +16,7 @@ interface IndexTemplateRow {
   agent_instructions: string;
 }
 
-function toApi(row: IndexTemplateRow) {
+function toApi(row: AgentTemplateRow) {
   return {
     id: row.id,
     userId: row.user_id,
@@ -31,20 +31,20 @@ function toApi(row: IndexTemplateRow) {
   };
 }
 
-export default async function indexTemplateRoutes(app: FastifyInstance) {
-  app.get('/index-templates', async (req, reply) => {
+export default async function agentTemplateRoutes(app: FastifyInstance) {
+  app.get('/agent-templates', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId)
       return reply.code(403).send({ error: 'forbidden' });
     const rows = db
-      .prepare<[string], IndexTemplateRow>(
-        'SELECT * FROM index_templates WHERE user_id = ? ORDER BY rowid DESC'
+      .prepare<[string], AgentTemplateRow>(
+        'SELECT * FROM agent_templates WHERE user_id = ? ORDER BY rowid DESC'
       )
       .all(userId);
     return rows.map(toApi);
   });
 
-  app.get('/index-templates/paginated', async (req, reply) => {
+  app.get('/agent-templates/paginated', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId)
       return reply.code(403).send({ error: 'forbidden' });
@@ -56,13 +56,13 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
     const ps = Math.max(parseInt(pageSize, 10), 1);
     const offset = (p - 1) * ps;
     const totalRow = db
-      .prepare('SELECT COUNT(*) as count FROM index_templates WHERE user_id = ?')
+      .prepare('SELECT COUNT(*) as count FROM agent_templates WHERE user_id = ?')
       .get(userId) as { count: number };
     const rows = db
       .prepare(
-        'SELECT * FROM index_templates WHERE user_id = ? ORDER BY rowid DESC LIMIT ? OFFSET ?'
+        'SELECT * FROM agent_templates WHERE user_id = ? ORDER BY rowid DESC LIMIT ? OFFSET ?'
       )
-      .all(userId, ps, offset) as IndexTemplateRow[];
+      .all(userId, ps, offset) as AgentTemplateRow[];
     return {
       items: rows.map(toApi),
       total: totalRow.count,
@@ -71,7 +71,7 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post('/index-templates', async (req, reply) => {
+  app.post('/agent-templates', async (req, reply) => {
     const body = req.body as {
       userId: string;
       tokenA: string;
@@ -95,7 +95,7 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions)
+      `INSERT INTO agent_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
@@ -120,37 +120,37 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/index-templates/:id', async (req, reply) => {
+  app.get('/agent-templates/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const row = db
-      .prepare('SELECT * FROM index_templates WHERE id = ?')
-      .get(id) as IndexTemplateRow | undefined;
+      .prepare('SELECT * FROM agent_templates WHERE id = ?')
+      .get(id) as AgentTemplateRow | undefined;
     if (!row) return reply.code(404).send({ error: 'not found' });
     if (!userId || row.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
     return toApi(row);
   });
 
-  app.patch('/index-templates/:id/instructions', async (req, reply) => {
+  app.patch('/agent-templates/:id/instructions', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const body = req.body as { userId: string; agentInstructions: string };
     const existing = db
-      .prepare('SELECT user_id FROM index_templates WHERE id = ?')
+      .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
-    db.prepare('UPDATE index_templates SET agent_instructions = ? WHERE id = ?')
+    db.prepare('UPDATE agent_templates SET agent_instructions = ? WHERE id = ?')
       .run(body.agentInstructions, id);
     const row = db
-      .prepare('SELECT * FROM index_templates WHERE id = ?')
-      .get(id) as IndexTemplateRow;
+      .prepare('SELECT * FROM agent_templates WHERE id = ?')
+      .get(id) as AgentTemplateRow;
     return toApi(row);
   });
 
-  app.put('/index-templates/:id', async (req, reply) => {
+  app.put('/agent-templates/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const body = req.body as {
@@ -165,8 +165,8 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       agentInstructions: string;
     };
     const existing = db
-      .prepare('SELECT * FROM index_templates WHERE id = ?')
-      .get(id) as IndexTemplateRow | undefined;
+      .prepare('SELECT * FROM agent_templates WHERE id = ?')
+      .get(id) as AgentTemplateRow | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
@@ -178,7 +178,7 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `UPDATE index_templates SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, agent_instructions = ? WHERE id = ?`
+      `UPDATE agent_templates SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, agent_instructions = ? WHERE id = ?`
     ).run(
       body.userId,
       tokenA,
@@ -192,21 +192,21 @@ export default async function indexTemplateRoutes(app: FastifyInstance) {
       id
     );
     const row = db
-      .prepare('SELECT * FROM index_templates WHERE id = ?')
-      .get(id) as IndexTemplateRow;
+      .prepare('SELECT * FROM agent_templates WHERE id = ?')
+      .get(id) as AgentTemplateRow;
     return toApi(row);
   });
 
-  app.delete('/index-templates/:id', async (req, reply) => {
+  app.delete('/agent-templates/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const existing = db
-      .prepare('SELECT user_id FROM index_templates WHERE id = ?')
+      .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
-    db.prepare('DELETE FROM index_templates WHERE id = ?').run(id);
+    db.prepare('DELETE FROM agent_templates WHERE id = ?').run(id);
     return { ok: true };
   });
 }

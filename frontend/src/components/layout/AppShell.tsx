@@ -27,8 +27,8 @@ export default function AppShell() {
           <Link to="/" className="block mb-2 text-gray-700 hover:text-gray-900">
             Agents
           </Link>
-          <Link to="/create-index" className="block mb-2 text-gray-700 hover:text-gray-900">
-            Create Index
+          <Link to="/agent-templates" className="block mb-2 text-gray-700 hover:text-gray-900">
+            Agent Templates
           </Link>
           <Link to="/settings" className="block mb-2 text-gray-700 hover:text-gray-900">
             Settings

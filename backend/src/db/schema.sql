@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS executions(
   tx_hash TEXT,
   created_at INTEGER
 );
-CREATE TABLE IF NOT EXISTS index_templates(
+CREATE TABLE IF NOT EXISTS agent_templates(
   id TEXT PRIMARY KEY,
   user_id TEXT,
   token_a TEXT,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS index_templates(
   agent_instructions TEXT
 );
 
-CREATE TABLE IF NOT EXISTS index_agents(
+CREATE TABLE IF NOT EXISTS agents(
   id TEXT PRIMARY KEY,
   template_id TEXT,
   user_id TEXT,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS index_agents(
   created_at INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS index_exec_log(
+CREATE TABLE IF NOT EXISTS agent_exec_log(
   id TEXT PRIMARY KEY,
   agent_id TEXT,
   log TEXT,
