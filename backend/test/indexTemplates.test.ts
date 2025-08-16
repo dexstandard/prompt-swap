@@ -203,6 +203,58 @@ describe('index template routes', () => {
     await app.close();
   });
 
+  it('enforces ownership on instruction updates', async () => {
+    const app = await buildServer();
+    db.prepare('INSERT INTO users (id) VALUES (?)').run('owner');
+    db.prepare('INSERT INTO users (id) VALUES (?)').run('intruder');
+
+    const payload = {
+      userId: 'owner',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      rebalance: '1h',
+      agentInstructions: 'prompt',
+    };
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/index-templates',
+      headers: { 'x-user-id': 'owner' },
+      payload,
+    });
+    const id = create.json().id as string;
+
+    let res = await app.inject({
+      method: 'PATCH',
+      url: `/api/index-templates/${id}/instructions`,
+      headers: { 'x-user-id': 'intruder' },
+      payload: { userId: 'intruder', agentInstructions: 'hack' },
+    });
+    expect(res.statusCode).toBe(403);
+
+    res = await app.inject({
+      method: 'PATCH',
+      url: `/api/index-templates/${id}/instructions`,
+      headers: { 'x-user-id': 'owner' },
+      payload: { userId: 'intruder', agentInstructions: 'hack' },
+    });
+    expect(res.statusCode).toBe(403);
+
+    res = await app.inject({
+      method: 'PATCH',
+      url: '/api/index-templates/missing/instructions',
+      headers: { 'x-user-id': 'owner' },
+      payload: { userId: 'owner', agentInstructions: 'prompt2' },
+    });
+    expect(res.statusCode).toBe(404);
+
+    await app.close();
+  });
+
   it('returns templates in reverse order', async () => {
     const app = await buildServer();
     db.prepare('INSERT INTO users (id) VALUES (?)').run('user6');
