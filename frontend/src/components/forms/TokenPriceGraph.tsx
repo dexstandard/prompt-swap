@@ -107,7 +107,7 @@ export default function TokenPriceGraph({
   }, [query.data, tokenA, tokenB]);
 
   return (
-    <div className="bg-white shadow-md rounded p-6 flex-1 min-w-0">
+    <div className="bg-white shadow-md border border-gray-200 rounded p-6 flex-1 min-w-0">
       <h2 className="text-xl font-bold mb-4">Price History</h2>
       <div className="h-72 relative">
         <div ref={containerRef} className="absolute inset-0" />

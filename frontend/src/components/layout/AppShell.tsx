@@ -34,7 +34,7 @@ export default function AppShell() {
             Settings
           </Link>
         </nav>
-        <main className="flex-1 p-4 bg-white">
+        <main className="flex-1 p-3 bg-white">
           <Outlet />
         </main>
       </div>
