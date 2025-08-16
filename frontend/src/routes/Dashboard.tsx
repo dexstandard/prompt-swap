@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
+import AgentStatusLabel from '../components/AgentStatusLabel';
 
 interface IndexAgent {
   id: string;
   templateId: string;
   userId: string;
-  status: string;
+  status: 'active' | 'inactive';
   createdAt: number;
 }
 
@@ -35,7 +36,7 @@ export default function Dashboard() {
   if (!user) {
     return (
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
+        <h1 className="text-2xl font-bold mb-4">My Agents</h1>
         <p>Please log in to view your agents.</p>
       </div>
     );
@@ -66,7 +67,9 @@ export default function Dashboard() {
                 <tr key={agent.id}>
                   <td>{agent.id}</td>
                   <td>{agent.templateId}</td>
-                  <td>{agent.status}</td>
+                  <td>
+                    <AgentStatusLabel status={agent.status} />
+                  </td>
                   <td>{new Date(agent.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
