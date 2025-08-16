@@ -11,6 +11,7 @@ export default function AiApiKeySection({ label }: { label: string }) {
     defaultValues: { key: '' },
     mode: 'onChange',
   });
+  const keyValue = form.watch('key');
   const id = user!.id;
   const query = useQuery<string | null>({
     queryKey: ['ai-key', id],
@@ -75,9 +76,10 @@ export default function AiApiKeySection({ label }: { label: string }) {
           <input
             type="text"
             autoComplete="off"
+            placeholder="API key"
             {...form.register('key', { required: true, minLength: 10 })}
             className="border rounded px-2 py-1 w-full"
-            style={{ WebkitTextSecurity: 'disc' }}
+            style={{ WebkitTextSecurity: keyValue ? 'disc' : 'none' }}
             data-lpignore="true"
             data-1p-ignore="true"
           />

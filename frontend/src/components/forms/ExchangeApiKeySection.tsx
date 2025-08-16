@@ -16,6 +16,8 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
     defaultValues: { key: '', secret: '' },
     mode: 'onChange',
   });
+  const keyValue = form.watch('key');
+  const secretValue = form.watch('secret');
   const id = user!.id;
   const keyPath = `/users/${id}/${exchange}-key`;
   const balancePath = `/users/${id}/${exchange}-balance`;
@@ -93,18 +95,20 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
           <input
             type="text"
             autoComplete="off"
+            placeholder="API key"
             {...form.register('key', { required: true, minLength: 10 })}
             className="border rounded px-2 py-1 w-full"
-            style={{ WebkitTextSecurity: 'disc' }}
+            style={{ WebkitTextSecurity: keyValue ? 'disc' : 'none' }}
             data-lpignore="true"
             data-1p-ignore="true"
           />
           <input
             type="text"
             autoComplete="off"
+            placeholder="API secret"
             {...form.register('secret', { required: true, minLength: 10 })}
             className="border rounded px-2 py-1 w-full"
-            style={{ WebkitTextSecurity: 'disc' }}
+            style={{ WebkitTextSecurity: secretValue ? 'disc' : 'none' }}
             data-lpignore="true"
             data-1p-ignore="true"
           />
