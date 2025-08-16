@@ -84,23 +84,29 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
   const buttonsDisabled = !form.formState.isValid;
 
   return (
-    <div className="space-y-2">
-      {label && <h2 className="text-lg font-bold">{label}</h2>}
+    <div className="space-y-2 w-full max-w-md">
+      {label && <h2 className="text-md font-bold">{label}</h2>}
       {query.isLoading ? (
         <p>Loading...</p>
       ) : editing ? (
         <div className="space-y-2">
           <input
             type="text"
-            placeholder="API Key"
+            autoComplete="off"
             {...form.register('key', { required: true, minLength: 10 })}
-            className="border rounded p-2 w-full"
+            className="border rounded px-2 py-1 w-full"
+            style={{ WebkitTextSecurity: 'disc' }}
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
           <input
             type="text"
-            placeholder="API Secret"
+            autoComplete="off"
             {...form.register('secret', { required: true, minLength: 10 })}
-            className="border rounded p-2 w-full"
+            className="border rounded px-2 py-1 w-full"
+            style={{ WebkitTextSecurity: 'disc' }}
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
           {(form.formState.errors.key || form.formState.errors.secret) && (
             <p className="text-sm text-red-600">
@@ -112,7 +118,7 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
               type="button"
               onClick={onSubmit}
               disabled={buttonsDisabled}
-              className={`bg-blue-600 text-white px-4 py-2 rounded ${
+              className={`bg-blue-600 text-white px-2 py-1 rounded ${
                 buttonsDisabled ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -125,7 +131,7 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
                   setEditing(false);
                   form.reset(query.data ?? { key: '', secret: '' });
                 }}
-                className="bg-gray-300 px-4 py-2 rounded"
+                className="bg-gray-300 px-2 py-1 rounded"
               >
                 Cancel
               </button>
@@ -139,7 +145,10 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
               type="text"
               value={query.data?.key ?? ''}
               disabled
-              className="border rounded p-2 w-full"
+              className="border rounded px-2 py-1 w-full"
+              style={{ WebkitTextSecurity: 'disc' }}
+              data-lpignore="true"
+              data-1p-ignore="true"
             />
             <button
               type="button"
@@ -147,14 +156,14 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
                 setEditing(true);
                 form.reset({ key: '', secret: '' });
               }}
-              className="bg-blue-600 text-white px-4 py-2 rounded"
+              className="bg-blue-600 text-white px-2 py-1 rounded"
             >
               Edit
             </button>
             <button
               type="button"
               onClick={() => delMut.mutate()}
-              className="bg-red-600 text-white px-4 py-2 rounded"
+              className="bg-red-600 text-white px-2 py-1 rounded"
             >
               Delete
             </button>
