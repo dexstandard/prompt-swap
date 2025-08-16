@@ -9,6 +9,10 @@ const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
   WebkitTextSecurity: 'disc',
 };
 
+const videoGuideLinks: Record<string, string> = {
+  binance: 'https://youtu.be/2NLF6eV2xhk?t=20',
+};
+
 interface Props {
   exchange: string;
   label: string;
@@ -116,6 +120,18 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
             data-lpignore="true"
             data-1p-ignore="true"
           />
+          {videoGuideLinks[exchange] && (
+            <p className="text-sm text-gray-600 space-x-2">
+              <a
+                href={videoGuideLinks[exchange]}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+              >
+                Video guide
+              </a>
+            </p>
+          )}
           {(form.formState.errors.key || form.formState.errors.secret) && (
             <p className="text-sm text-red-600">
               Key and secret are required and must be at least 10 characters
