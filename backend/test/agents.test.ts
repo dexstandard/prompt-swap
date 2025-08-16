@@ -9,21 +9,21 @@ import buildServer from '../src/server.js';
 
 migrate();
 
-describe('index agent routes', () => {
+describe('agent routes', () => {
   it('performs CRUD operations', async () => {
     const app = await buildServer();
     db.prepare(
       'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
     ).run('user1', 'a', 'b', 'c');
     db.prepare(
-      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agent_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl1', 'user1', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
 
     const payload = { templateId: 'tmpl1', userId: 'user1', model: 'gpt-5', status: 'inactive' };
 
     let res = await app.inject({
       method: 'POST',
-      url: '/api/index-agents',
+      url: '/api/agents',
       headers: { 'x-user-id': 'user1' },
       payload,
     });
@@ -32,7 +32,7 @@ describe('index agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/index-agents/${id}`,
+      url: `/api/agents/${id}`,
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
@@ -40,7 +40,7 @@ describe('index agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-agents',
+      url: '/api/agents',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
@@ -48,7 +48,7 @@ describe('index agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-agents/paginated?page=1&pageSize=10',
+      url: '/api/agents/paginated?page=1&pageSize=10',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
@@ -58,7 +58,7 @@ describe('index agent routes', () => {
     const update = { templateId: 'tmpl1', userId: 'user1', model: 'o3', status: 'active' };
     res = await app.inject({
       method: 'PUT',
-      url: `/api/index-agents/${id}`,
+      url: `/api/agents/${id}`,
       headers: { 'x-user-id': 'user1' },
       payload: update,
     });
@@ -67,14 +67,14 @@ describe('index agent routes', () => {
 
     res = await app.inject({
       method: 'DELETE',
-      url: `/api/index-agents/${id}`,
+      url: `/api/agents/${id}`,
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/index-agents/${id}`,
+      url: `/api/agents/${id}`,
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(404);
@@ -91,15 +91,15 @@ describe('index agent routes', () => {
       'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
     ).run('user3', 'a', 'b', 'c');
     db.prepare(
-      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agent_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl2', 'user2', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
     db.prepare(
-      `INSERT INTO index_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agent_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl3', 'user3', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
 
     let res = await app.inject({
       method: 'POST',
-      url: '/api/index-agents',
+      url: '/api/agents',
       headers: { 'x-user-id': 'user2' },
       payload: { templateId: 'tmpl2', userId: 'user2', model: 'm1', status: 'inactive' },
     });
@@ -107,7 +107,7 @@ describe('index agent routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/index-agents',
+      url: '/api/agents',
       headers: { 'x-user-id': 'user3' },
       payload: { templateId: 'tmpl3', userId: 'user3', model: 'm1', status: 'inactive' },
     });
@@ -115,7 +115,7 @@ describe('index agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-agents',
+      url: '/api/agents',
       headers: { 'x-user-id': 'user2' },
     });
     expect(res.json()).toHaveLength(1);
@@ -123,14 +123,14 @@ describe('index agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/index-agents/${id2}`,
+      url: `/api/agents/${id2}`,
       headers: { 'x-user-id': 'user2' },
     });
     expect(res.statusCode).toBe(403);
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/index-agents',
+      url: '/api/agents',
       headers: { 'x-user-id': 'user2' },
       payload: { templateId: 'tmpl2', userId: 'user3', model: 'm1', status: 'inactive' },
     });

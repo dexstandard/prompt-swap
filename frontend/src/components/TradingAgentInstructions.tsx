@@ -21,7 +21,7 @@ export default function TradingAgentInstructions({templateId, instructions, onCh
   async function save() {
     if (!user) return;
     await api.patch(
-      `/index-templates/${templateId}/instructions`,
+      `/agent-templates/${templateId}/instructions`,
       {userId: user.id, agentInstructions: text},
       {headers: {'x-user-id': user.id}}
     );

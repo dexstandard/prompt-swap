@@ -4,7 +4,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 
-interface IndexAgent {
+interface Agent {
   id: string;
   templateId: string;
   userId: string;
@@ -17,14 +17,14 @@ export default function Dashboard() {
   const [page, setPage] = useState(1);
 
   const { data } = useQuery({
-    queryKey: ['index-agents', page, user?.id],
+    queryKey: ['agents', page, user?.id],
     queryFn: async () => {
-      const res = await api.get('/index-agents/paginated', {
+      const res = await api.get('/agents/paginated', {
         params: { page, pageSize: 10, userId: user!.id },
         headers: { 'x-user-id': user!.id },
       });
       return res.data as {
-        items: IndexAgent[];
+        items: Agent[];
         total: number;
         page: number;
         pageSize: number;

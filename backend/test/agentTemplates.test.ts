@@ -9,7 +9,7 @@ import buildServer from '../src/server.js';
 
 migrate();
 
-describe('index template routes', () => {
+describe('agent template routes', () => {
   it('performs CRUD operations', async () => {
     const app = await buildServer();
     db.prepare('INSERT INTO users (id) VALUES (?)').run('user1');
@@ -28,7 +28,7 @@ describe('index template routes', () => {
 
     let res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user1' },
       payload,
     });
@@ -37,7 +37,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/index-templates/${id}`,
+      url: `/api/agent-templates/${id}`,
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
@@ -45,7 +45,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
@@ -53,7 +53,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-templates/paginated?page=1&pageSize=10',
+      url: '/api/agent-templates/paginated?page=1&pageSize=10',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
@@ -63,7 +63,7 @@ describe('index template routes', () => {
     const update = { ...payload, targetAllocation: 70, risk: 'medium' };
     res = await app.inject({
       method: 'PUT',
-      url: `/api/index-templates/${id}`,
+      url: `/api/agent-templates/${id}`,
       headers: { 'x-user-id': 'user1' },
       payload: update,
     });
@@ -72,7 +72,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'PATCH',
-      url: `/api/index-templates/${id}/instructions`,
+      url: `/api/agent-templates/${id}/instructions`,
       headers: { 'x-user-id': 'user1' },
       payload: { userId: 'user1', agentInstructions: 'new prompt' },
     });
@@ -81,14 +81,14 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'DELETE',
-      url: `/api/index-templates/${id}`,
+      url: `/api/agent-templates/${id}`,
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/index-templates/${id}`,
+      url: `/api/agent-templates/${id}`,
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(404);
@@ -115,7 +115,7 @@ describe('index template routes', () => {
 
     let res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user3' },
       payload,
     });
@@ -123,7 +123,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user4' },
       payload: { ...payload, userId: 'user4' },
     });
@@ -131,7 +131,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user3' },
     });
     expect(res.json()).toHaveLength(1);
@@ -139,14 +139,14 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/index-templates/${id2}`,
+      url: `/api/agent-templates/${id2}`,
       headers: { 'x-user-id': 'user3' },
     });
     expect(res.statusCode).toBe(403);
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user3' },
       payload: { ...payload, userId: 'user4' },
     });
@@ -170,7 +170,7 @@ describe('index template routes', () => {
 
     let res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user5' },
       payload: { ...base, targetAllocation: 50, minTokenAAllocation: 80, minTokenBAllocation: 30 },
     });
@@ -178,7 +178,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user5' },
       payload: { ...base, targetAllocation: 50, minTokenAAllocation: 20, minTokenBAllocation: 90 },
     });
@@ -186,7 +186,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user5' },
       payload: { ...base, targetAllocation: 5, minTokenAAllocation: 10, minTokenBAllocation: 10 },
     });
@@ -194,7 +194,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user5' },
       payload: { ...base, targetAllocation: 95, minTokenAAllocation: 10, minTokenBAllocation: 10 },
     });
@@ -222,7 +222,7 @@ describe('index template routes', () => {
 
     const create = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'owner' },
       payload,
     });
@@ -230,7 +230,7 @@ describe('index template routes', () => {
 
     let res = await app.inject({
       method: 'PATCH',
-      url: `/api/index-templates/${id}/instructions`,
+      url: `/api/agent-templates/${id}/instructions`,
       headers: { 'x-user-id': 'intruder' },
       payload: { userId: 'intruder', agentInstructions: 'hack' },
     });
@@ -238,7 +238,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'PATCH',
-      url: `/api/index-templates/${id}/instructions`,
+      url: `/api/agent-templates/${id}/instructions`,
       headers: { 'x-user-id': 'owner' },
       payload: { userId: 'intruder', agentInstructions: 'hack' },
     });
@@ -246,7 +246,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'PATCH',
-      url: '/api/index-templates/missing/instructions',
+      url: '/api/agent-templates/missing/instructions',
       headers: { 'x-user-id': 'owner' },
       payload: { userId: 'owner', agentInstructions: 'prompt2' },
     });
@@ -273,7 +273,7 @@ describe('index template routes', () => {
 
     let res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user6' },
       payload: base,
     });
@@ -281,7 +281,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/index-templates',
+      url: '/api/agent-templates',
       headers: { 'x-user-id': 'user6' },
       payload: base,
     });
@@ -289,7 +289,7 @@ describe('index template routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/index-templates/paginated?page=1&pageSize=2',
+      url: '/api/agent-templates/paginated?page=1&pageSize=2',
       headers: { 'x-user-id': 'user6' },
     });
     expect(res.statusCode).toBe(200);

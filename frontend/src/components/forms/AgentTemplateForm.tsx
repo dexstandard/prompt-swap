@@ -61,7 +61,7 @@ const rebalanceOptions = [
 ];
 
 const DEFAULT_AGENT_INSTRUCTIONS =
-    'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
+    'Manage this agent based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
 
 const defaultValues: FormValues = {
     tokenA: 'USDT',
@@ -73,7 +73,7 @@ const defaultValues: FormValues = {
     rebalance: '1h',
 };
 
-export default function IndexForm({
+export default function AgentTemplateForm({
                                       onTokensChange,
                                       template,
                                       onSubmitSuccess,
@@ -172,7 +172,7 @@ export default function IndexForm({
         if (!user) return;
         if (template) {
             const res = await api.put(
-                `/index-templates/${template.id}`,
+                `/agent-templates/${template.id}`,
                 {
                     userId: user.id,
                     ...values,
@@ -182,12 +182,12 @@ export default function IndexForm({
                 },
                 {headers: {'x-user-id': user.id}}
             );
-            queryClient.invalidateQueries({queryKey: ['index-templates']});
+            queryClient.invalidateQueries({queryKey: ['agent-templates']});
             onSubmitSuccess?.();
-            navigate(`/index-templates/${res.data.id}`);
+            navigate(`/agent-templates/${res.data.id}`);
         } else {
             const res = await api.post(
-                '/index-templates',
+                '/agent-templates',
                 {
                     userId: user.id,
                     ...values,
@@ -197,8 +197,8 @@ export default function IndexForm({
                 },
                 {headers: {'x-user-id': user.id}}
             );
-            queryClient.invalidateQueries({queryKey: ['index-templates']});
-            navigate(`/index-templates/${res.data.id}`);
+            queryClient.invalidateQueries({queryKey: ['agent-templates']});
+            navigate(`/agent-templates/${res.data.id}`);
         }
     });
 
@@ -208,7 +208,7 @@ export default function IndexForm({
                 onSubmit={onSubmit}
                 className="bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem]"
             >
-                <h2 className="text-xl font-bold">{template ? 'Edit Index' : 'Create Index'}</h2>
+                <h2 className="text-xl font-bold">{template ? 'Edit Agent Template' : 'Create Agent Template'}</h2>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium mb-1" htmlFor="tokenA">
@@ -377,7 +377,7 @@ export default function IndexForm({
                     }`}
                     disabled={!user || isSubmitting}
                 >
-                    Save Template
+                    Save Agent Template
                 </button>
             </form>
         </>

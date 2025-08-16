@@ -6,7 +6,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import TokenDisplay from './TokenDisplay';
 
-interface IndexTemplate {
+interface AgentTemplate {
   id: string;
   tokenA: string;
   tokenB: string;
@@ -15,7 +15,7 @@ interface IndexTemplate {
   rebalance: string;
 }
 
-export default function IndexTemplatesTable({
+export default function AgentTemplatesTable({
   onEdit,
 }: {
   onEdit?: (id: string) => void;
@@ -25,14 +25,14 @@ export default function IndexTemplatesTable({
   const queryClient = useQueryClient();
 
   const { data } = useQuery({
-    queryKey: ['index-templates', page, user?.id],
+    queryKey: ['agent-templates', page, user?.id],
     queryFn: async () => {
-      const res = await api.get('/index-templates/paginated', {
+      const res = await api.get('/agent-templates/paginated', {
         params: { page, pageSize: 5 },
         headers: { 'x-user-id': user!.id },
       });
       return res.data as {
-        items: IndexTemplate[];
+        items: AgentTemplate[];
         total: number;
         page: number;
         pageSize: number;
@@ -87,10 +87,10 @@ export default function IndexTemplatesTable({
                 const rebalance = rebalanceMap[t.rebalance] || t.rebalance;
                 const handleDelete = async () => {
                   if (!user) return;
-                  await api.delete(`/index-templates/${t.id}`, {
+                  await api.delete(`/agent-templates/${t.id}`, {
                     headers: { 'x-user-id': user.id },
                   });
-                  queryClient.invalidateQueries({ queryKey: ['index-templates'] });
+                  queryClient.invalidateQueries({ queryKey: ['agent-templates'] });
                 };
                 return (
                   <tr key={t.id}>
@@ -105,7 +105,7 @@ export default function IndexTemplatesTable({
                     <td>{rebalance}</td>
                     <td className="flex gap-2">
                       <Link
-                        to={`/index-templates/${t.id}`}
+                        to={`/agent-templates/${t.id}`}
                         className="text-blue-600 underline inline-flex"
                         aria-label="View template"
                       >

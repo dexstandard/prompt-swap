@@ -10,7 +10,7 @@ import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 import WalletBalances from '../components/WalletBalances';
 import TradingAgentInstructions from '../components/TradingAgentInstructions';
 
-interface IndexDetails {
+interface AgentTemplateDetails {
     id: string;
     userId: string;
     tokenA: string;
@@ -23,16 +23,16 @@ interface IndexDetails {
     agentInstructions: string;
 }
 
-export default function ViewIndex() {
+export default function ViewAgentTemplate() {
     const {id} = useParams();
     const {user} = useUser();
     const {data} = useQuery({
-        queryKey: ['index-template', id, user?.id],
+        queryKey: ['agent-template', id, user?.id],
         queryFn: async () => {
-            const res = await api.get(`/index-templates/${id}`, {
+            const res = await api.get(`/agent-templates/${id}`, {
                 headers: {'x-user-id': user!.id},
             });
-            return res.data as IndexDetails;
+            return res.data as AgentTemplateDetails;
         },
         enabled: !!id && !!user,
     });
@@ -177,7 +177,7 @@ export default function ViewIndex() {
                     onClick={async () => {
                         if (!user) return;
                         await api.post(
-                            '/index-agents',
+                            '/agents',
                             {
                                 templateId: id,
                                 userId: user.id,
