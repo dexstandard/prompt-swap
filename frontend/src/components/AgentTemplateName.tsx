@@ -37,7 +37,7 @@ export default function AgentTemplateName({templateId, name, onChange}: Props) {
       {editing ? (
         <>
           <input
-            className="border rounded p-1 mr-2 w-full max-w-[50ch]"
+            className="border rounded p-1 mr-2 w-full max-w-[33ch]"
             value={text}
             maxLength={MAX_NAME_LENGTH}
             onChange={(e) => setText(e.target.value)}
