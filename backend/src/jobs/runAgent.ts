@@ -34,7 +34,7 @@ export async function runAgent(agentId: string, log: FastifyBaseLogger) {
         model: row.model,
         input: [{ role: 'user', content: row.agent_instructions }],
       });
-      content = resp.output[0]?.content[0]?.text ?? '';
+      content = resp.output_text ?? '';
     } catch (err) {
       log.error({ err }, 'openai call failed');
     }
