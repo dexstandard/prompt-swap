@@ -6,6 +6,7 @@ import App from './App';
 import queryClient from './lib/queryClient';
 import { setupMocks } from './lib/mocks';
 import { UserProvider } from './lib/UserProvider';
+import { ToastProvider } from './components/Toast';
 import './index.css';
 
 setupMocks();
@@ -14,9 +15,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <UserProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <ToastProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ToastProvider>
       </UserProvider>
     </QueryClientProvider>
   </React.StrictMode>,

@@ -1,4 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import {
+  ERROR_MESSAGES,
+  lengthMessage,
+  errorResponse,
+} from '../src/util/errorMessages.js';
 
 process.env.DATABASE_URL = ':memory:';
 process.env.KEY_PASSWORD = 'test-pass';
@@ -297,7 +302,7 @@ describe('agent template routes', () => {
       method: 'POST',
       url: '/api/agent-templates',
       headers: { 'x-user-id': 'user6' },
-      payload: base,
+      payload: { ...base, name: 'alt', tokenA: 'ETH', tokenB: 'BTC' },
     });
     const id2 = res.json().id as string;
 
@@ -310,6 +315,73 @@ describe('agent template routes', () => {
     const items = res.json().items as { id: string }[];
     expect(items[0].id).toBe(id2);
     expect(items[1].id).toBe(id1);
+
+    await app.close();
+  });
+
+  it('prevents duplicates and validates lengths', async () => {
+    const app = await buildServer();
+    db.prepare('INSERT INTO users (id) VALUES (?)').run('user7');
+
+    const payload = {
+      userId: 'user7',
+      name: 'BTC 60 / ETH 40',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+    };
+
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/agent-templates',
+      headers: { 'x-user-id': 'user7' },
+      payload,
+    });
+    expect(res.statusCode).toBe(200);
+    const id1 = res.json().id as string;
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agent-templates',
+      headers: { 'x-user-id': 'user7' },
+      payload,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({
+      error: ERROR_MESSAGES.templateExists,
+      id: id1,
+    });
+
+    const longInstr = 'a'.repeat(2001);
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agent-templates',
+      headers: { 'x-user-id': 'user7' },
+      payload: { ...payload, agentInstructions: longInstr },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject(
+      errorResponse(lengthMessage('agentInstructions', 2000))
+    );
+
+    const id = db
+      .prepare('SELECT id FROM agent_templates WHERE user_id = ?')
+      .get('user7') as { id: string };
+    res = await app.inject({
+      method: 'PATCH',
+      url: `/api/agent-templates/${id.id}/instructions`,
+      headers: { 'x-user-id': 'user7' },
+      payload: { userId: 'user7', agentInstructions: longInstr },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject(
+      errorResponse(lengthMessage('agentInstructions', 2000))
+    );
 
     await app.close();
   });

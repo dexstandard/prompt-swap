@@ -12,6 +12,7 @@ import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 import WalletBalances from '../components/WalletBalances';
 import TradingAgentInstructions from '../components/TradingAgentInstructions';
 import AgentTemplateName from '../components/AgentTemplateName';
+import { useToast } from '../components/Toast';
 
 interface AgentTemplateDetails {
     id: string;
@@ -31,6 +32,7 @@ export default function ViewAgentTemplate() {
     const {id} = useParams();
     const navigate = useNavigate();
     const {user} = useUser();
+    const toast = useToast();
     const {data} = useQuery({
         queryKey: ['agent-template', id, user?.id],
         queryFn: async () => {
@@ -217,8 +219,12 @@ export default function ViewAgentTemplate() {
                             );
                             navigate(`/agents/${res.data.id}`);
                         } catch (err) {
-                            console.error(err);
                             setIsCreating(false);
+                            if (axios.isAxiosError(err) && err.response?.data?.error) {
+                                toast.show(err.response.data.error);
+                            } else {
+                                toast.show('Failed to start agent');
+                            }
                         }
                     }}
                 >
