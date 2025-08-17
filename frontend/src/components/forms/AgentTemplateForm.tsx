@@ -12,6 +12,11 @@ import TextInput from './TextInput';
 import SelectInput from './SelectInput';
 import RiskDisplay from '../RiskDisplay';
 
+interface AgentInstructions {
+    webSearchStrategy: string;
+    goal: string;
+}
+
 const schema = z
     .object({
         tokenA: z.string().min(1, 'Token A is required'),
@@ -61,8 +66,10 @@ const rebalanceOptions = [
     {value: '1w', label: '1 week'},
 ];
 
-const DEFAULT_AGENT_INSTRUCTIONS =
-    'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
+const DEFAULT_AGENT_INSTRUCTIONS: AgentInstructions = {
+    webSearchStrategy: 'use search tool with keywords CoinTelegraph Solana Latest',
+    goal: 'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.',
+};
 
 const defaultValues: FormValues = {
     tokenA: 'USDT',
@@ -90,7 +97,7 @@ export default function AgentTemplateForm({
         minTokenBAllocation: number;
         risk: string;
         rebalance: string;
-        agentInstructions: string;
+        agentInstructions: AgentInstructions;
     };
     onSubmitSuccess?: () => void;
     onCancel?: () => void;

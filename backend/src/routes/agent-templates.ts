@@ -3,6 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 import { normalizeAllocations } from '../util/allocations.js';
 
+interface AgentInstructions {
+  webSearchStrategy: string;
+  goal: string;
+}
+
 interface AgentTemplateRow {
   id: string;
   user_id: string;
@@ -29,7 +34,7 @@ function toApi(row: AgentTemplateRow) {
     minTokenBAllocation: row.min_b_allocation,
     risk: row.risk,
     rebalance: row.rebalance,
-    agentInstructions: row.agent_instructions,
+    agentInstructions: JSON.parse(row.agent_instructions) as AgentInstructions,
   };
 }
 
@@ -84,7 +89,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation: number;
       risk: string;
       rebalance: string;
-      agentInstructions: string;
+      agentInstructions: AgentInstructions;
     };
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId || body.userId !== userId)
@@ -111,7 +116,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation,
       body.risk,
       body.rebalance,
-      body.agentInstructions
+      JSON.stringify(body.agentInstructions)
     );
     return {
       id,
@@ -139,7 +144,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
   app.patch('/agent-templates/:id/instructions', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
-    const body = req.body as { userId: string; agentInstructions: string };
+    const body = req.body as { userId: string; agentInstructions: AgentInstructions };
     const existing = db
       .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
@@ -147,7 +152,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
     db.prepare('UPDATE agent_templates SET agent_instructions = ? WHERE id = ?')
-      .run(body.agentInstructions, id);
+      .run(JSON.stringify(body.agentInstructions), id);
     const row = db
       .prepare('SELECT * FROM agent_templates WHERE id = ?')
       .get(id) as AgentTemplateRow;
@@ -187,7 +192,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation: number;
       risk: string;
       rebalance: string;
-      agentInstructions: string;
+      agentInstructions: AgentInstructions;
     };
     const existing = db
       .prepare('SELECT * FROM agent_templates WHERE id = ?')
@@ -214,7 +219,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation,
       body.risk,
       body.rebalance,
-      body.agentInstructions,
+      JSON.stringify(body.agentInstructions),
       id
     );
     const row = db

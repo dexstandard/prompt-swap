@@ -6,6 +6,11 @@ import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
 import RiskDisplay from '../components/RiskDisplay';
 
+interface AgentInstructions {
+  webSearchStrategy: string;
+  goal: string;
+}
+
 interface Agent {
   id: string;
   templateId: string;
@@ -21,7 +26,7 @@ interface Agent {
     minTokenBAllocation: number;
     risk: string;
     rebalance: string;
-    agentInstructions: string;
+    agentInstructions: AgentInstructions;
   };
 }
 
@@ -82,7 +87,10 @@ export default function ViewAgent() {
             <strong>Minimum {template.tokenB} Allocation:</strong> {template.minTokenBAllocation}%
           </p>
           <p>
-            <strong>Instructions:</strong> {template.agentInstructions}
+            <strong>Web Search Strategy:</strong> {template.agentInstructions.webSearchStrategy}
+          </p>
+          <p>
+            <strong>Goal:</strong> {template.agentInstructions.goal}
           </p>
         </>
       ) : (

@@ -6,6 +6,11 @@ import PriceChart from '../components/forms/PriceChart';
 import AgentTemplatesTable from '../components/AgentTemplatesTable';
 import ErrorBoundary from '../components/ErrorBoundary';
 
+interface AgentInstructions {
+  webSearchStrategy: string;
+  goal: string;
+}
+
 interface AgentTemplateDetails {
   id: string;
   name: string;
@@ -16,7 +21,7 @@ interface AgentTemplateDetails {
   minTokenBAllocation: number;
   risk: string;
   rebalance: string;
-  agentInstructions: string;
+  agentInstructions: AgentInstructions;
 }
 
 export default function AgentTemplates() {

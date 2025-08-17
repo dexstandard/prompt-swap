@@ -2,6 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 
+interface AgentInstructions {
+  webSearchStrategy: string;
+  goal: string;
+}
+
 export enum AgentStatus {
   Active = 'active',
   Inactive = 'inactive',
@@ -43,7 +48,7 @@ function toApi(row: AgentRow) {
       minTokenBAllocation: row.min_b_allocation,
       risk: row.risk,
       rebalance: row.rebalance,
-      agentInstructions: row.agent_instructions,
+      agentInstructions: JSON.parse(row.agent_instructions) as AgentInstructions,
     },
   };
 }

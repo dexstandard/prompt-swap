@@ -12,6 +12,11 @@ import WalletBalances from '../components/WalletBalances';
 import TradingAgentInstructions from '../components/TradingAgentInstructions';
 import AgentTemplateName from '../components/AgentTemplateName';
 
+interface AgentInstructions {
+    webSearchStrategy: string;
+    goal: string;
+}
+
 interface AgentTemplateDetails {
     id: string;
     userId: string;
@@ -23,7 +28,7 @@ interface AgentTemplateDetails {
     minTokenBAllocation: number;
     risk: string;
     rebalance: string;
-    agentInstructions: string;
+    agentInstructions: AgentInstructions;
 }
 
 export default function ViewAgentTemplate() {
@@ -77,7 +82,7 @@ export default function ViewAgentTemplate() {
         },
     });
     const [model, setModel] = useState('');
-    const [instructions, setInstructions] = useState('');
+    const [instructions, setInstructions] = useState<AgentInstructions>({webSearchStrategy: '', goal: ''});
     const [name, setName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     useEffect(() => {

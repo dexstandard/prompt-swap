@@ -1,32 +1,41 @@
-import {useState, useEffect} from 'react';
-import {Pencil} from 'lucide-react';
-import {useUser} from '../lib/useUser';
+import { useState, useEffect } from 'react';
+import { Pencil } from 'lucide-react';
+import { useUser } from '../lib/useUser';
 import api from '../lib/axios';
+
+interface AgentInstructions {
+  webSearchStrategy: string;
+  goal: string;
+}
 
 interface Props {
   templateId: string;
-  instructions: string;
-  onChange?: (text: string) => void;
+  instructions: AgentInstructions;
+  onChange?: (value: AgentInstructions) => void;
 }
 
-export default function TradingAgentInstructions({templateId, instructions, onChange}: Props) {
-  const {user} = useUser();
+export default function TradingAgentInstructions({
+  templateId,
+  instructions,
+  onChange,
+}: Props) {
+  const { user } = useUser();
   const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(instructions);
+  const [local, setLocal] = useState<AgentInstructions>(instructions);
 
   useEffect(() => {
-    setText(instructions);
+    setLocal(instructions);
   }, [instructions]);
 
   async function save() {
     if (!user) return;
     await api.patch(
       `/agent-templates/${templateId}/instructions`,
-      {userId: user.id, agentInstructions: text},
-      {headers: {'x-user-id': user.id}}
+      { userId: user.id, agentInstructions: local },
+      { headers: { 'x-user-id': user.id } }
     );
     setEditing(false);
-    onChange?.(text);
+    onChange?.(local);
   }
 
   return (
@@ -44,13 +53,33 @@ export default function TradingAgentInstructions({templateId, instructions, onCh
         )}
       </div>
       {editing ? (
-        <div>
-          <textarea
-            className="w-full border rounded p-2"
-            rows={4}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+        <div className="space-y-2">
+          <div>
+            <label className="block text-sm font-medium mb-1" htmlFor="webSearchStrategy">
+              Web Search Strategy
+            </label>
+            <textarea
+              id="webSearchStrategy"
+              className="w-full border rounded p-2"
+              rows={2}
+              value={local.webSearchStrategy}
+              onChange={(e) =>
+                setLocal({ ...local, webSearchStrategy: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1" htmlFor="goal">
+              Goal
+            </label>
+            <textarea
+              id="goal"
+              className="w-full border rounded p-2"
+              rows={4}
+              value={local.goal}
+              onChange={(e) => setLocal({ ...local, goal: e.target.value })}
+            />
+          </div>
           <div className="mt-2 flex gap-2">
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded"
@@ -61,7 +90,7 @@ export default function TradingAgentInstructions({templateId, instructions, onCh
             <button
               className="px-4 py-2 border rounded"
               onClick={() => {
-                setText(instructions);
+                setLocal(instructions);
                 setEditing(false);
               }}
             >
@@ -70,7 +99,14 @@ export default function TradingAgentInstructions({templateId, instructions, onCh
           </div>
         </div>
       ) : (
-        <pre className="whitespace-pre-wrap">{instructions}</pre>
+        <div className="space-y-2">
+          <p>
+            <strong>Web Search Strategy:</strong> {instructions.webSearchStrategy}
+          </p>
+          <p>
+            <strong>Goal:</strong> {instructions.goal}
+          </p>
+        </div>
       )}
     </div>
   );

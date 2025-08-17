@@ -24,7 +24,7 @@ describe('agent template routes', () => {
       minTokenBAllocation: 20,
       risk: 'low',
       rebalance: '1h',
-      agentInstructions: 'prompt',
+      agentInstructions: { webSearchStrategy: 'search', goal: 'prompt' },
     };
 
     let res = await app.inject({
@@ -75,10 +75,16 @@ describe('agent template routes', () => {
       method: 'PATCH',
       url: `/api/agent-templates/${id}/instructions`,
       headers: { 'x-user-id': 'user1' },
-      payload: { userId: 'user1', agentInstructions: 'new prompt' },
+      payload: {
+        userId: 'user1',
+        agentInstructions: { webSearchStrategy: 'search', goal: 'new prompt' },
+      },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, agentInstructions: 'new prompt' });
+    expect(res.json()).toMatchObject({
+      id,
+      agentInstructions: { webSearchStrategy: 'search', goal: 'new prompt' },
+    });
 
     res = await app.inject({
       method: 'PATCH',
@@ -121,7 +127,7 @@ describe('agent template routes', () => {
       minTokenBAllocation: 20,
       risk: 'low',
       rebalance: '1h',
-      agentInstructions: 'prompt',
+      agentInstructions: { webSearchStrategy: 'search', goal: 'prompt' },
     };
 
     let res = await app.inject({
@@ -177,7 +183,7 @@ describe('agent template routes', () => {
       tokenB: 'ETH',
       risk: 'low',
       rebalance: '1h',
-      agentInstructions: 'prompt',
+      agentInstructions: { webSearchStrategy: 'search', goal: 'prompt' },
     };
 
     let res = await app.inject({
@@ -230,7 +236,7 @@ describe('agent template routes', () => {
       minTokenBAllocation: 20,
       risk: 'low',
       rebalance: '1h',
-      agentInstructions: 'prompt',
+      agentInstructions: { webSearchStrategy: 'search', goal: 'prompt' },
     };
 
     const create = await app.inject({
@@ -245,7 +251,10 @@ describe('agent template routes', () => {
       method: 'PATCH',
       url: `/api/agent-templates/${id}/instructions`,
       headers: { 'x-user-id': 'intruder' },
-      payload: { userId: 'intruder', agentInstructions: 'hack' },
+      payload: {
+        userId: 'intruder',
+        agentInstructions: { webSearchStrategy: 'hack', goal: 'hack' },
+      },
     });
     expect(res.statusCode).toBe(403);
 
@@ -253,7 +262,10 @@ describe('agent template routes', () => {
       method: 'PATCH',
       url: `/api/agent-templates/${id}/instructions`,
       headers: { 'x-user-id': 'owner' },
-      payload: { userId: 'intruder', agentInstructions: 'hack' },
+      payload: {
+        userId: 'intruder',
+        agentInstructions: { webSearchStrategy: 'hack', goal: 'hack' },
+      },
     });
     expect(res.statusCode).toBe(403);
 
@@ -261,7 +273,10 @@ describe('agent template routes', () => {
       method: 'PATCH',
       url: '/api/agent-templates/missing/instructions',
       headers: { 'x-user-id': 'owner' },
-      payload: { userId: 'owner', agentInstructions: 'prompt2' },
+      payload: {
+        userId: 'owner',
+        agentInstructions: { webSearchStrategy: 'search', goal: 'prompt2' },
+      },
     });
     expect(res.statusCode).toBe(404);
 
@@ -282,7 +297,7 @@ describe('agent template routes', () => {
       minTokenBAllocation: 20,
       risk: 'low',
       rebalance: '1h',
-      agentInstructions: 'prompt',
+      agentInstructions: { webSearchStrategy: 'search', goal: 'prompt' },
     };
 
     let res = await app.inject({
