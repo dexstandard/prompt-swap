@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
+import RiskDisplay from '../components/RiskDisplay';
 import {useParams, useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
@@ -121,8 +122,8 @@ export default function ViewAgentTemplate() {
             <p>
                 <strong>Minimum {data.tokenB.toUpperCase()} Allocation:</strong> {data.minTokenBAllocation}%
             </p>
-            <p>
-                <strong>Risk Tolerance:</strong> {data.risk}
+            <p className="flex items-center gap-1">
+                <strong>Risk Tolerance:</strong> <RiskDisplay risk={data.risk} />
             </p>
             <p>
                 <strong>Rebalance Frequency:</strong> {data.rebalance}

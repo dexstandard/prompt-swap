@@ -4,6 +4,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
+import RiskDisplay from '../components/RiskDisplay';
 
 interface Agent {
   id: string;
@@ -41,6 +42,8 @@ export default function ViewAgent() {
   if (!data) return <div className="p-4">Loading...</div>;
 
   const template = data.template;
+  const rebalanceLabel =
+    template?.rebalance === '1h' ? '1 hour' : template?.rebalance;
 
   return (
     <div className="p-4">
@@ -56,16 +59,18 @@ export default function ViewAgent() {
       </p>
       {template ? (
         <>
-          <p>
-            <strong>Pair:</strong>{' '}
-            <TokenDisplay token={template.tokenA} />/
+          <p className="flex items-center">
+            <strong className="mr-1">Tokens:</strong>
+            <TokenDisplay token={template.tokenA} />
+            <span className="mx-1">/</span>
             <TokenDisplay token={template.tokenB} />
           </p>
-          <p>
-            <strong>Risk:</strong> {template.risk}
+          <p className="flex items-center">
+            <strong className="mr-1">Risk:</strong>
+            <RiskDisplay risk={template.risk} />
           </p>
           <p>
-            <strong>Rebalance:</strong> {template.rebalance}
+            <strong>Rebalance:</strong> {rebalanceLabel}
           </p>
           <p>
             <strong>Target Allocation:</strong> {template.targetAllocation}/

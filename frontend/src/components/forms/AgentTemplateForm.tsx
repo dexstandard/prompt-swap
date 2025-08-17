@@ -10,6 +10,7 @@ import {normalizeAllocations} from '../../lib/allocations';
 import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import SelectInput from './SelectInput';
+import RiskDisplay from '../RiskDisplay';
 
 const schema = z
     .object({
@@ -45,9 +46,9 @@ const tokens = [
 ];
 
 const riskOptions = [
-    {value: 'low', label: 'Low'},
-    {value: 'medium', label: 'Medium'},
-    {value: 'high', label: 'High'},
+    {value: 'low', label: <RiskDisplay risk="low" />},
+    {value: 'medium', label: <RiskDisplay risk="medium" />},
+    {value: 'high', label: <RiskDisplay risk="high" />},
 ];
 
 const rebalanceOptions = [

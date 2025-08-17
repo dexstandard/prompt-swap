@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 interface Option {
   value: string;
-  label: string;
+  label: ReactNode;
 }
 
 export default function SelectInput({
@@ -27,7 +27,7 @@ export default function SelectInput({
         onClick={() => setOpen(!open)}
         className="w-full border rounded px-2 py-1 flex items-center justify-between"
       >
-        <span className={selected ? '' : 'text-gray-500'}>
+        <span className={`${selected ? '' : 'text-gray-500'} flex items-center gap-1`}>
           {selected ? selected.label : 'Select'}
         </span>
         <span className="ml-2">▾</span>
