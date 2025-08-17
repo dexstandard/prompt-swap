@@ -11,6 +11,7 @@ import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import SelectInput from './SelectInput';
 import RiskDisplay from '../RiskDisplay';
+import {Info} from 'lucide-react';
 
 const schema = z
     .object({
@@ -29,7 +30,7 @@ const schema = z
             .min(0, 'Must be at least 0')
             .max(100, 'Must be 100 or less'),
         risk: z.enum(['low', 'medium', 'high']),
-        rebalance: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
+        reviewInterval: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
     })
     .refine((data) => data.tokenA !== data.tokenB, {
         message: 'Tokens must be different',
@@ -51,7 +52,7 @@ const riskOptions = [
     {value: 'high', label: <RiskDisplay risk="high" />},
 ];
 
-const rebalanceOptions = [
+const reviewIntervalOptions = [
     {value: '1h', label: '1 hour'},
     {value: '3h', label: '3 hours'},
     {value: '5h', label: '5 hours'},
@@ -71,7 +72,7 @@ const defaultValues: FormValues = {
     minTokenAAllocation: 0,
     minTokenBAllocation: 30,
     risk: 'low',
-    rebalance: '1h',
+    reviewInterval: '1h',
 };
 
 export default function AgentTemplateForm({
@@ -89,7 +90,7 @@ export default function AgentTemplateForm({
         minTokenAAllocation: number;
         minTokenBAllocation: number;
         risk: string;
-        rebalance: string;
+        reviewInterval: string;
         agentInstructions: string;
     };
     onSubmitSuccess?: () => void;
@@ -119,7 +120,7 @@ export default function AgentTemplateForm({
                 minTokenAAllocation: template.minTokenAAllocation,
                 minTokenBAllocation: template.minTokenBAllocation,
                 risk: template.risk as any,
-                rebalance: template.rebalance as any,
+                reviewInterval: template.reviewInterval as any,
             });
         } else {
             reset(defaultValues);
@@ -358,18 +359,29 @@ export default function AgentTemplateForm({
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-1" htmlFor="rebalance">
-                            Rebalance Frequency
+                        <label className="block text-sm font-medium mb-1" htmlFor="reviewInterval">
+                            <span className="inline-flex items-center">
+                                Review Interval
+                                <span
+                                    className="relative ml-1 cursor-pointer group"
+                                    tabIndex={0}
+                                >
+                                    <Info className="w-4 h-4 text-gray-500" />
+                                    <span className="absolute z-10 hidden w-48 -translate-x-1/2 left-1/2 -translate-y-full mb-1 rounded bg-gray-800 p-2 text-xs text-white group-hover:block group-focus:block">
+                                        How often the agent will review the portfolio; it may not rebalance every time.
+                                    </span>
+                                </span>
+                            </span>
                         </label>
                         <Controller
-                            name="rebalance"
+                            name="reviewInterval"
                             control={control}
                             render={({field}) => (
                                 <SelectInput
-                                    id="rebalance"
+                                    id="reviewInterval"
                                     value={field.value}
                                     onChange={field.onChange}
-                                    options={rebalanceOptions}
+                                    options={reviewIntervalOptions}
                                 />
                             )}
                         />

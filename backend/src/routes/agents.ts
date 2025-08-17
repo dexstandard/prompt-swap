@@ -21,7 +21,7 @@ interface AgentRow {
   min_a_allocation: number;
   min_b_allocation: number;
   risk: string;
-  rebalance: string;
+  review_interval: string;
   agent_instructions: string;
 }
 
@@ -42,7 +42,7 @@ function toApi(row: AgentRow) {
       minTokenAAllocation: row.min_a_allocation,
       minTokenBAllocation: row.min_b_allocation,
       risk: row.risk,
-      rebalance: row.rebalance,
+      reviewInterval: row.review_interval,
       agentInstructions: row.agent_instructions,
     },
   };
@@ -51,7 +51,7 @@ function toApi(row: AgentRow) {
 const baseSelect =
   'SELECT a.id, a.template_id, a.user_id, a.model, a.status, a.created_at, ' +
   't.name, t.token_a, t.token_b, t.target_allocation, t.min_a_allocation, t.min_b_allocation, ' +
-  't.risk, t.rebalance, t.agent_instructions FROM agents a JOIN agent_templates t ON a.template_id = t.id';
+  't.risk, t.review_interval, t.agent_instructions FROM agents a JOIN agent_templates t ON a.template_id = t.id';
 
 function getAgent(id: string) {
   return db

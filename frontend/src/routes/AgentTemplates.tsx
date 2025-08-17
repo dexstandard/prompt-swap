@@ -15,7 +15,7 @@ interface AgentTemplateDetails {
   minTokenAAllocation: number;
   minTokenBAllocation: number;
   risk: string;
-  rebalance: string;
+  reviewInterval: string;
   agentInstructions: string;
 }
 

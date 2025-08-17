@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS agent_templates(
   min_a_allocation INTEGER,
   min_b_allocation INTEGER,
   risk TEXT,
-  rebalance TEXT,
+  review_interval TEXT,
   agent_instructions TEXT
 );
 

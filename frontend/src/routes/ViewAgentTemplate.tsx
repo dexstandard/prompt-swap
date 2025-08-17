@@ -22,7 +22,7 @@ interface AgentTemplateDetails {
     minTokenAAllocation: number;
     minTokenBAllocation: number;
     risk: string;
-    rebalance: string;
+    reviewInterval: string;
     agentInstructions: string;
 }
 
@@ -126,7 +126,7 @@ export default function ViewAgentTemplate() {
                 <strong>Risk Tolerance:</strong> <RiskDisplay risk={data.risk} />
             </p>
             <p>
-                <strong>Rebalance Frequency:</strong> {data.rebalance}
+                <strong>Review Interval:</strong> {data.reviewInterval}
             </p>
             <TradingAgentInstructions
                 templateId={data.id}

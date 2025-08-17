@@ -14,7 +14,7 @@ interface AgentTemplate {
   tokenB: string;
   targetAllocation: number;
   risk: string;
-  rebalance: string;
+  reviewInterval: string;
 }
 
 export default function AgentTemplatesTable({
@@ -69,13 +69,13 @@ export default function AgentTemplatesTable({
                 <th className="text-left">Tokens</th>
                 <th className="text-left">Target Allocation</th>
                 <th className="text-left">Risk</th>
-                <th className="text-left">Rebalance</th>
+                <th className="text-left">Review Interval</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {items.map((t) => {
-                const rebalanceMap: Record<string, string> = {
+                const reviewIntervalMap: Record<string, string> = {
                   '1h': '1 hour',
                   '3h': '3 hours',
                   '5h': '5 hours',
@@ -84,7 +84,7 @@ export default function AgentTemplatesTable({
                   '3d': '3 days',
                   '1w': '1 week',
                 };
-                const rebalance = rebalanceMap[t.rebalance] || t.rebalance;
+                const reviewInterval = reviewIntervalMap[t.reviewInterval] || t.reviewInterval;
                 const handleDelete = async () => {
                   if (!user) return;
                   await api.delete(`/agent-templates/${t.id}`, {
@@ -105,7 +105,7 @@ export default function AgentTemplatesTable({
                     <td>
                       <RiskDisplay risk={t.risk} />
                     </td>
-                    <td>{rebalance}</td>
+                    <td>{reviewInterval}</td>
                     <td className="flex gap-2">
                       <Link
                         to={`/agent-templates/${t.id}`}
