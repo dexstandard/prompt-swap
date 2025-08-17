@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
-import {useParams} from 'react-router-dom';
+import {useParams, useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../lib/axios';
@@ -25,6 +25,7 @@ interface AgentTemplateDetails {
 
 export default function ViewAgentTemplate() {
     const {id} = useParams();
+    const navigate = useNavigate();
     const {user} = useUser();
     const {data} = useQuery({
         queryKey: ['agent-template', id, user?.id],
@@ -170,7 +171,7 @@ export default function ViewAgentTemplate() {
                     disabled={!user || !hasOpenAIKey || !hasBinanceKey || !modelsQuery.data?.length}
                     onClick={async () => {
                         if (!user) return;
-                        await api.post(
+                        const res = await api.post(
                             '/agents',
                             {
                                 templateId: id,
@@ -179,9 +180,10 @@ export default function ViewAgentTemplate() {
                             },
                             {headers: {'x-user-id': user.id}}
                         );
+                        navigate(`/agents/${res.data.id}`);
                     }}
                 >
-                    Start trading
+                    Start Agent
                 </button>
             </div>
         </div>
