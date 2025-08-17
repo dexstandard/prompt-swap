@@ -23,7 +23,7 @@ describe('agent template routes', () => {
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
-      rebalance: '1h',
+      reviewInterval: '1h',
       agentInstructions: 'prompt',
     };
 
@@ -120,7 +120,7 @@ describe('agent template routes', () => {
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
-      rebalance: '1h',
+      reviewInterval: '1h',
       agentInstructions: 'prompt',
     };
 
@@ -176,7 +176,7 @@ describe('agent template routes', () => {
       tokenA: 'BTC',
       tokenB: 'ETH',
       risk: 'low',
-      rebalance: '1h',
+      reviewInterval: '1h',
       agentInstructions: 'prompt',
     };
 
@@ -229,7 +229,7 @@ describe('agent template routes', () => {
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
-      rebalance: '1h',
+      reviewInterval: '1h',
       agentInstructions: 'prompt',
     };
 
@@ -281,7 +281,7 @@ describe('agent template routes', () => {
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
-      rebalance: '1h',
+      reviewInterval: '1h',
       agentInstructions: 'prompt',
     };
 

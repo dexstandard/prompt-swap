@@ -20,7 +20,7 @@ interface Agent {
     minTokenAAllocation: number;
     minTokenBAllocation: number;
     risk: string;
-    rebalance: string;
+    reviewInterval: string;
     agentInstructions: string;
   };
 }
@@ -42,8 +42,8 @@ export default function ViewAgent() {
   if (!data) return <div className="p-4">Loading...</div>;
 
   const template = data.template;
-  const rebalanceLabel =
-    template?.rebalance === '1h' ? '1 hour' : template?.rebalance;
+  const reviewIntervalLabel =
+    template?.reviewInterval === '1h' ? '1 hour' : template?.reviewInterval;
 
   return (
     <div className="p-4">
@@ -70,7 +70,7 @@ export default function ViewAgent() {
             <RiskDisplay risk={template.risk} />
           </p>
           <p>
-            <strong>Rebalance:</strong> {rebalanceLabel}
+            <strong>Review Interval:</strong> {reviewIntervalLabel}
           </p>
           <p>
             <strong>Target Allocation:</strong> {template.targetAllocation} / {100 - template.targetAllocation}
