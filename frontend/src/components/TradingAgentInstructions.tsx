@@ -13,6 +13,7 @@ export default function TradingAgentInstructions({templateId, instructions, onCh
   const {user} = useUser();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(instructions);
+  const MAX_LENGTH = 2000;
 
   useEffect(() => {
     setText(instructions);
@@ -49,8 +50,12 @@ export default function TradingAgentInstructions({templateId, instructions, onCh
             className="w-full border rounded p-2"
             rows={4}
             value={text}
+            maxLength={MAX_LENGTH}
             onChange={(e) => setText(e.target.value)}
           />
+          <div className="text-sm text-gray-600 text-right mt-1">
+            {text.length}/{MAX_LENGTH}
+          </div>
           <div className="mt-2 flex gap-2">
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded"
