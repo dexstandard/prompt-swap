@@ -76,13 +76,13 @@ export default function AgentTemplatesTable({
             <tbody>
               {items.map((t) => {
                 const reviewIntervalMap: Record<string, string> = {
-                  '1h': '1 hour',
-                  '3h': '3 hours',
-                  '5h': '5 hours',
-                  '12h': '12 hours',
-                  '24h': '1 day',
-                  '3d': '3 days',
-                  '1w': '1 week',
+                  '1h': '1 Hour',
+                  '3h': '3 Hours',
+                  '5h': '5 Hours',
+                  '12h': '12 Hours',
+                  '24h': '1 Day',
+                  '3d': '3 Days',
+                  '1w': '1 Week',
                 };
                 const reviewInterval = reviewIntervalMap[t.reviewInterval] || t.reviewInterval;
                 const handleDelete = async () => {

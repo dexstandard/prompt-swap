@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
 import RiskDisplay from '../components/RiskDisplay';
+import TokenDisplay from '../components/TokenDisplay';
 import {useParams, useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
@@ -98,6 +99,17 @@ export default function ViewAgentTemplate() {
 
     if (!data) return <div className="p-4">Loading...</div>;
 
+    const reviewIntervalMap: Record<string, string> = {
+        '1h': '1 Hour',
+        '3h': '3 Hours',
+        '5h': '5 Hours',
+        '12h': '12 Hours',
+        '24h': '1 Day',
+        '3d': '3 Days',
+        '1w': '1 Week',
+    };
+    const reviewIntervalLabel = reviewIntervalMap[data.reviewInterval] ?? data.reviewInterval;
+
     function WarningSign({children}: { children: ReactNode }) {
         return (
             <div className="mt-2 p-4 text-sm text-red-600 border border-red-600 rounded bg-red-100">
@@ -110,8 +122,11 @@ export default function ViewAgentTemplate() {
         <div className="p-4">
             <h1 className="text-2xl font-bold mb-2">Agent Template</h1>
             <AgentTemplateName templateId={data.id} name={name} onChange={setName} />
-            <p>
-                <strong>Tokens:</strong> {data.tokenA.toUpperCase()} / {data.tokenB.toUpperCase()}
+            <p className="flex items-center gap-1">
+                <strong>Tokens:</strong>
+                <TokenDisplay token={data.tokenA} />
+                <span>/</span>
+                <TokenDisplay token={data.tokenB} />
             </p>
             <p>
                 <strong>Target Allocation:</strong> {data.targetAllocation} / {100 - data.targetAllocation}
@@ -126,7 +141,7 @@ export default function ViewAgentTemplate() {
                 <strong>Risk Tolerance:</strong> <RiskDisplay risk={data.risk} />
             </p>
             <p>
-                <strong>Review Interval:</strong> {data.reviewInterval}
+                <strong>Review Interval:</strong> {reviewIntervalLabel}
             </p>
             <TradingAgentInstructions
                 templateId={data.id}
