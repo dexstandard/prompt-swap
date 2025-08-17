@@ -10,8 +10,8 @@ import {normalizeAllocations} from '../../lib/allocations';
 import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import SelectInput from './SelectInput';
+import FormField from './FormField';
 import RiskDisplay from '../RiskDisplay';
-import {Info} from 'lucide-react';
 import axios from 'axios';
 import { useToast } from '../Toast';
 import Button from '../ui/Button';
@@ -233,10 +233,7 @@ export default function AgentTemplateForm({
             >
                 <h2 className="text-xl font-bold">{template ? 'Edit Agent Template' : 'Create Agent Template'}</h2>
                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1" htmlFor="tokenA">
-                            Token A
-                        </label>
+                    <FormField label="Token A" htmlFor="tokenA">
                         <Controller
                             name="tokenA"
                             control={control}
@@ -251,11 +248,8 @@ export default function AgentTemplateForm({
                                 />
                             )}
                         />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1" htmlFor="tokenB">
-                            Token B
-                        </label>
+                    </FormField>
+                    <FormField label="Token B" htmlFor="tokenB">
                         <Controller
                             name="tokenB"
                             control={control}
@@ -270,12 +264,9 @@ export default function AgentTemplateForm({
                                 />
                             )}
                         />
-                    </div>
+                    </FormField>
                 </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1" htmlFor="targetAllocation">
-                        Target Allocation
-                    </label>
+                <FormField label="Target Allocation" htmlFor="targetAllocation">
                     <div className="flex items-center gap-2">
           <span className="w-24 text-right">
             {targetAllocation}% {tokenA.toUpperCase()}
@@ -293,15 +284,12 @@ export default function AgentTemplateForm({
             {100 - targetAllocation}% {tokenB.toUpperCase()}
           </span>
                     </div>
-                </div>
+                </FormField>
                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label
-                            className="block text-sm font-medium mb-1"
-                            htmlFor="minTokenAAllocation"
-                        >
-                            Min {tokenA.toUpperCase()} allocation
-                        </label>
+                    <FormField
+                        label={`Min ${tokenA.toUpperCase()} allocation`}
+                        htmlFor="minTokenAAllocation"
+                    >
                         <Controller
                             name="minTokenAAllocation"
                             control={control}
@@ -322,14 +310,11 @@ export default function AgentTemplateForm({
                                 />
                             )}
                         />
-                    </div>
-                    <div>
-                        <label
-                            className="block text-sm font-medium mb-1"
-                            htmlFor="minTokenBAllocation"
-                        >
-                            Min {tokenB.toUpperCase()} allocation
-                        </label>
+                    </FormField>
+                    <FormField
+                        label={`Min ${tokenB.toUpperCase()} allocation`}
+                        htmlFor="minTokenBAllocation"
+                    >
                         <Controller
                             name="minTokenBAllocation"
                             control={control}
@@ -350,13 +335,10 @@ export default function AgentTemplateForm({
                                 />
                             )}
                         />
-                    </div>
+                    </FormField>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1" htmlFor="risk">
-                            Risk Tolerance
-                        </label>
+                    <FormField label="Risk Tolerance" htmlFor="risk">
                         <Controller
                             name="risk"
                             control={control}
@@ -369,22 +351,12 @@ export default function AgentTemplateForm({
                                 />
                             )}
                         />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1" htmlFor="reviewInterval">
-                            <span className="inline-flex items-center">
-                                Review Interval
-                                <span
-                                    className="relative ml-1 cursor-pointer group"
-                                    tabIndex={0}
-                                >
-                                    <Info className="w-4 h-4 text-gray-500" />
-                                    <span className="absolute z-10 hidden w-48 -translate-x-1/2 left-1/2 -translate-y-full mb-1 rounded bg-gray-800 p-2 text-xs text-white group-hover:block group-focus:block">
-                                        How often the agent will review the portfolio; it may not rebalance every time.
-                                    </span>
-                                </span>
-                            </span>
-                        </label>
+                    </FormField>
+                    <FormField
+                        label="Review Interval"
+                        htmlFor="reviewInterval"
+                        tooltip="How often the agent will review the portfolio; it may not rebalance every time."
+                    >
                         <Controller
                             name="reviewInterval"
                             control={control}
@@ -397,7 +369,7 @@ export default function AgentTemplateForm({
                                 />
                             )}
                         />
-                    </div>
+                    </FormField>
                 </div>
                 {!user && (
                     <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
