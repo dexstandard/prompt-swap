@@ -2,13 +2,13 @@ import cron from 'node-cron';
 import buildServer from '../src/server.js';
 import { env } from '../src/util/env.js';
 import { migrate } from '../src/db/index.js';
-import rebalance from '../src/jobs/rebalance.js';
+import reviewPortfolio from '../src/jobs/review-portfolio.js';
 
 async function main() {
   migrate();
   const app = await buildServer();
 
-  cron.schedule(env.CRON, () => rebalance(app.log));
+  cron.schedule(env.CRON, () => reviewPortfolio(app.log));
 
   try {
     await app.listen({ port: 3000 });
