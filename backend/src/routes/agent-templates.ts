@@ -2,7 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 import { normalizeAllocations } from '../util/allocations.js';
-import { errorResponse, lengthMessage, ERROR_MESSAGES } from '../util/errorMessages.js';
+import {
+  errorResponse,
+  lengthMessage,
+  ERROR_MESSAGES,
+} from '../util/errorMessages.js';
+import { requireUserId } from '../util/auth.js';
 
 const MAX_NAME_LENGTH = 50;
 const MAX_INSTRUCTIONS_LENGTH = 2000;
@@ -42,9 +47,8 @@ function toApi(row: AgentTemplateRow) {
 
 export default async function agentTemplateRoutes(app: FastifyInstance) {
   app.get('/agent-templates', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
-    if (!userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const rows = db
       .prepare<[string], AgentTemplateRow>(
         'SELECT * FROM agent_templates WHERE user_id = ? ORDER BY rowid DESC'
@@ -54,9 +58,8 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
   });
 
   app.get('/agent-templates/paginated', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
-    if (!userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const { page = '1', pageSize = '10' } = req.query as {
       page?: string;
       pageSize?: string;
@@ -93,9 +96,12 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       reviewInterval: string;
       agentInstructions: string;
     };
-    const userId = req.headers['x-user-id'] as string | undefined;
-    if (!userId || body.userId !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
+    if (body.userId !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     if (body.name.length > MAX_NAME_LENGTH)
       return reply
         .code(400)
@@ -183,27 +189,39 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
   });
 
   app.get('/agent-templates/:id', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const id = (req.params as any).id;
     const row = db
       .prepare('SELECT * FROM agent_templates WHERE id = ?')
       .get(id) as AgentTemplateRow | undefined;
-    if (!row) return reply.code(404).send({ error: 'not found' });
-    if (!userId || row.user_id !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    if (!row)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (row.user_id !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     return toApi(row);
   });
 
   app.patch('/agent-templates/:id/instructions', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const id = (req.params as any).id;
     const body = req.body as { userId: string; agentInstructions: string };
     const existing = db
       .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
-    if (!existing) return reply.code(404).send({ error: 'not found' });
-    if (!userId || existing.user_id !== userId || body.userId !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    if (!existing)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (existing.user_id !== userId || body.userId !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     if (body.agentInstructions.length > MAX_INSTRUCTIONS_LENGTH)
       return reply
         .code(400)
@@ -221,15 +239,21 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
   });
 
   app.patch('/agent-templates/:id/name', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const id = (req.params as any).id;
     const body = req.body as { userId: string; name: string };
     const existing = db
       .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
-    if (!existing) return reply.code(404).send({ error: 'not found' });
-    if (!userId || existing.user_id !== userId || body.userId !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    if (!existing)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (existing.user_id !== userId || body.userId !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     if (body.name.length > MAX_NAME_LENGTH)
       return reply
         .code(400)
@@ -245,7 +269,8 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
   });
 
   app.put('/agent-templates/:id', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const id = (req.params as any).id;
     const body = req.body as {
       userId: string;
@@ -262,9 +287,14 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     const existing = db
       .prepare('SELECT * FROM agent_templates WHERE id = ?')
       .get(id) as AgentTemplateRow | undefined;
-    if (!existing) return reply.code(404).send({ error: 'not found' });
-    if (!userId || existing.user_id !== userId || body.userId !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    if (!existing)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (existing.user_id !== userId || body.userId !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     const tokenA = body.tokenA.toUpperCase();
     const tokenB = body.tokenB.toUpperCase();
     if (body.name.length > MAX_NAME_LENGTH)
@@ -346,14 +376,20 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
   });
 
   app.delete('/agent-templates/:id', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const id = (req.params as any).id;
     const existing = db
       .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
-    if (!existing) return reply.code(404).send({ error: 'not found' });
-    if (!userId || existing.user_id !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    if (!existing)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (existing.user_id !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     db.prepare('DELETE FROM agent_templates WHERE id = ?').run(id);
     return { ok: true };
   });

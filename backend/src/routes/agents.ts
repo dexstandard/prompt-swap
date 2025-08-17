@@ -1,8 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
-import { errorResponse, lengthMessage, ERROR_MESSAGES } from '../util/errorMessages.js';
+import {
+  errorResponse,
+  lengthMessage,
+  ERROR_MESSAGES,
+} from '../util/errorMessages.js';
 import reviewPortfolio from '../jobs/review-portfolio.js';
+import { requireUserId } from '../util/auth.js';
 
 export enum AgentStatus {
   Active = 'active',
@@ -63,9 +68,8 @@ function getAgent(id: string) {
 
 export default async function agentRoutes(app: FastifyInstance) {
   app.get('/agents', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
-    if (!userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const rows = db
       .prepare<[string], AgentRow>(`${baseSelect} WHERE a.user_id = ?`)
       .all(userId);
@@ -73,9 +77,8 @@ export default async function agentRoutes(app: FastifyInstance) {
   });
 
   app.get('/agents/paginated', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
-    if (!userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const { page = '1', pageSize = '10' } = req.query as {
       page?: string;
       pageSize?: string;
@@ -103,14 +106,19 @@ export default async function agentRoutes(app: FastifyInstance) {
       userId: string;
       model: string;
     };
-    const userId = req.headers['x-user-id'] as string | undefined;
-    if (!userId || body.userId !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
+    if (body.userId !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     const template = db
       .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(body.templateId) as { user_id: string } | undefined;
     if (!template || template.user_id !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     const existing = db
       .prepare('SELECT id FROM agents WHERE template_id = ?')
       .get(body.templateId) as { id: string } | undefined;
@@ -138,7 +146,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       !userRow.binance_api_key_enc ||
       !userRow.binance_api_secret_enc
     )
-      return reply.code(400).send({ error: 'missing api keys' });
+      return reply.code(400).send(errorResponse('missing api keys'));
     const id = randomUUID();
     const status = AgentStatus.Active;
     const createdAt = Date.now();
@@ -151,17 +159,24 @@ export default async function agentRoutes(app: FastifyInstance) {
   });
 
   app.get('/agents/:id', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const id = (req.params as any).id;
     const row = getAgent(id);
-    if (!row) return reply.code(404).send({ error: 'not found' });
-    if (!userId || row.user_id !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    if (!row)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (row.user_id !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     return toApi(row);
   });
 
   app.put('/agents/:id', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const id = (req.params as any).id;
     const body = req.body as {
       templateId: string;
@@ -172,14 +187,21 @@ export default async function agentRoutes(app: FastifyInstance) {
     const existing = db
       .prepare('SELECT user_id FROM agents WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
-    if (!existing) return reply.code(404).send({ error: 'not found' });
-    if (!userId || existing.user_id !== userId || body.userId !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    if (!existing)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (existing.user_id !== userId || body.userId !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     const template = db
       .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
       .get(body.templateId) as { user_id: string } | undefined;
     if (!template || template.user_id !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     db.prepare(
       `UPDATE agents SET template_id = ?, user_id = ?, model = ?, status = ? WHERE id = ?`
     ).run(body.templateId, body.userId, body.model, body.status, id);
@@ -188,14 +210,20 @@ export default async function agentRoutes(app: FastifyInstance) {
   });
 
   app.delete('/agents/:id', async (req, reply) => {
-    const userId = req.headers['x-user-id'] as string | undefined;
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
     const id = (req.params as any).id;
     const existing = db
       .prepare('SELECT user_id FROM agents WHERE id = ?')
       .get(id) as { user_id: string } | undefined;
-    if (!existing) return reply.code(404).send({ error: 'not found' });
-    if (!userId || existing.user_id !== userId)
-      return reply.code(403).send({ error: 'forbidden' });
+    if (!existing)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (existing.user_id !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
     db.prepare('DELETE FROM agents WHERE id = ?').run(id);
     return { ok: true };
   });
