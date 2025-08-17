@@ -42,8 +42,17 @@ export default function ViewAgent() {
   if (!data) return <div className="p-4">Loading...</div>;
 
   const template = data.template;
+  const reviewIntervalMap: Record<string, string> = {
+    '1h': '1 Hour',
+    '3h': '3 Hours',
+    '5h': '5 Hours',
+    '12h': '12 Hours',
+    '24h': '1 Day',
+    '3d': '3 Days',
+    '1w': '1 Week',
+  };
   const reviewIntervalLabel =
-    template?.reviewInterval === '1h' ? '1 hour' : template?.reviewInterval;
+    reviewIntervalMap[template?.reviewInterval ?? ''] ?? template?.reviewInterval;
 
   return (
     <div className="p-4">
@@ -59,14 +68,14 @@ export default function ViewAgent() {
       </p>
       {template ? (
         <>
-          <p className="flex items-center">
-            <strong className="mr-1">Tokens:</strong>
+          <p className="flex items-center gap-1">
+            <strong>Tokens:</strong>
             <TokenDisplay token={template.tokenA} />
-            <span className="mx-1">/</span>
+            <span>/</span>
             <TokenDisplay token={template.tokenB} />
           </p>
-          <p className="flex items-center">
-            <strong className="mr-1">Risk:</strong>
+          <p className="flex items-center gap-1">
+            <strong>Risk:</strong>
             <RiskDisplay risk={template.risk} />
           </p>
           <p>

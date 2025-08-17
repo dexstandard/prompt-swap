@@ -53,13 +53,13 @@ const riskOptions = [
 ];
 
 const reviewIntervalOptions = [
-    {value: '1h', label: '1 hour'},
-    {value: '3h', label: '3 hours'},
-    {value: '5h', label: '5 hours'},
-    {value: '12h', label: '12 hours'},
-    {value: '24h', label: '1 day'},
-    {value: '3d', label: '3 days'},
-    {value: '1w', label: '1 week'},
+    {value: '1h', label: '1 Hour'},
+    {value: '3h', label: '3 Hours'},
+    {value: '5h', label: '5 Hours'},
+    {value: '12h', label: '12 Hours'},
+    {value: '24h', label: '1 Day'},
+    {value: '3d', label: '3 Days'},
+    {value: '1w', label: '1 Week'},
 ];
 
 const DEFAULT_AGENT_INSTRUCTIONS =
