@@ -2,6 +2,7 @@ import {useState, useEffect} from 'react';
 import {Pencil} from 'lucide-react';
 import {useUser} from '../lib/useUser';
 import api from '../lib/axios';
+import Button from './ui/Button';
 
 interface Props {
   templateId: string;
@@ -42,21 +43,18 @@ export default function AgentTemplateName({templateId, name, onChange}: Props) {
             maxLength={MAX_NAME_LENGTH}
             onChange={(e) => setText(e.target.value)}
           />
-          <button
-            className="px-2 py-1 bg-blue-600 text-white rounded mr-2"
-            onClick={save}
-          >
+          <Button className="mr-2" onClick={save}>
             Save
-          </button>
-          <button
-            className="px-2 py-1 border rounded"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => {
               setText(name);
               setEditing(false);
             }}
           >
             Cancel
-          </button>
+          </Button>
         </>
       ) : (
         <>

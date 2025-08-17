@@ -6,6 +6,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import TokenDisplay from './TokenDisplay';
 import RiskDisplay from './RiskDisplay';
+import Button from './ui/Button';
 
 interface AgentTemplate {
   id: string;
@@ -138,23 +139,25 @@ export default function AgentTemplatesTable({
           </table>
           {totalPages > 1 && (
             <div className="flex gap-2 items-center">
-              <button
-                className="px-2 py-1 border"
+              <Button
+                type="button"
+                variant="secondary"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
               >
                 Prev
-              </button>
+              </Button>
               <span>
                 {page} / {totalPages}
               </span>
-              <button
-                className="px-2 py-1 border"
+              <Button
+                type="button"
+                variant="secondary"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
                 Next
-              </button>
+              </Button>
             </div>
           )}
         </>

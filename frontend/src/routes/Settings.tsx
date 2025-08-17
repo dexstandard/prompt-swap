@@ -2,6 +2,7 @@ import { useEffect, useState, FormEvent } from 'react';
 import QRCode from 'react-qr-code';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
+import Button from '../components/ui/Button';
 
 export default function Settings() {
   const { user } = useUser();
@@ -60,9 +61,7 @@ export default function Settings() {
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
-          <button type="submit" className="px-2 py-1 bg-blue-500 text-white rounded">
-            Disable
-          </button>
+          <Button type="submit">Disable</Button>
         </form>
       ) : setup ? (
         <form onSubmit={enable} className="space-y-2">
@@ -74,17 +73,10 @@ export default function Settings() {
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
-          <button type="submit" className="px-2 py-1 bg-blue-500 text-white rounded">
-            Enable
-          </button>
+          <Button type="submit">Enable</Button>
         </form>
       ) : (
-        <button
-          onClick={startSetup}
-          className="px-2 py-1 bg-blue-500 text-white rounded"
-        >
-          Setup 2FA
-        </button>
+        <Button onClick={startSetup}>Setup 2FA</Button>
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import {useState, useEffect} from 'react';
 import {Pencil} from 'lucide-react';
 import {useUser} from '../lib/useUser';
 import api from '../lib/axios';
+import Button from './ui/Button';
 
 interface Props {
   templateId: string;
@@ -57,21 +58,16 @@ export default function TradingAgentInstructions({templateId, instructions, onCh
             {text.length}/{MAX_LENGTH}
           </div>
           <div className="mt-2 flex gap-2">
-            <button
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-              onClick={save}
-            >
-              Save
-            </button>
-            <button
-              className="px-4 py-2 border rounded"
+            <Button onClick={save}>Save</Button>
+            <Button
+              variant="secondary"
               onClick={() => {
                 setText(instructions);
                 setEditing(false);
               }}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : (

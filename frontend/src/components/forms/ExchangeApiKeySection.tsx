@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
+import Button from '../ui/Button';
 
 const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
   WebkitTextSecurity: 'disc',
@@ -138,30 +139,26 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
             </p>
           )}
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
               onClick={onSubmit}
               disabled={saveDisabled}
-              className={`bg-blue-600 text-white px-2 py-1 rounded ${
-                saveDisabled ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              loading={saveMut.isPending}
             >
               {query.data ? 'Update' : 'Save'}
-            </button>
+            </Button>
             {query.data && (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => {
                   setEditing(false);
                   form.reset(query.data ?? { key: '', secret: '' });
                 }}
                 disabled={saveMut.isPending}
-                className={`bg-gray-300 px-2 py-1 rounded ${
-                  saveMut.isPending ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
               >
                 Cancel
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -177,29 +174,24 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
               data-lpignore="true"
               data-1p-ignore="true"
             />
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setEditing(true);
                 form.reset({ key: '', secret: '' });
               }}
               disabled={delMut.isPending}
-              className={`bg-blue-600 text-white px-2 py-1 rounded ${
-                delMut.isPending ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
             >
               Edit
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="danger"
               onClick={() => delMut.mutate()}
               disabled={delMut.isPending}
-              className={`bg-red-600 text-white px-2 py-1 rounded ${
-                delMut.isPending ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
             >
               Delete
-            </button>
+            </Button>
           </div>
           {balanceQuery.isLoading ? (
             <p>Loading balance...</p>

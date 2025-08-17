@@ -13,6 +13,7 @@ import WalletBalances from '../components/WalletBalances';
 import TradingAgentInstructions from '../components/TradingAgentInstructions';
 import AgentTemplateName from '../components/AgentTemplateName';
 import { useToast } from '../components/Toast';
+import Button from '../components/ui/Button';
 
 interface AgentTemplateDetails {
     id: string;
@@ -191,12 +192,8 @@ export default function ViewAgentTemplate() {
                 {!user && (
                     <p className="text-sm text-gray-600 mb-2 mt-4">Log in to continue</p>
                 )}
-                <button
-                    className={`mt-4 px-4 py-2 rounded ${
-                        !isCreating && user && hasOpenAIKey && hasBinanceKey && modelsQuery.data?.length
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                <Button
+                    className="mt-4"
                     disabled={
                         isCreating ||
                         !user ||
@@ -204,6 +201,7 @@ export default function ViewAgentTemplate() {
                         !hasBinanceKey ||
                         !modelsQuery.data?.length
                     }
+                    loading={isCreating}
                     onClick={async () => {
                         if (!user) return;
                         setIsCreating(true);
@@ -229,7 +227,7 @@ export default function ViewAgentTemplate() {
                     }}
                 >
                     Start Agent
-                </button>
+                </Button>
             </div>
         </div>
     );

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { LogOut } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
+import Button from './ui/Button';
 
 type CredentialResponse = { credential: string };
 
@@ -63,16 +64,18 @@ export default function GoogleLoginButton() {
     return (
       <div className="h-5 flex items-center text-sm gap-2">
         <span>{user.email}</span>
-        <button
+        <Button
+          type="button"
+          variant="link"
+          className="text-xs flex items-center gap-1"
           onClick={() => {
             const google = window.google;
             google?.accounts.id.disableAutoSelect?.();
             setUser(null);
           }}
-          className="text-xs text-blue-500 hover:underline flex items-center gap-1"
         >
           <LogOut className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     );
   return <div ref={btnRef} className="h-5 capitalize" />;

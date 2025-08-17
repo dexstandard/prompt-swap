@@ -14,6 +14,7 @@ import RiskDisplay from '../RiskDisplay';
 import {Info} from 'lucide-react';
 import axios from 'axios';
 import { useToast } from '../Toast';
+import Button from '../ui/Button';
 
 const schema = z
     .object({
@@ -403,37 +404,32 @@ export default function AgentTemplateForm({
                 )}
                 {template ? (
                     <div className="flex gap-2">
-                        <button
+                        <Button
                             type="submit"
-                            className={`flex-1 py-2 rounded border border-transparent ${
-                                user && !isSubmitting
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
-                            disabled={!user || isSubmitting}
+                            className="flex-1"
+                            disabled={!user}
+                            loading={isSubmitting}
                         >
                             Update
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="button"
-                            className="flex-1 py-2 rounded border border-gray-300"
+                            variant="secondary"
+                            className="flex-1"
                             onClick={onCancel}
                         >
                             Cancel
-                        </button>
+                        </Button>
                     </div>
                 ) : (
-                    <button
+                    <Button
                         type="submit"
-                        className={`w-full py-2 rounded border border-transparent ${
-                            user && !isSubmitting
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                        disabled={!user || isSubmitting}
+                        className="w-full"
+                        disabled={!user}
+                        loading={isSubmitting}
                     >
                         Save Template
-                    </button>
+                    </Button>
                 )}
             </form>
         </>
