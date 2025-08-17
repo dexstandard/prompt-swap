@@ -373,7 +373,7 @@ export default function AgentTemplateForm({
                     <div className="flex gap-2">
                         <button
                             type="submit"
-                            className={`flex-1 py-2 rounded ${
+                            className={`flex-1 py-2 rounded border border-transparent ${
                                 user && !isSubmitting
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -393,7 +393,7 @@ export default function AgentTemplateForm({
                 ) : (
                     <button
                         type="submit"
-                        className={`w-full py-2 rounded ${
+                        className={`w-full py-2 rounded border border-transparent ${
                             user && !isSubmitting
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
