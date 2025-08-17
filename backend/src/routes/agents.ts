@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 import { errorResponse, lengthMessage, ERROR_MESSAGES } from '../util/errorMessages.js';
+import reviewPortfolio from '../jobs/review-portfolio.js';
 
 export enum AgentStatus {
   Active = 'active',
@@ -101,7 +102,6 @@ export default async function agentRoutes(app: FastifyInstance) {
       templateId: string;
       userId: string;
       model: string;
-      status?: AgentStatus;
     };
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId || body.userId !== userId)
@@ -140,12 +140,13 @@ export default async function agentRoutes(app: FastifyInstance) {
     )
       return reply.code(400).send({ error: 'missing api keys' });
     const id = randomUUID();
-    const status = body.status ?? AgentStatus.Inactive;
+    const status = AgentStatus.Active;
     const createdAt = Date.now();
     db.prepare(
       `INSERT INTO agents (id, template_id, user_id, model, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`
     ).run(id, body.templateId, body.userId, body.model, status, createdAt);
     const row = getAgent(id)!;
+    await reviewPortfolio(req.log, id);
     return toApi(row);
   });
 
