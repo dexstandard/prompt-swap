@@ -150,7 +150,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
         body.risk,
         body.reviewInterval,
         body.agentInstructions
-      );
+      ) as { id: string } | undefined;
     if (duplicate)
       return reply
         .code(400)
@@ -319,7 +319,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
         body.reviewInterval,
         body.agentInstructions,
         id
-      );
+      ) as { id: string } | undefined;
     if (duplicate)
       return reply
         .code(400)
