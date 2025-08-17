@@ -8,6 +8,7 @@ import TokenDisplay from './TokenDisplay';
 
 interface AgentTemplate {
   id: string;
+  name: string;
   tokenA: string;
   tokenB: string;
   targetAllocation: number;
@@ -63,6 +64,7 @@ export default function AgentTemplatesTable({
           <table className="w-full mb-4">
             <thead>
               <tr>
+                <th className="text-left">Name</th>
                 <th className="text-left">Tokens</th>
                 <th className="text-left">Target Allocation</th>
                 <th className="text-left">Risk</th>
@@ -94,6 +96,7 @@ export default function AgentTemplatesTable({
                 };
                 return (
                   <tr key={t.id}>
+                    <td>{t.name}</td>
                     <td>
                       <span className="inline-flex items-center gap-1">
                         <TokenDisplay token={t.tokenA} />/

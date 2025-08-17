@@ -14,6 +14,7 @@ interface AgentRow {
   model: string;
   status: string;
   created_at: number;
+  name: string;
   token_a: string;
   token_b: string;
   target_allocation: number;
@@ -34,6 +35,7 @@ function toApi(row: AgentRow) {
     createdAt: row.created_at,
     template: {
       id: row.template_id,
+      name: row.name,
       tokenA: row.token_a,
       tokenB: row.token_b,
       targetAllocation: row.target_allocation,
@@ -48,7 +50,7 @@ function toApi(row: AgentRow) {
 
 const baseSelect =
   'SELECT a.id, a.template_id, a.user_id, a.model, a.status, a.created_at, ' +
-  't.token_a, t.token_b, t.target_allocation, t.min_a_allocation, t.min_b_allocation, ' +
+  't.name, t.token_a, t.token_b, t.target_allocation, t.min_a_allocation, t.min_b_allocation, ' +
   't.risk, t.rebalance, t.agent_instructions FROM agents a JOIN agent_templates t ON a.template_id = t.id';
 
 function getAgent(id: string) {

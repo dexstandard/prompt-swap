@@ -8,6 +8,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 
 interface AgentTemplateDetails {
   id: string;
+  name: string;
   tokenA: string;
   tokenB: string;
   targetAllocation: number;

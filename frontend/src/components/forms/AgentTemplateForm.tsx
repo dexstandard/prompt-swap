@@ -172,11 +172,18 @@ export default function AgentTemplateForm({
 
     const onSubmit = handleSubmit(async (values) => {
         if (!user) return;
+        const {targetAllocation} = normalizeAllocations(
+            values.targetAllocation,
+            values.minTokenAAllocation,
+            values.minTokenBAllocation
+        );
+        const name = `${values.tokenA.toUpperCase()} ${targetAllocation} / ${values.tokenB.toUpperCase()} ${100 - targetAllocation}`;
         if (template) {
             await api.put(
                 `/agent-templates/${template.id}`,
                 {
                     userId: user.id,
+                    name,
                     ...values,
                     tokenA: values.tokenA.toUpperCase(),
                     tokenB: values.tokenB.toUpperCase(),
@@ -191,6 +198,7 @@ export default function AgentTemplateForm({
                 '/agent-templates',
                 {
                     userId: user.id,
+                    name,
                     ...values,
                     tokenA: values.tokenA.toUpperCase(),
                     tokenB: values.tokenB.toUpperCase(),

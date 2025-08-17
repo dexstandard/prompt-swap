@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS executions(
 CREATE TABLE IF NOT EXISTS agent_templates(
   id TEXT PRIMARY KEY,
   user_id TEXT,
+  name TEXT,
   token_a TEXT,
   token_b TEXT,
   target_allocation INTEGER,
