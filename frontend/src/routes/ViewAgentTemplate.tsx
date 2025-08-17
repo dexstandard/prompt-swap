@@ -110,7 +110,7 @@ export default function ViewAgentTemplate() {
         <div className="p-4">
             <h1 className="text-2xl font-bold mb-2">Agent Template</h1>
             <AgentTemplateName templateId={data.id} name={name} onChange={setName} />
-            <p className="mt-4">
+            <p>
                 <strong>Tokens:</strong> {data.tokenA.toUpperCase()} / {data.tokenB.toUpperCase()}
             </p>
             <p>
