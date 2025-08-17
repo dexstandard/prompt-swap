@@ -22,6 +22,8 @@ interface Agent {
     risk: string;
     rebalance: string;
     agentInstructions: string;
+    useSearch: boolean;
+    webSearchInstructions: string;
   };
 }
 
@@ -83,6 +85,12 @@ export default function ViewAgent() {
           </p>
           <p>
             <strong>Instructions:</strong> {template.agentInstructions}
+          </p>
+          <p>
+            <strong>Use Web Search:</strong> {template.useSearch ? 'Yes' : 'No'}
+          </p>
+          <p>
+            <strong>Web Search Instructions:</strong> {template.webSearchInstructions}
           </p>
         </>
       ) : (

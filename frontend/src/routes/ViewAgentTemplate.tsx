@@ -10,6 +10,7 @@ import AiApiKeySection from '../components/forms/AiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 import WalletBalances from '../components/WalletBalances';
 import TradingAgentInstructions from '../components/TradingAgentInstructions';
+import WebSearchInstructions from '../components/WebSearchInstructions';
 import AgentTemplateName from '../components/AgentTemplateName';
 
 interface AgentTemplateDetails {
@@ -24,6 +25,8 @@ interface AgentTemplateDetails {
     risk: string;
     rebalance: string;
     agentInstructions: string;
+    useSearch: boolean;
+    webSearchInstructions: string;
 }
 
 export default function ViewAgentTemplate() {
@@ -78,6 +81,8 @@ export default function ViewAgentTemplate() {
     });
     const [model, setModel] = useState('');
     const [instructions, setInstructions] = useState('');
+    const [useSearch, setUseSearch] = useState(true);
+    const [webSearchInstructions, setWebSearchInstructions] = useState('');
     const [name, setName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     useEffect(() => {
@@ -90,6 +95,12 @@ export default function ViewAgentTemplate() {
             setInstructions(data.agentInstructions);
         }
     }, [data?.agentInstructions]);
+    useEffect(() => {
+        if (data) {
+            setUseSearch(data.useSearch);
+            setWebSearchInstructions(data.webSearchInstructions);
+        }
+    }, [data?.useSearch, data?.webSearchInstructions, data]);
     useEffect(() => {
         if (data?.name) {
             setName(data.name);
@@ -128,11 +139,41 @@ export default function ViewAgentTemplate() {
             <p>
                 <strong>Rebalance Frequency:</strong> {data.rebalance}
             </p>
+            <div className="mt-4 flex items-center gap-2">
+                <label htmlFor="useSearch" className="font-bold">Use Web Search</label>
+                <input
+                    id="useSearch"
+                    type="checkbox"
+                    checked={useSearch}
+                    disabled={!user}
+                    onChange={async (e) => {
+                        const checked = e.target.checked;
+                        setUseSearch(checked);
+                        if (!user) return;
+                        try {
+                            await api.patch(
+                                `/agent-templates/${data.id}/use-search`,
+                                {userId: user.id, useSearch: checked},
+                                {headers: {'x-user-id': user.id}}
+                            );
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    }}
+                />
+            </div>
             <TradingAgentInstructions
                 templateId={data.id}
                 instructions={instructions}
                 onChange={setInstructions}
             />
+            {useSearch && (
+                <WebSearchInstructions
+                    templateId={data.id}
+                    instructions={webSearchInstructions}
+                    onChange={setWebSearchInstructions}
+                />
+            )}
             {user && !hasOpenAIKey && (
                 <div className="mt-4">
                     <AiApiKeySection label="OpenAI API Key"/>

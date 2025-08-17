@@ -64,6 +64,9 @@ const rebalanceOptions = [
 const DEFAULT_AGENT_INSTRUCTIONS =
     'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
 
+const DEFAULT_WEB_SEARCH_INSTRUCTIONS =
+    'Use web_search with queries: ("Solana" AND (outage OR exploit OR hack OR upgrade OR listing OR delisting OR "network halt" OR TVL)) OR ("CoinDesk" Solana) OR ("CoinTelegraph" Solana). Window ≤ 7 days, prefer ≤ 72h. Max results = 5. Provide: title, source, published_at, one-line impact. If zero high-confidence items, return "no_material_news": true.';
+
 const defaultValues: FormValues = {
     tokenA: 'USDT',
     tokenB: 'SOL',
@@ -91,6 +94,8 @@ export default function AgentTemplateForm({
         risk: string;
         rebalance: string;
         agentInstructions: string;
+        useSearch: boolean;
+        webSearchInstructions: string;
     };
     onSubmitSuccess?: () => void;
     onCancel?: () => void;
@@ -189,6 +194,8 @@ export default function AgentTemplateForm({
                     tokenA: values.tokenA.toUpperCase(),
                     tokenB: values.tokenB.toUpperCase(),
                     agentInstructions: template.agentInstructions,
+                    useSearch: template.useSearch,
+                    webSearchInstructions: template.webSearchInstructions,
                 },
                 {headers: {'x-user-id': user.id}}
             );
@@ -204,6 +211,8 @@ export default function AgentTemplateForm({
                     tokenA: values.tokenA.toUpperCase(),
                     tokenB: values.tokenB.toUpperCase(),
                     agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+                    useSearch: true,
+                    webSearchInstructions: DEFAULT_WEB_SEARCH_INSTRUCTIONS,
                 },
                 {headers: {'x-user-id': user.id}}
             );

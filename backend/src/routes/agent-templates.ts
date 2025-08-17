@@ -3,6 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 import { normalizeAllocations } from '../util/allocations.js';
 
+const DEFAULT_WEB_SEARCH_INSTRUCTIONS =
+  'Use web_search with queries: ("Solana" AND (outage OR exploit OR hack OR upgrade OR listing OR delisting OR "network halt" OR TVL)) OR ("CoinDesk" Solana) OR ("CoinTelegraph" Solana). Window ≤ 7 days, prefer ≤ 72h. Max results = 5. Provide: title, source, published_at, one-line impact. If zero high-confidence items, return "no_material_news": true.';
+
 interface AgentTemplateRow {
   id: string;
   user_id: string;
@@ -15,6 +18,8 @@ interface AgentTemplateRow {
   risk: string;
   rebalance: string;
   agent_instructions: string;
+  use_search: number;
+  web_search_instructions: string;
 }
 
 function toApi(row: AgentTemplateRow) {
@@ -30,6 +35,8 @@ function toApi(row: AgentTemplateRow) {
     risk: row.risk,
     rebalance: row.rebalance,
     agentInstructions: row.agent_instructions,
+    useSearch: !!row.use_search,
+    webSearchInstructions: row.web_search_instructions,
   };
 }
 
@@ -84,7 +91,9 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation: number;
       risk: string;
       rebalance: string;
-      agentInstructions: string;
+      agentInstructions?: string;
+      useSearch?: boolean;
+      webSearchInstructions?: string;
     };
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId || body.userId !== userId)
@@ -97,9 +106,13 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       body.minTokenAAllocation,
       body.minTokenBAllocation
     );
+    const agentInstructions = body.agentInstructions ?? '';
+    const useSearch = body.useSearch ?? true;
+    const webSearchInstructions =
+      body.webSearchInstructions ?? DEFAULT_WEB_SEARCH_INSTRUCTIONS;
     db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions, use_search, web_search_instructions)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       body.userId,
@@ -111,7 +124,9 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenBAllocation,
       body.risk,
       body.rebalance,
-      body.agentInstructions
+      agentInstructions,
+      useSearch ? 1 : 0,
+      webSearchInstructions
     );
     return {
       id,
@@ -121,6 +136,9 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       targetAllocation,
       minTokenAAllocation,
       minTokenBAllocation,
+      agentInstructions,
+      useSearch,
+      webSearchInstructions,
     };
   });
 
@@ -148,6 +166,42 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'forbidden' });
     db.prepare('UPDATE agent_templates SET agent_instructions = ? WHERE id = ?')
       .run(body.agentInstructions, id);
+    const row = db
+      .prepare('SELECT * FROM agent_templates WHERE id = ?')
+      .get(id) as AgentTemplateRow;
+    return toApi(row);
+  });
+
+  app.patch('/agent-templates/:id/web-search-instructions', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
+    const id = (req.params as any).id;
+    const body = req.body as { userId: string; webSearchInstructions: string };
+    const existing = db
+      .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
+      .get(id) as { user_id: string } | undefined;
+    if (!existing) return reply.code(404).send({ error: 'not found' });
+    if (!userId || existing.user_id !== userId || body.userId !== userId)
+      return reply.code(403).send({ error: 'forbidden' });
+    db.prepare('UPDATE agent_templates SET web_search_instructions = ? WHERE id = ?')
+      .run(body.webSearchInstructions, id);
+    const row = db
+      .prepare('SELECT * FROM agent_templates WHERE id = ?')
+      .get(id) as AgentTemplateRow;
+    return toApi(row);
+  });
+
+  app.patch('/agent-templates/:id/use-search', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
+    const id = (req.params as any).id;
+    const body = req.body as { userId: string; useSearch: boolean };
+    const existing = db
+      .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
+      .get(id) as { user_id: string } | undefined;
+    if (!existing) return reply.code(404).send({ error: 'not found' });
+    if (!userId || existing.user_id !== userId || body.userId !== userId)
+      return reply.code(403).send({ error: 'forbidden' });
+    db.prepare('UPDATE agent_templates SET use_search = ? WHERE id = ?')
+      .run(body.useSearch ? 1 : 0, id);
     const row = db
       .prepare('SELECT * FROM agent_templates WHERE id = ?')
       .get(id) as AgentTemplateRow;
@@ -188,6 +242,8 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       risk: string;
       rebalance: string;
       agentInstructions: string;
+      useSearch: boolean;
+      webSearchInstructions: string;
     };
     const existing = db
       .prepare('SELECT * FROM agent_templates WHERE id = ?')
@@ -203,7 +259,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `UPDATE agent_templates SET user_id = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, agent_instructions = ? WHERE id = ?`
+      `UPDATE agent_templates SET user_id = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, agent_instructions = ?, use_search = ?, web_search_instructions = ? WHERE id = ?`
     ).run(
       body.userId,
       body.name,
@@ -215,6 +271,8 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       body.risk,
       body.rebalance,
       body.agentInstructions,
+      body.useSearch ? 1 : 0,
+      body.webSearchInstructions,
       id
     );
     const row = db

@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS agent_templates(
   min_b_allocation INTEGER,
   risk TEXT,
   rebalance TEXT,
-  agent_instructions TEXT
+  agent_instructions TEXT,
+  use_search INTEGER DEFAULT 1,
+  web_search_instructions TEXT
 );
 
 CREATE TABLE IF NOT EXISTS agents(

@@ -23,6 +23,8 @@ interface AgentRow {
   risk: string;
   rebalance: string;
   agent_instructions: string;
+  use_search: number;
+  web_search_instructions: string;
 }
 
 function toApi(row: AgentRow) {
@@ -44,6 +46,8 @@ function toApi(row: AgentRow) {
       risk: row.risk,
       rebalance: row.rebalance,
       agentInstructions: row.agent_instructions,
+      useSearch: !!row.use_search,
+      webSearchInstructions: row.web_search_instructions,
     },
   };
 }
@@ -51,7 +55,7 @@ function toApi(row: AgentRow) {
 const baseSelect =
   'SELECT a.id, a.template_id, a.user_id, a.model, a.status, a.created_at, ' +
   't.name, t.token_a, t.token_b, t.target_allocation, t.min_a_allocation, t.min_b_allocation, ' +
-  't.risk, t.rebalance, t.agent_instructions FROM agents a JOIN agent_templates t ON a.template_id = t.id';
+  't.risk, t.rebalance, t.agent_instructions, t.use_search, t.web_search_instructions FROM agents a JOIN agent_templates t ON a.template_id = t.id';
 
 function getAgent(id: string) {
   return db

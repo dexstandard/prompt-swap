@@ -17,6 +17,8 @@ interface AgentTemplateDetails {
   risk: string;
   rebalance: string;
   agentInstructions: string;
+  useSearch: boolean;
+  webSearchInstructions: string;
 }
 
 export default function AgentTemplates() {
