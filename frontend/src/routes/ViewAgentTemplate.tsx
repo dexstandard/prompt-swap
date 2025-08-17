@@ -127,7 +127,7 @@ export default function ViewAgentTemplate() {
             )}
             {user && hasOpenAIKey && modelsQuery.data && modelsQuery.data.length > 0 && (
                 <div className="mt-4">
-                    <label className="block text-sm font-medium mb-1" htmlFor="model">Model</label>
+                    <h2 className="text-md font-bold">Model</h2>
                     <select
                         id="model"
                         value={model}
