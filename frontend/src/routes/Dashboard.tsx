@@ -7,6 +7,7 @@ import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
 import AgentBalance from '../components/AgentBalance';
+import Button from '../components/ui/Button';
 
 interface Agent {
   id: string;
@@ -114,23 +115,25 @@ export default function Dashboard() {
           </table>
           {totalPages > 0 && (
             <div className="flex gap-2 items-center">
-              <button
-                className="px-2 py-1 border"
+              <Button
+                type="button"
+                variant="secondary"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
               >
                 Prev
-              </button>
+              </Button>
               <span>
                 {page} / {totalPages}
               </span>
-              <button
-                className="px-2 py-1 border"
+              <Button
+                type="button"
+                variant="secondary"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
                 Next
-              </button>
+              </Button>
             </div>
           )}
         </>
