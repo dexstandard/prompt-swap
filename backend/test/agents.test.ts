@@ -141,5 +141,52 @@ describe('agent routes', () => {
 
     await app.close();
   });
+
+  it('prevents multiple agents for a template', async () => {
+    const app = await buildServer();
+    db.prepare(
+      'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
+    ).run('u1', 'a', 'b', 'c');
+    db.prepare(
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('t1', 'u1', 'T1', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'p');
+    db.prepare(
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('t2', 'u1', 'T2', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'p');
+
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'u1' },
+      payload: { templateId: 't1', userId: 'u1', model: 'm', status: 'inactive' },
+    });
+    expect(res.statusCode).toBe(200);
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'u1' },
+      payload: { templateId: 't1', userId: 'u1', model: 'm', status: 'inactive' },
+    });
+    expect(res.statusCode).toBe(409);
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'u1' },
+      payload: { templateId: 't2', userId: 'u1', model: 'm', status: 'inactive' },
+    });
+    const id = res.json().id as string;
+
+    res = await app.inject({
+      method: 'PUT',
+      url: `/api/agents/${id}`,
+      headers: { 'x-user-id': 'u1' },
+      payload: { templateId: 't1', userId: 'u1', model: 'm', status: 'inactive' },
+    });
+    expect(res.statusCode).toBe(409);
+
+    await app.close();
+  });
 });
 

@@ -106,6 +106,77 @@ describe('agent template routes', () => {
     await app.close();
   });
 
+  it('prevents duplicate template names per user', async () => {
+    const app = await buildServer();
+    db.prepare('INSERT INTO users (id) VALUES (?)').run('u1');
+    db.prepare('INSERT INTO users (id) VALUES (?)').run('u2');
+
+    const base = {
+      userId: 'u1',
+      name: 'T1',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      rebalance: '1h',
+      agentInstructions: 'p',
+    };
+
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/agent-templates',
+      headers: { 'x-user-id': 'u1' },
+      payload: base,
+    });
+    expect(res.statusCode).toBe(200);
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agent-templates',
+      headers: { 'x-user-id': 'u1' },
+      payload: base,
+    });
+    expect(res.statusCode).toBe(409);
+
+    // different user can use same name
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agent-templates',
+      headers: { 'x-user-id': 'u2' },
+      payload: { ...base, userId: 'u2' },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const id2 = res.json().id as string;
+    res = await app.inject({
+      method: 'PATCH',
+      url: `/api/agent-templates/${id2}/name`,
+      headers: { 'x-user-id': 'u2' },
+      payload: { userId: 'u2', name: 'T1' },
+    });
+    expect(res.statusCode).toBe(200);
+
+    // user1 cannot rename to existing name
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agent-templates',
+      headers: { 'x-user-id': 'u1' },
+      payload: { ...base, name: 'T2' },
+    });
+    const id3 = res.json().id as string;
+    res = await app.inject({
+      method: 'PATCH',
+      url: `/api/agent-templates/${id3}/name`,
+      headers: { 'x-user-id': 'u1' },
+      payload: { userId: 'u1', name: 'T1' },
+    });
+    expect(res.statusCode).toBe(409);
+
+    await app.close();
+  });
+
   it('enforces user ownership', async () => {
     const app = await buildServer();
     db.prepare('INSERT INTO users (id) VALUES (?)').run('user3');
@@ -172,7 +243,6 @@ describe('agent template routes', () => {
 
     const base = {
       userId: 'user5',
-      name: 'base',
       tokenA: 'BTC',
       tokenB: 'ETH',
       risk: 'low',
@@ -184,7 +254,13 @@ describe('agent template routes', () => {
       method: 'POST',
       url: '/api/agent-templates',
       headers: { 'x-user-id': 'user5' },
-      payload: { ...base, targetAllocation: 50, minTokenAAllocation: 80, minTokenBAllocation: 30 },
+      payload: {
+        ...base,
+        name: 'base1',
+        targetAllocation: 50,
+        minTokenAAllocation: 80,
+        minTokenBAllocation: 30,
+      },
     });
     expect(res.json()).toMatchObject({ targetAllocation: 70, minTokenAAllocation: 70, minTokenBAllocation: 30 });
 
@@ -192,7 +268,13 @@ describe('agent template routes', () => {
       method: 'POST',
       url: '/api/agent-templates',
       headers: { 'x-user-id': 'user5' },
-      payload: { ...base, targetAllocation: 50, minTokenAAllocation: 20, minTokenBAllocation: 90 },
+      payload: {
+        ...base,
+        name: 'base2',
+        targetAllocation: 50,
+        minTokenAAllocation: 20,
+        minTokenBAllocation: 90,
+      },
     });
     expect(res.json()).toMatchObject({ targetAllocation: 20, minTokenAAllocation: 20, minTokenBAllocation: 80 });
 
@@ -200,7 +282,13 @@ describe('agent template routes', () => {
       method: 'POST',
       url: '/api/agent-templates',
       headers: { 'x-user-id': 'user5' },
-      payload: { ...base, targetAllocation: 5, minTokenAAllocation: 10, minTokenBAllocation: 10 },
+      payload: {
+        ...base,
+        name: 'base3',
+        targetAllocation: 5,
+        minTokenAAllocation: 10,
+        minTokenBAllocation: 10,
+      },
     });
     expect(res.json()).toMatchObject({ targetAllocation: 10, minTokenAAllocation: 10, minTokenBAllocation: 10 });
 
@@ -208,7 +296,13 @@ describe('agent template routes', () => {
       method: 'POST',
       url: '/api/agent-templates',
       headers: { 'x-user-id': 'user5' },
-      payload: { ...base, targetAllocation: 95, minTokenAAllocation: 10, minTokenBAllocation: 10 },
+      payload: {
+        ...base,
+        name: 'base4',
+        targetAllocation: 95,
+        minTokenAAllocation: 10,
+        minTokenBAllocation: 10,
+      },
     });
     expect(res.json()).toMatchObject({ targetAllocation: 90, minTokenAAllocation: 10, minTokenBAllocation: 10 });
 
@@ -274,7 +368,6 @@ describe('agent template routes', () => {
 
     const base = {
       userId: 'user6',
-      name: 'base',
       tokenA: 'BTC',
       tokenB: 'ETH',
       targetAllocation: 60,
@@ -289,7 +382,7 @@ describe('agent template routes', () => {
       method: 'POST',
       url: '/api/agent-templates',
       headers: { 'x-user-id': 'user6' },
-      payload: base,
+      payload: { ...base, name: 'base1' },
     });
     const id1 = res.json().id as string;
 
@@ -297,7 +390,7 @@ describe('agent template routes', () => {
       method: 'POST',
       url: '/api/agent-templates',
       headers: { 'x-user-id': 'user6' },
-      payload: base,
+      payload: { ...base, name: 'base2' },
     });
     const id2 = res.json().id as string;
 

@@ -1,4 +1,5 @@
 import {useEffect} from 'react';
+import axios from 'axios';
 import {useNavigate} from 'react-router-dom';
 import {Controller, useForm} from 'react-hook-form';
 import {z} from 'zod';
@@ -179,36 +180,44 @@ export default function AgentTemplateForm({
             values.minTokenBAllocation
         );
         const name = `${values.tokenA.toUpperCase()} ${targetAllocation} / ${values.tokenB.toUpperCase()} ${100 - targetAllocation}`;
-        if (template) {
-            await api.put(
-                `/agent-templates/${template.id}`,
-                {
-                    userId: user.id,
-                    name,
-                    ...values,
-                    tokenA: values.tokenA.toUpperCase(),
-                    tokenB: values.tokenB.toUpperCase(),
-                    agentInstructions: template.agentInstructions,
-                },
-                {headers: {'x-user-id': user.id}}
-            );
-            queryClient.invalidateQueries({queryKey: ['agent-templates']});
-            onSubmitSuccess?.();
-        } else {
-            const res = await api.post(
-                '/agent-templates',
-                {
-                    userId: user.id,
-                    name,
-                    ...values,
-                    tokenA: values.tokenA.toUpperCase(),
-                    tokenB: values.tokenB.toUpperCase(),
-                    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
-                },
-                {headers: {'x-user-id': user.id}}
-            );
-            queryClient.invalidateQueries({queryKey: ['agent-templates']});
-            navigate(`/agent-templates/${res.data.id}`);
+        try {
+            if (template) {
+                await api.put(
+                    `/agent-templates/${template.id}`,
+                    {
+                        userId: user.id,
+                        name,
+                        ...values,
+                        tokenA: values.tokenA.toUpperCase(),
+                        tokenB: values.tokenB.toUpperCase(),
+                        agentInstructions: template.agentInstructions,
+                    },
+                    {headers: {'x-user-id': user.id}}
+                );
+                queryClient.invalidateQueries({queryKey: ['agent-templates']});
+                onSubmitSuccess?.();
+            } else {
+                const res = await api.post(
+                    '/agent-templates',
+                    {
+                        userId: user.id,
+                        name,
+                        ...values,
+                        tokenA: values.tokenA.toUpperCase(),
+                        tokenB: values.tokenB.toUpperCase(),
+                        agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+                    },
+                    {headers: {'x-user-id': user.id}}
+                );
+                queryClient.invalidateQueries({queryKey: ['agent-templates']});
+                navigate(`/agent-templates/${res.data.id}`);
+            }
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response?.data?.error) {
+                alert(err.response.data.error);
+            } else {
+                alert('Failed to save template');
+            }
         }
     });
 

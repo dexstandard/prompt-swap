@@ -110,6 +110,13 @@ export default async function agentRoutes(app: FastifyInstance) {
       .get(body.templateId) as { user_id: string } | undefined;
     if (!template || template.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    const dupe = db
+      .prepare('SELECT 1 FROM agents WHERE template_id = ? AND user_id = ?')
+      .get(body.templateId, body.userId);
+    if (dupe)
+      return reply
+        .code(409)
+        .send({ error: 'agent already exists for this template' });
     const userRow = db
       .prepare(
         'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
@@ -167,6 +174,13 @@ export default async function agentRoutes(app: FastifyInstance) {
       .get(body.templateId) as { user_id: string } | undefined;
     if (!template || template.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    const dupe = db
+      .prepare('SELECT 1 FROM agents WHERE template_id = ? AND id != ?')
+      .get(body.templateId, id);
+    if (dupe)
+      return reply
+        .code(409)
+        .send({ error: 'agent already exists for this template' });
     db.prepare(
       `UPDATE agents SET template_id = ?, user_id = ?, model = ?, status = ? WHERE id = ?`
     ).run(body.templateId, body.userId, body.model, body.status, id);

@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS agent_templates(
   min_b_allocation INTEGER,
   risk TEXT,
   rebalance TEXT,
-  agent_instructions TEXT
+  agent_instructions TEXT,
+  UNIQUE(user_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS agents(
@@ -38,7 +39,8 @@ CREATE TABLE IF NOT EXISTS agents(
   user_id TEXT,
   model TEXT,
   status TEXT,
-  created_at INTEGER
+  created_at INTEGER,
+  UNIQUE(template_id)
 );
 
 CREATE TABLE IF NOT EXISTS agent_exec_log(

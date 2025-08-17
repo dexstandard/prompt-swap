@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Pencil } from 'lucide-react';
+import axios from 'axios';
 import { useUser } from '../lib/useUser';
 import api from '../lib/axios';
 
@@ -20,13 +21,21 @@ export default function AgentTemplateName({ templateId, name, onChange }: Props)
 
   async function save() {
     if (!user) return;
-    await api.patch(
-      `/agent-templates/${templateId}/name`,
-      { userId: user.id, name: text },
-      { headers: { 'x-user-id': user.id } }
-    );
-    setEditing(false);
-    onChange?.(text);
+    try {
+      await api.patch(
+        `/agent-templates/${templateId}/name`,
+        { userId: user.id, name: text },
+        { headers: { 'x-user-id': user.id } }
+      );
+      setEditing(false);
+      onChange?.(text);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        alert(err.response.data.error);
+      } else {
+        alert('Failed to update name');
+      }
+    }
   }
 
   if (editing) {

@@ -89,6 +89,13 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    const dupe = db
+      .prepare('SELECT 1 FROM agent_templates WHERE user_id = ? AND name = ?')
+      .get(body.userId, body.name);
+    if (dupe)
+      return reply
+        .code(409)
+        .send({ error: 'template with this name already exists' });
     const id = randomUUID();
     const tokenA = body.tokenA.toUpperCase();
     const tokenB = body.tokenB.toUpperCase();
@@ -164,6 +171,15 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    const dupe = db
+      .prepare(
+        'SELECT 1 FROM agent_templates WHERE user_id = ? AND name = ? AND id != ?'
+      )
+      .get(userId, body.name, id);
+    if (dupe)
+      return reply
+        .code(409)
+        .send({ error: 'template with this name already exists' });
     db.prepare('UPDATE agent_templates SET name = ? WHERE id = ?').run(
       body.name,
       id
@@ -195,6 +211,15 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    const dupe = db
+      .prepare(
+        'SELECT 1 FROM agent_templates WHERE user_id = ? AND name = ? AND id != ?'
+      )
+      .get(body.userId, body.name, id);
+    if (dupe)
+      return reply
+        .code(409)
+        .send({ error: 'template with this name already exists' });
     const tokenA = body.tokenA.toUpperCase();
     const tokenB = body.tokenB.toUpperCase();
     const { targetAllocation, minTokenAAllocation, minTokenBAllocation } = normalizeAllocations(

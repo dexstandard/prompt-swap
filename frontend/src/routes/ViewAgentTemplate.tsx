@@ -204,6 +204,11 @@ export default function ViewAgentTemplate() {
                         } catch (err) {
                             console.error(err);
                             setIsCreating(false);
+                            if (axios.isAxiosError(err) && err.response?.data?.error) {
+                                alert(err.response.data.error);
+                            } else {
+                                alert('Failed to start agent');
+                            }
                         }
                     }}
                 >
