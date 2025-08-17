@@ -9,10 +9,12 @@ import AiApiKeySection from '../components/forms/AiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 import WalletBalances from '../components/WalletBalances';
 import TradingAgentInstructions from '../components/TradingAgentInstructions';
+import AgentTemplateName from '../components/AgentTemplateName';
 
 interface AgentTemplateDetails {
     id: string;
     userId: string;
+    name: string;
     tokenA: string;
     tokenB: string;
     targetAllocation: number;
@@ -75,6 +77,7 @@ export default function ViewAgentTemplate() {
     });
     const [model, setModel] = useState('');
     const [instructions, setInstructions] = useState('');
+    const [name, setName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     useEffect(() => {
         if (modelsQuery.data && modelsQuery.data.length) {
@@ -86,6 +89,11 @@ export default function ViewAgentTemplate() {
             setInstructions(data.agentInstructions);
         }
     }, [data?.agentInstructions]);
+    useEffect(() => {
+        if (data?.name) {
+            setName(data.name);
+        }
+    }, [data?.name]);
 
     if (!data) return <div className="p-4">Loading...</div>;
 
@@ -99,9 +107,11 @@ export default function ViewAgentTemplate() {
 
     return (
         <div className="p-4">
-            <h1 className="text-2xl font-bold mb-4">
-                {`${data.tokenA.toUpperCase()} ${data.targetAllocation} / ${data.tokenB.toUpperCase()} ${100 - data.targetAllocation}`}
-            </h1>
+            <h1 className="text-2xl font-bold mb-2">Agent Template</h1>
+            <AgentTemplateName templateId={data.id} name={name} onChange={setName} />
+            <p className="mt-4">
+                <strong>Tokens:</strong> {data.tokenA.toUpperCase()} / {data.tokenB.toUpperCase()}
+            </p>
             <p>
                 <strong>Target Allocation:</strong> {data.targetAllocation}/{100 - data.targetAllocation}
             </p>

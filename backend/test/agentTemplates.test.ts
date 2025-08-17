@@ -16,6 +16,7 @@ describe('agent template routes', () => {
 
     const payload = {
       userId: 'user1',
+      name: 'BTC 60 / ETH 40',
       tokenA: 'BTC',
       tokenB: 'ETH',
       targetAllocation: 60,
@@ -60,7 +61,7 @@ describe('agent template routes', () => {
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
 
-    const update = { ...payload, targetAllocation: 70, risk: 'medium' };
+    const update = { ...payload, name: 'BTC 70 / ETH 30', targetAllocation: 70, risk: 'medium' };
     res = await app.inject({
       method: 'PUT',
       url: `/api/agent-templates/${id}`,
@@ -78,6 +79,15 @@ describe('agent template routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ id, agentInstructions: 'new prompt' });
+
+    res = await app.inject({
+      method: 'PATCH',
+      url: `/api/agent-templates/${id}/name`,
+      headers: { 'x-user-id': 'user1' },
+      payload: { userId: 'user1', name: 'custom name' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ id, name: 'custom name' });
 
     res = await app.inject({
       method: 'DELETE',
@@ -103,6 +113,7 @@ describe('agent template routes', () => {
 
     const payload = {
       userId: 'user3',
+      name: 'BTC 60 / ETH 40',
       tokenA: 'BTC',
       tokenB: 'ETH',
       targetAllocation: 60,
@@ -161,6 +172,7 @@ describe('agent template routes', () => {
 
     const base = {
       userId: 'user5',
+      name: 'base',
       tokenA: 'BTC',
       tokenB: 'ETH',
       risk: 'low',
@@ -210,6 +222,7 @@ describe('agent template routes', () => {
 
     const payload = {
       userId: 'owner',
+      name: 'BTC 60 / ETH 40',
       tokenA: 'BTC',
       tokenB: 'ETH',
       targetAllocation: 60,
@@ -261,6 +274,7 @@ describe('agent template routes', () => {
 
     const base = {
       userId: 'user6',
+      name: 'base',
       tokenA: 'BTC',
       tokenB: 'ETH',
       targetAllocation: 60,

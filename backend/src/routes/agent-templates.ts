@@ -6,6 +6,7 @@ import { normalizeAllocations } from '../util/allocations.js';
 interface AgentTemplateRow {
   id: string;
   user_id: string;
+  name: string;
   token_a: string;
   token_b: string;
   target_allocation: number;
@@ -20,6 +21,7 @@ function toApi(row: AgentTemplateRow) {
   return {
     id: row.id,
     userId: row.user_id,
+    name: row.name,
     tokenA: row.token_a.toUpperCase(),
     tokenB: row.token_b.toUpperCase(),
     targetAllocation: row.target_allocation,
@@ -74,6 +76,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
   app.post('/agent-templates', async (req, reply) => {
     const body = req.body as {
       userId: string;
+      name: string;
       tokenA: string;
       tokenB: string;
       targetAllocation: number;
@@ -95,11 +98,12 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `INSERT INTO agent_templates (id, user_id, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       body.userId,
+      body.name,
       tokenA,
       tokenB,
       targetAllocation,
@@ -150,11 +154,32 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     return toApi(row);
   });
 
+  app.patch('/agent-templates/:id/name', async (req, reply) => {
+    const userId = req.headers['x-user-id'] as string | undefined;
+    const id = (req.params as any).id;
+    const body = req.body as { userId: string; name: string };
+    const existing = db
+      .prepare('SELECT user_id FROM agent_templates WHERE id = ?')
+      .get(id) as { user_id: string } | undefined;
+    if (!existing) return reply.code(404).send({ error: 'not found' });
+    if (!userId || existing.user_id !== userId || body.userId !== userId)
+      return reply.code(403).send({ error: 'forbidden' });
+    db.prepare('UPDATE agent_templates SET name = ? WHERE id = ?').run(
+      body.name,
+      id
+    );
+    const row = db
+      .prepare('SELECT * FROM agent_templates WHERE id = ?')
+      .get(id) as AgentTemplateRow;
+    return toApi(row);
+  });
+
   app.put('/agent-templates/:id', async (req, reply) => {
     const userId = req.headers['x-user-id'] as string | undefined;
     const id = (req.params as any).id;
     const body = req.body as {
       userId: string;
+      name: string;
       tokenA: string;
       tokenB: string;
       targetAllocation: number;
@@ -178,9 +203,10 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `UPDATE agent_templates SET user_id = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, agent_instructions = ? WHERE id = ?`
+      `UPDATE agent_templates SET user_id = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, agent_instructions = ? WHERE id = ?`
     ).run(
       body.userId,
+      body.name,
       tokenA,
       tokenB,
       targetAllocation,
