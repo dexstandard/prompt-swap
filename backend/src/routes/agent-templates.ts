@@ -2,6 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 import { normalizeAllocations } from '../util/allocations.js';
+import { errorResponse, lengthMessage, ERROR_MESSAGES } from '../util/errorMessages.js';
+
+const MAX_NAME_LENGTH = 50;
+const MAX_INSTRUCTIONS_LENGTH = 2000;
+const MAX_TOKEN_LENGTH = 10;
+const MAX_RISK_LENGTH = 20;
+const MAX_REVIEW_INTERVAL_LENGTH = 20;
 
 interface AgentTemplateRow {
   id: string;
@@ -89,6 +96,38 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     const userId = req.headers['x-user-id'] as string | undefined;
     if (!userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    if (body.name.length > MAX_NAME_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('name', MAX_NAME_LENGTH)));
+    if (body.tokenA.length > MAX_TOKEN_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('tokenA', MAX_TOKEN_LENGTH)));
+    if (body.tokenB.length > MAX_TOKEN_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('tokenB', MAX_TOKEN_LENGTH)));
+    if (body.risk.length > MAX_RISK_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('risk', MAX_RISK_LENGTH)));
+    if (body.reviewInterval.length > MAX_REVIEW_INTERVAL_LENGTH)
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            lengthMessage('reviewInterval', MAX_REVIEW_INTERVAL_LENGTH)
+          )
+        );
+    if (body.agentInstructions.length > MAX_INSTRUCTIONS_LENGTH)
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            lengthMessage('agentInstructions', MAX_INSTRUCTIONS_LENGTH)
+          )
+        );
     const id = randomUUID();
     const tokenA = body.tokenA.toUpperCase();
     const tokenB = body.tokenB.toUpperCase();
@@ -97,6 +136,25 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       body.minTokenAAllocation,
       body.minTokenBAllocation
     );
+    const duplicate = db
+      .prepare(
+        `SELECT id FROM agent_templates WHERE user_id = ? AND token_a = ? AND token_b = ? AND target_allocation = ? AND min_a_allocation = ? AND min_b_allocation = ? AND risk = ? AND review_interval = ? AND agent_instructions = ?`
+      )
+      .get(
+        body.userId,
+        tokenA,
+        tokenB,
+        targetAllocation,
+        minTokenAAllocation,
+        minTokenBAllocation,
+        body.risk,
+        body.reviewInterval,
+        body.agentInstructions
+      );
+    if (duplicate)
+      return reply
+        .code(400)
+        .send({ ...errorResponse(ERROR_MESSAGES.templateExists), id: duplicate.id });
     db.prepare(
       `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -146,6 +204,14 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    if (body.agentInstructions.length > MAX_INSTRUCTIONS_LENGTH)
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            lengthMessage('agentInstructions', MAX_INSTRUCTIONS_LENGTH)
+          )
+        );
     db.prepare('UPDATE agent_templates SET agent_instructions = ? WHERE id = ?')
       .run(body.agentInstructions, id);
     const row = db
@@ -164,6 +230,10 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     if (!existing) return reply.code(404).send({ error: 'not found' });
     if (!userId || existing.user_id !== userId || body.userId !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    if (body.name.length > MAX_NAME_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('name', MAX_NAME_LENGTH)));
     db.prepare('UPDATE agent_templates SET name = ? WHERE id = ?').run(
       body.name,
       id
@@ -197,11 +267,63 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'forbidden' });
     const tokenA = body.tokenA.toUpperCase();
     const tokenB = body.tokenB.toUpperCase();
+    if (body.name.length > MAX_NAME_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('name', MAX_NAME_LENGTH)));
+    if (tokenA.length > MAX_TOKEN_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('tokenA', MAX_TOKEN_LENGTH)));
+    if (tokenB.length > MAX_TOKEN_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('tokenB', MAX_TOKEN_LENGTH)));
+    if (body.risk.length > MAX_RISK_LENGTH)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('risk', MAX_RISK_LENGTH)));
+    if (body.reviewInterval.length > MAX_REVIEW_INTERVAL_LENGTH)
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            lengthMessage('reviewInterval', MAX_REVIEW_INTERVAL_LENGTH)
+          )
+        );
+    if (body.agentInstructions.length > MAX_INSTRUCTIONS_LENGTH)
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            lengthMessage('agentInstructions', MAX_INSTRUCTIONS_LENGTH)
+          )
+        );
     const { targetAllocation, minTokenAAllocation, minTokenBAllocation } = normalizeAllocations(
       body.targetAllocation,
       body.minTokenAAllocation,
       body.minTokenBAllocation
     );
+    const duplicate = db
+      .prepare(
+        `SELECT id FROM agent_templates WHERE user_id = ? AND token_a = ? AND token_b = ? AND target_allocation = ? AND min_a_allocation = ? AND min_b_allocation = ? AND risk = ? AND review_interval = ? AND agent_instructions = ? AND id <> ?`
+      )
+      .get(
+        body.userId,
+        tokenA,
+        tokenB,
+        targetAllocation,
+        minTokenAAllocation,
+        minTokenBAllocation,
+        body.risk,
+        body.reviewInterval,
+        body.agentInstructions,
+        id
+      );
+    if (duplicate)
+      return reply
+        .code(400)
+        .send({ ...errorResponse(ERROR_MESSAGES.templateExists), id: duplicate.id });
     db.prepare(
       `UPDATE agent_templates SET user_id = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ? WHERE id = ?`
     ).run(
@@ -236,4 +358,3 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 }
-

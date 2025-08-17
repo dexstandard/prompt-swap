@@ -32,6 +32,18 @@ CREATE TABLE IF NOT EXISTS agent_templates(
   agent_instructions TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_templates_user_config ON agent_templates(
+  user_id,
+  token_a,
+  token_b,
+  target_allocation,
+  min_a_allocation,
+  min_b_allocation,
+  risk,
+  review_interval,
+  agent_instructions
+);
+
 CREATE TABLE IF NOT EXISTS agents(
   id TEXT PRIMARY KEY,
   template_id TEXT,

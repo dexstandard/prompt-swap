@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
+import { errorResponse, lengthMessage, ERROR_MESSAGES } from '../util/errorMessages.js';
 
 export enum AgentStatus {
   Active = 'active',
@@ -110,6 +111,17 @@ export default async function agentRoutes(app: FastifyInstance) {
       .get(body.templateId) as { user_id: string } | undefined;
     if (!template || template.user_id !== userId)
       return reply.code(403).send({ error: 'forbidden' });
+    const existing = db
+      .prepare('SELECT id FROM agents WHERE template_id = ?')
+      .get(body.templateId) as { id: string } | undefined;
+    if (existing)
+      return reply
+        .code(400)
+        .send(errorResponse(ERROR_MESSAGES.agentExists));
+    if (body.model.length > 50)
+      return reply
+        .code(400)
+        .send(errorResponse(lengthMessage('model', 50)));
     const userRow = db
       .prepare(
         'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'

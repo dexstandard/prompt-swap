@@ -1,4 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import {
+  ERROR_MESSAGES,
+  lengthMessage,
+  errorResponse,
+} from '../src/util/errorMessages.js';
 
 process.env.DATABASE_URL = ':memory:';
 process.env.KEY_PASSWORD = 'test-pass';
@@ -138,6 +143,52 @@ describe('agent routes', () => {
       payload: { templateId: 'tmpl2', userId: 'user3', model: 'm1', status: 'inactive' },
     });
     expect(res.statusCode).toBe(403);
+
+    await app.close();
+  });
+
+  it('prevents multiple agents for a template', async () => {
+    const app = await buildServer();
+    db.prepare(
+      'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
+    ).run('user4', 'a', 'b', 'c');
+    db.prepare(
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('tmpl4', 'user4', 'T4', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
+    db.prepare(
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('tmpl5', 'user4', 'T5', 'BTC', 'SOL', 60, 10, 20, 'low', '1h', 'prompt');
+
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'user4' },
+      payload: { templateId: 'tmpl4', userId: 'user4', model: 'm1', status: 'inactive' },
+    });
+    expect(res.statusCode).toBe(200);
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'user4' },
+      payload: { templateId: 'tmpl4', userId: 'user4', model: 'm1', status: 'inactive' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject(errorResponse(ERROR_MESSAGES.agentExists));
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'user4' },
+      payload: {
+        templateId: 'tmpl5',
+        userId: 'user4',
+        model: 'x'.repeat(51),
+        status: 'inactive',
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject(errorResponse(lengthMessage('model', 50)));
 
     await app.close();
   });
