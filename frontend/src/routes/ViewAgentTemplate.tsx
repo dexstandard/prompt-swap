@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
-import {useParams} from 'react-router-dom';
+import {useParams, useNavigate} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../lib/axios';
@@ -25,6 +25,7 @@ interface AgentTemplateDetails {
 
 export default function ViewAgentTemplate() {
     const {id} = useParams();
+    const navigate = useNavigate();
     const {user} = useUser();
     const {data} = useQuery({
         queryKey: ['agent-template', id, user?.id],
@@ -74,6 +75,7 @@ export default function ViewAgentTemplate() {
     });
     const [model, setModel] = useState('');
     const [instructions, setInstructions] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
     useEffect(() => {
         if (modelsQuery.data && modelsQuery.data.length) {
             setModel(modelsQuery.data[0]);
@@ -163,25 +165,38 @@ export default function ViewAgentTemplate() {
                 )}
                 <button
                     className={`mt-4 px-4 py-2 rounded ${
-                        user && hasOpenAIKey && hasBinanceKey && modelsQuery.data?.length
+                        !isCreating && user && hasOpenAIKey && hasBinanceKey && modelsQuery.data?.length
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
-                    disabled={!user || !hasOpenAIKey || !hasBinanceKey || !modelsQuery.data?.length}
+                    disabled={
+                        isCreating ||
+                        !user ||
+                        !hasOpenAIKey ||
+                        !hasBinanceKey ||
+                        !modelsQuery.data?.length
+                    }
                     onClick={async () => {
                         if (!user) return;
-                        await api.post(
-                            '/agents',
-                            {
-                                templateId: id,
-                                userId: user.id,
-                                model,
-                            },
-                            {headers: {'x-user-id': user.id}}
-                        );
+                        setIsCreating(true);
+                        try {
+                            const res = await api.post(
+                                '/agents',
+                                {
+                                    templateId: id,
+                                    userId: user.id,
+                                    model,
+                                },
+                                {headers: {'x-user-id': user.id}}
+                            );
+                            navigate(`/agents/${res.data.id}`);
+                        } catch (err) {
+                            console.error(err);
+                            setIsCreating(false);
+                        }
                     }}
                 >
-                    Start trading
+                    Start Agent
                 </button>
             </div>
         </div>
