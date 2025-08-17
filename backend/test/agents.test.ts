@@ -16,7 +16,7 @@ describe('agent routes', () => {
       'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
     ).run('user1', 'a', 'b', 'c');
     db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl1', 'user1', 'T1', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
 
     const payload = { templateId: 'tmpl1', userId: 'user1', model: 'gpt-5', status: 'inactive' };
@@ -94,10 +94,10 @@ describe('agent routes', () => {
       'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
     ).run('user3', 'a', 'b', 'c');
     db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl2', 'user2', 'T2', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
     db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl3', 'user3', 'T3', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
 
     let res = await app.inject({

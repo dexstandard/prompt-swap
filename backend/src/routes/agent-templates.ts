@@ -13,7 +13,7 @@ interface AgentTemplateRow {
   min_a_allocation: number;
   min_b_allocation: number;
   risk: string;
-  rebalance: string;
+  review_interval: string;
   agent_instructions: string;
 }
 
@@ -28,7 +28,7 @@ function toApi(row: AgentTemplateRow) {
     minTokenAAllocation: row.min_a_allocation,
     minTokenBAllocation: row.min_b_allocation,
     risk: row.risk,
-    rebalance: row.rebalance,
+    reviewInterval: row.review_interval,
     agentInstructions: row.agent_instructions,
   };
 }
@@ -83,7 +83,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenAAllocation: number;
       minTokenBAllocation: number;
       risk: string;
-      rebalance: string;
+      reviewInterval: string;
       agentInstructions: string;
     };
     const userId = req.headers['x-user-id'] as string | undefined;
@@ -98,7 +98,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, rebalance, agent_instructions)
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
@@ -110,7 +110,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenAAllocation,
       minTokenBAllocation,
       body.risk,
-      body.rebalance,
+      body.reviewInterval,
       body.agentInstructions
     );
     return {
@@ -186,7 +186,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenAAllocation: number;
       minTokenBAllocation: number;
       risk: string;
-      rebalance: string;
+      reviewInterval: string;
       agentInstructions: string;
     };
     const existing = db
@@ -203,7 +203,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       body.minTokenBAllocation
     );
     db.prepare(
-      `UPDATE agent_templates SET user_id = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, rebalance = ?, agent_instructions = ? WHERE id = ?`
+      `UPDATE agent_templates SET user_id = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ? WHERE id = ?`
     ).run(
       body.userId,
       body.name,
@@ -213,7 +213,7 @@ export default async function agentTemplateRoutes(app: FastifyInstance) {
       minTokenAAllocation,
       minTokenBAllocation,
       body.risk,
-      body.rebalance,
+      body.reviewInterval,
       body.agentInstructions,
       id
     );
