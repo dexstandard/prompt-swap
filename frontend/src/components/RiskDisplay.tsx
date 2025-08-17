@@ -1,18 +1,22 @@
-import { Shield, AlertTriangle, Flame, type LucideIcon } from 'lucide-react';
-
-const ICONS: Record<string, LucideIcon> = {
-  low: Shield,
-  medium: AlertTriangle,
-  high: Flame,
-};
-
-export default function RiskDisplay({ risk, className = '' }: { risk: string; className?: string }) {
+export default function RiskDisplay({
+  risk,
+  className = '',
+}: {
+  risk: string;
+  className?: string;
+}) {
   const key = risk.toLowerCase();
-  const Icon = ICONS[key];
   return (
     <span className={`inline-flex items-center gap-1 ${className}`}>
-      {Icon && <Icon className="w-4 h-4" />}
+      <span
+        className="w-4 h-4 rounded-full"
+        style={{
+          background:
+            'linear-gradient(135deg, #22c55e, #eab308, #ef4444)',
+        }}
+      />
       <span className="capitalize">{key}</span>
     </span>
   );
 }
+

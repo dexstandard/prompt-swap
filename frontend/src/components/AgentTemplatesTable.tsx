@@ -5,6 +5,7 @@ import { Eye, Pencil, Trash2 } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import TokenDisplay from './TokenDisplay';
+import RiskDisplay from './RiskDisplay';
 
 interface AgentTemplate {
   id: string;
@@ -74,9 +75,6 @@ export default function AgentTemplatesTable({
             </thead>
             <tbody>
               {items.map((t) => {
-                const risk = t.risk
-                  ? t.risk.charAt(0).toUpperCase() + t.risk.slice(1)
-                  : '';
                 const rebalanceMap: Record<string, string> = {
                   '1h': '1 hour',
                   '3h': '3 hours',
@@ -104,7 +102,9 @@ export default function AgentTemplatesTable({
                       </span>
                     </td>
                     <td>{`${t.targetAllocation}/${100 - t.targetAllocation}`}</td>
-                    <td>{risk}</td>
+                    <td>
+                      <RiskDisplay risk={t.risk} />
+                    </td>
                     <td>{rebalance}</td>
                     <td className="flex gap-2">
                       <Link
