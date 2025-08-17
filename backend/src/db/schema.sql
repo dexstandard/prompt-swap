@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS users(
   session_key_expires_at INTEGER,
   ai_api_key_enc TEXT,
   binance_api_key_enc TEXT,
-  binance_api_secret_enc TEXT
+  binance_api_secret_enc TEXT,
+  totp_secret TEXT,
+  is_totp_enabled INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS executions(

@@ -36,9 +36,20 @@ export default function GoogleLoginButton() {
     google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       callback: async (resp: CredentialResponse) => {
-        const res = await api.post('/login', { token: resp.credential });
-        setUser(res.data);
-        if (btnRef.current) btnRef.current.innerHTML = '';
+        try {
+          const res = await api.post('/login', { token: resp.credential });
+          setUser(res.data);
+          if (btnRef.current) btnRef.current.innerHTML = '';
+        } catch (err: any) {
+          if (err.response?.data?.error === 'otp required') {
+            const otp = window.prompt('Enter 2FA code');
+            if (otp) {
+              const res2 = await api.post('/login', { token: resp.credential, otp });
+              setUser(res2.data);
+              if (btnRef.current) btnRef.current.innerHTML = '';
+            }
+          }
+        }
       },
     });
     google.accounts.id.renderButton(btnRef.current, {
