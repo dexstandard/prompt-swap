@@ -37,7 +37,7 @@ export default function AgentTemplateName({templateId, name, onChange}: Props) {
       {editing ? (
         <>
           <input
-            className="border rounded p-1 flex-1 mr-2"
+            className="border rounded p-1 mr-2 w-full max-w-[50ch]"
             value={text}
             maxLength={MAX_NAME_LENGTH}
             onChange={(e) => setText(e.target.value)}
@@ -64,7 +64,7 @@ export default function AgentTemplateName({templateId, name, onChange}: Props) {
           {user && (
             <button
               aria-label="Edit name"
-              className="text-gray-600 ml-1"
+              className="text-gray-600 ml-2"
               onClick={() => setEditing(true)}
             >
               <Pencil className="w-4 h-4" />
