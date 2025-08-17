@@ -14,9 +14,9 @@ export default function RiskDisplay({
   };
 
   return (
-    <span className={`inline-flex items-center gap-1 ${className}`}>
+    <span className={`inline-flex items-center gap-2 ${className}`}>
       <span
-        className="w-4 h-4 rounded-full"
+        className="w-1.5 h-1.5 rounded-full"
         style={{ backgroundColor: colors[key] || colors.low }}
       />
       <span className="capitalize">{key}</span>
