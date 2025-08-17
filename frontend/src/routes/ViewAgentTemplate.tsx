@@ -114,7 +114,7 @@ export default function ViewAgentTemplate() {
                 <strong>Tokens:</strong> {data.tokenA.toUpperCase()} / {data.tokenB.toUpperCase()}
             </p>
             <p>
-                <strong>Target Allocation:</strong> {data.targetAllocation}/{100 - data.targetAllocation}
+                <strong>Target Allocation:</strong> {data.targetAllocation} / {100 - data.targetAllocation}
             </p>
             <p>
                 <strong>Minimum {data.tokenA.toUpperCase()} Allocation:</strong> {data.minTokenAAllocation}%

@@ -101,7 +101,7 @@ export default function AgentTemplatesTable({
                         <TokenDisplay token={t.tokenB} />
                       </span>
                     </td>
-                    <td>{`${t.targetAllocation}/${100 - t.targetAllocation}`}</td>
+                    <td>{`${t.targetAllocation} / ${100 - t.targetAllocation}`}</td>
                     <td>
                       <RiskDisplay risk={t.risk} />
                     </td>

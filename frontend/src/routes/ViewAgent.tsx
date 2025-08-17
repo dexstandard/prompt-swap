@@ -73,8 +73,7 @@ export default function ViewAgent() {
             <strong>Rebalance:</strong> {rebalanceLabel}
           </p>
           <p>
-            <strong>Target Allocation:</strong> {template.targetAllocation}/
-            {100 - template.targetAllocation}
+            <strong>Target Allocation:</strong> {template.targetAllocation} / {100 - template.targetAllocation}
           </p>
           <p>
             <strong>Minimum {template.tokenA} Allocation:</strong> {template.minTokenAAllocation}%
