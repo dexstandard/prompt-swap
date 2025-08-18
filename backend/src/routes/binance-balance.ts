@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { fetchAccount } from '../services/binance.js';
+import { fetchAccount, fetchTotalBalanceUsd } from '../services/binance.js';
 import { requireUserId } from '../util/auth.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 
@@ -10,31 +10,16 @@ export default async function binanceBalanceRoutes(app: FastifyInstance) {
     if (!userId) return;
     if (userId !== id)
       return reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
-    let account;
+    let total;
     try {
-      account = await fetchAccount(id);
+      total = await fetchTotalBalanceUsd(id);
     } catch {
       return reply
         .code(500)
         .send(errorResponse('failed to fetch account'));
     }
-    if (!account)
+    if (total === null)
       return reply.code(404).send(errorResponse(ERROR_MESSAGES.notFound));
-    let total = 0;
-    for (const b of account.balances) {
-      const amount = Number(b.free) + Number(b.locked);
-      if (!amount) continue;
-      if (b.asset === 'USDT') {
-        total += amount;
-        continue;
-      }
-      const priceRes = await fetch(
-        `https://api.binance.com/api/v3/ticker/price?symbol=${b.asset}USDT`
-      );
-      if (!priceRes.ok) continue;
-      const priceJson = (await priceRes.json()) as { price: string };
-      total += amount * Number(priceJson.price);
-    }
     return { totalUsd: total };
   });
 

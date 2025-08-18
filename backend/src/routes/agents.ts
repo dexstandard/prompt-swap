@@ -8,6 +8,8 @@ import {
 } from '../util/errorMessages.js';
 import reviewPortfolio from '../jobs/review-portfolio.js';
 import { requireUserId } from '../util/auth.js';
+import { fetchTotalBalanceUsd } from '../services/binance.js';
+import { calculatePnl } from '../services/pnl.js';
 
 export enum AgentStatus {
   Active = 'active',
@@ -147,12 +149,30 @@ export default async function agentRoutes(app: FastifyInstance) {
       !userRow.binance_api_secret_enc
     )
       return reply.code(400).send(errorResponse('missing api keys'));
+    let startBalance;
+    try {
+      startBalance = await fetchTotalBalanceUsd(userId);
+    } catch {
+      return reply
+        .code(500)
+        .send(errorResponse('failed to fetch balance'));
+    }
+    if (startBalance === null)
+      return reply.code(500).send(errorResponse('failed to fetch balance'));
     const id = randomUUID();
     const status = AgentStatus.Active;
     const createdAt = Date.now();
     db.prepare(
-      `INSERT INTO agents (id, template_id, user_id, model, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(id, body.templateId, body.userId, body.model, status, createdAt);
+      `INSERT INTO agents (id, template_id, user_id, model, status, created_at, start_balance) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      id,
+      body.templateId,
+      body.userId,
+      body.model,
+      status,
+      createdAt,
+      startBalance,
+    );
     const row = getAgent(id)!;
     await reviewPortfolio(req.log, id);
     return toApi(row);
@@ -172,6 +192,18 @@ export default async function agentRoutes(app: FastifyInstance) {
         .code(403)
         .send(errorResponse(ERROR_MESSAGES.forbidden));
     return toApi(row);
+  });
+
+  app.get('/agents/:id/pnl', async (req, reply) => {
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
+    const id = (req.params as any).id;
+    const perf = await calculatePnl(id, userId);
+    if (!perf)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    return perf;
   });
 
   app.put('/agents/:id', async (req, reply) => {
