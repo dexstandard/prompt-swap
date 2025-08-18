@@ -1,10 +1,10 @@
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
-import RiskDisplay from '../components/RiskDisplay';
+import AgentBalance from '../components/AgentBalance';
 
 interface Agent {
   id: string;
@@ -14,6 +14,8 @@ interface Agent {
   status: 'active' | 'inactive';
   createdAt: number;
   template?: {
+    id: string;
+    name: string;
     tokenA: string;
     tokenB: string;
     targetAllocation: number;
@@ -40,17 +42,6 @@ export default function ViewAgent() {
   if (!data) return <div className="p-4">Loading...</div>;
 
   const template = data.template;
-  const reviewIntervalMap: Record<string, string> = {
-    '1h': '1 Hour',
-    '3h': '3 Hours',
-    '5h': '5 Hours',
-    '12h': '12 Hours',
-    '24h': '1 Day',
-    '3d': '3 Days',
-    '1w': '1 Week',
-  };
-  const reviewIntervalLabel =
-    reviewIntervalMap[template?.reviewInterval ?? ''] ?? template?.reviewInterval;
 
   return (
     <div className="p-4">
@@ -66,30 +57,27 @@ export default function ViewAgent() {
       </p>
       {template ? (
         <>
+          <p>
+            <strong>Template:</strong>{' '}
+            <Link
+              to={`/agent-templates/${template.id}`}
+              className="text-blue-600 underline"
+            >
+              {template.name}
+            </Link>
+          </p>
           <p className="flex items-center gap-1">
             <strong>Tokens:</strong>
             <TokenDisplay token={template.tokenA} />
             <span>/</span>
             <TokenDisplay token={template.tokenB} />
           </p>
-          <p className="flex items-center gap-1">
-            <strong>Risk:</strong>
-            <RiskDisplay risk={template.risk} />
-          </p>
           <p>
-            <strong>Review Interval:</strong> {reviewIntervalLabel}
-          </p>
-          <p>
-            <strong>Target Allocation:</strong> {template.targetAllocation} / {100 - template.targetAllocation}
-          </p>
-          <p>
-            <strong>Minimum {template.tokenA} Allocation:</strong> {template.minTokenAAllocation}%
-          </p>
-          <p>
-            <strong>Minimum {template.tokenB} Allocation:</strong> {template.minTokenBAllocation}%
-          </p>
-          <p>
-            <strong>Instructions:</strong> {template.agentInstructions}
+            <strong>Balance (USD):</strong>{' '}
+            <AgentBalance
+              tokenA={template.tokenA}
+              tokenB={template.tokenB}
+            />
           </p>
         </>
       ) : (
