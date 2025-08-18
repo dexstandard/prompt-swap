@@ -23,11 +23,10 @@ export default function AgentTemplateName({templateId, name, onChange}: Props) {
 
   async function save() {
     if (!user) return;
-    await api.patch(
-      `/agent-templates/${templateId}/name`,
-      {userId: user.id, name: text},
-      {headers: {'x-user-id': user.id}}
-    );
+    await api.patch(`/agent-templates/${templateId}/name`, {
+      userId: user.id,
+      name: text,
+    });
     setEditing(false);
     onChange?.(text);
   }

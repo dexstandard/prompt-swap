@@ -37,9 +37,7 @@ export default function ViewAgentTemplate() {
     const {data} = useQuery({
         queryKey: ['agent-template', id, user?.id],
         queryFn: async () => {
-            const res = await api.get(`/agent-templates/${id}`, {
-                headers: {'x-user-id': user!.id},
-            });
+            const res = await api.get(`/agent-templates/${id}`);
             return res.data as AgentTemplateDetails;
         },
         enabled: !!id && !!user,
@@ -206,15 +204,11 @@ export default function ViewAgentTemplate() {
                         if (!user) return;
                         setIsCreating(true);
                         try {
-                            const res = await api.post(
-                                '/agents',
-                                {
-                                    templateId: id,
-                                    userId: user.id,
-                                    model,
-                                },
-                                {headers: {'x-user-id': user.id}}
-                            );
+                            const res = await api.post('/agents', {
+                                templateId: id,
+                                userId: user.id,
+                                model,
+                            });
                             navigate(`/agents/${res.data.id}`);
                         } catch (err) {
                             setIsCreating(false);

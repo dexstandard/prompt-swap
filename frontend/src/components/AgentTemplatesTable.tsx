@@ -32,7 +32,6 @@ export default function AgentTemplatesTable({
     queryFn: async () => {
       const res = await api.get('/agent-templates/paginated', {
         params: { page, pageSize: 5 },
-        headers: { 'x-user-id': user!.id },
       });
       return res.data as {
         items: AgentTemplate[];
@@ -88,9 +87,7 @@ export default function AgentTemplatesTable({
                 const reviewInterval = reviewIntervalMap[t.reviewInterval] || t.reviewInterval;
                 const handleDelete = async () => {
                   if (!user) return;
-                  await api.delete(`/agent-templates/${t.id}`, {
-                    headers: { 'x-user-id': user.id },
-                  });
+                  await api.delete(`/agent-templates/${t.id}`);
                   queryClient.invalidateQueries({ queryKey: ['agent-templates'] });
                 };
                 return (

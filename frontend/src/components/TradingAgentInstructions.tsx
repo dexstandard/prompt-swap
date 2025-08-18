@@ -22,11 +22,10 @@ export default function TradingAgentInstructions({templateId, instructions, onCh
 
   async function save() {
     if (!user) return;
-    await api.patch(
-      `/agent-templates/${templateId}/instructions`,
-      {userId: user.id, agentInstructions: text},
-      {headers: {'x-user-id': user.id}}
-    );
+    await api.patch(`/agent-templates/${templateId}/instructions`, {
+      userId: user.id,
+      agentInstructions: text,
+    });
     setEditing(false);
     onChange?.(text);
   }

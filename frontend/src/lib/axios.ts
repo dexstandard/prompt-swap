@@ -7,4 +7,22 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api',
 });
 
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const raw = localStorage.getItem('user');
+    if (raw) {
+      try {
+        const { id } = JSON.parse(raw);
+        if (id) {
+          config.headers = config.headers || {};
+          config.headers['x-user-id'] = id;
+        }
+      } catch {
+        // ignore JSON parse errors
+      }
+    }
+  }
+  return config;
+});
+
 export default api;

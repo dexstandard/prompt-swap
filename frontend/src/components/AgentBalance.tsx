@@ -30,8 +30,7 @@ export default function AgentBalance({ tokenA, tokenB }: Props) {
       enabled: !!user && !!binanceKey,
       queryFn: async () => {
         const res = await api.get(
-          `/users/${user!.id}/binance-balance/${token.toUpperCase()}`,
-          { headers: { 'x-user-id': user!.id } }
+          `/users/${user!.id}/binance-balance/${token.toUpperCase()}`
         );
         const bal = res.data as { free: number; locked: number };
         const amount = (bal.free ?? 0) + (bal.locked ?? 0);
