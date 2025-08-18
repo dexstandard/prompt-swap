@@ -14,15 +14,12 @@ import ErrorBoundary from '../components/ErrorBoundary';
 
 interface Agent {
   id: string;
-  templateId: string;
   userId: string;
   model: string;
   status: 'active' | 'inactive';
-  template?: {
-    tokenA: string;
-    tokenB: string;
-    risk: string;
-  };
+  tokenA: string;
+  tokenB: string;
+  risk: string;
 }
 
 export default function Dashboard() {
@@ -86,24 +83,13 @@ export default function Dashboard() {
                   {items.map((agent) => (
                     <tr key={agent.id}>
                       <td>
-                        {agent.template ? (
-                          <span className="inline-flex items-center gap-1">
-                            <TokenDisplay token={agent.template.tokenA} /> /
-                            <TokenDisplay token={agent.template.tokenB} />
-                          </span>
-                        ) : (
-                          '-'
-                        )}
+                        <span className="inline-flex items-center gap-1">
+                          <TokenDisplay token={agent.tokenA} />/
+                          <TokenDisplay token={agent.tokenB} />
+                        </span>
                       </td>
                       <td>
-                        {agent.template ? (
-                          <AgentBalance
-                            tokenA={agent.template.tokenA}
-                            tokenB={agent.template.tokenB}
-                          />
-                        ) : (
-                          '-'
-                        )}
+                        <AgentBalance tokenA={agent.tokenA} tokenB={agent.tokenB} />
                       </td>
                       <td>{agent.model}</td>
                       <td>
