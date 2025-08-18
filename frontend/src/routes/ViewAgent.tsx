@@ -31,9 +31,7 @@ export default function ViewAgent() {
   const { data } = useQuery({
     queryKey: ['agent', id, user?.id],
     queryFn: async () => {
-      const res = await api.get(`/agents/${id}`, {
-        headers: { 'x-user-id': user!.id },
-      });
+      const res = await api.get(`/agents/${id}`);
       return res.data as Agent;
     },
     enabled: !!id && !!user,

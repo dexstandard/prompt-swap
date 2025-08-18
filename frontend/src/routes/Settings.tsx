@@ -12,27 +12,21 @@ export default function Settings() {
 
   useEffect(() => {
     if (!user) return;
-    api
-      .get('/2fa/status', { headers: { 'x-user-id': user.id } })
-      .then((res) => setEnabled(res.data.enabled));
+    api.get('/2fa/status').then((res) => setEnabled(res.data.enabled));
   }, [user]);
 
   if (!user) return <p>Please log in.</p>;
   if (enabled === null) return <p>Loading...</p>;
 
   const startSetup = async () => {
-    const res = await api.get('/2fa/setup', { headers: { 'x-user-id': user.id } });
+    const res = await api.get('/2fa/setup');
     setSetup(res.data);
   };
 
   const enable = async (e: FormEvent) => {
     e.preventDefault();
     if (!setup) return;
-    await api.post(
-      '/2fa/enable',
-      { token: code, secret: setup.secret },
-      { headers: { 'x-user-id': user.id } },
-    );
+    await api.post('/2fa/enable', { token: code, secret: setup.secret });
     setEnabled(true);
     setSetup(null);
     setCode('');
@@ -40,11 +34,7 @@ export default function Settings() {
 
   const disable = async (e: FormEvent) => {
     e.preventDefault();
-    await api.post(
-      '/2fa/disable',
-      { token: code },
-      { headers: { 'x-user-id': user.id } },
-    );
+    await api.post('/2fa/disable', { token: code });
     setEnabled(false);
     setCode('');
   };

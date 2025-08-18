@@ -186,33 +186,25 @@ export default function AgentTemplateForm({
             );
             const name = `${values.tokenA.toUpperCase()} ${targetAllocation} / ${values.tokenB.toUpperCase()} ${100 - targetAllocation}`;
             if (template) {
-                await api.put(
-                    `/agent-templates/${template.id}`,
-                    {
-                        userId: user.id,
-                        name,
-                        ...values,
-                        tokenA: values.tokenA.toUpperCase(),
-                        tokenB: values.tokenB.toUpperCase(),
-                        agentInstructions: template.agentInstructions,
-                    },
-                    {headers: {'x-user-id': user.id}}
-                );
+                await api.put(`/agent-templates/${template.id}`, {
+                    userId: user.id,
+                    name,
+                    ...values,
+                    tokenA: values.tokenA.toUpperCase(),
+                    tokenB: values.tokenB.toUpperCase(),
+                    agentInstructions: template.agentInstructions,
+                });
                 queryClient.invalidateQueries({queryKey: ['agent-templates']});
                 onSubmitSuccess?.();
             } else {
-                const res = await api.post(
-                    '/agent-templates',
-                    {
-                        userId: user.id,
-                        name,
-                        ...values,
-                        tokenA: values.tokenA.toUpperCase(),
-                        tokenB: values.tokenB.toUpperCase(),
-                        agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
-                    },
-                    {headers: {'x-user-id': user.id}}
-                );
+                const res = await api.post('/agent-templates', {
+                    userId: user.id,
+                    name,
+                    ...values,
+                    tokenA: values.tokenA.toUpperCase(),
+                    tokenB: values.tokenB.toUpperCase(),
+                    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+                });
                 queryClient.invalidateQueries({queryKey: ['agent-templates']});
                 navigate(`/agent-templates/${res.data.id}`);
             }

@@ -47,9 +47,7 @@ export default function AgentTemplates() {
         <AgentTemplatesTable
           onEdit={async (id) => {
             if (!user) return;
-            const res = await api.get(`/agent-templates/${id}`, {
-              headers: { 'x-user-id': user.id },
-            });
+            const res = await api.get(`/agent-templates/${id}`);
             setEditing(res.data);
           }}
         />

@@ -30,8 +30,7 @@ export default function WalletBalances({ tokens }: Props) {
       enabled: !!user && !!binanceKey,
       queryFn: async () => {
         const res = await api.get(
-          `/users/${user!.id}/binance-balance/${token.toUpperCase()}`,
-          { headers: { 'x-user-id': user!.id } }
+          `/users/${user!.id}/binance-balance/${token.toUpperCase()}`
         );
         return res.data as { asset: string; free: number; locked: number };
       },

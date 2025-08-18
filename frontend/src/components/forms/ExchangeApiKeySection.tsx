@@ -84,9 +84,7 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
     queryKey: [`${exchange}-balance`, id],
     enabled: !!query.data && !editing,
     queryFn: async () => {
-      const res = await api.get(balancePath, {
-        headers: { 'x-user-id': id },
-      });
+      const res = await api.get(balancePath);
       return res.data as { totalUsd: number };
     },
   });
