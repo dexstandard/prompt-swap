@@ -76,7 +76,9 @@ export default function ViewAgentTemplate() {
         queryKey: ['openai-models', user?.id],
         enabled: !!user && hasOpenAIKey,
         queryFn: async () => {
-            const res = await api.get(`/users/${user!.id}/models`);
+            const res = await api.get(`/users/${user!.id}/models`, {
+                headers: { 'x-user-id': user!.id },
+            });
             return res.data.models as string[];
         },
     });
