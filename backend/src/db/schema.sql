@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS agents(
   user_id TEXT,
   model TEXT,
   status TEXT,
-  created_at INTEGER
+  created_at INTEGER,
+  start_balance REAL
 );
 
 CREATE TABLE IF NOT EXISTS agent_exec_log(

@@ -32,7 +32,14 @@ describe('agent routes', () => {
       `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl1', 'user1', 'T1', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
 
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => 'ok' } as any);
+    const fetchMock = vi.fn();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+      }),
+    } as any);
+    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -48,8 +55,8 @@ describe('agent routes', () => {
     const id = res.json().id as string;
     expect(res.json().template).toMatchObject({ tokenA: 'BTC', tokenB: 'ETH' });
     expect(res.json().status).toBe('active');
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const body = JSON.parse(fetchMock.mock.calls[1][1].body);
     expect(body).toMatchObject({
       model: 'gpt-5',
       input: {
@@ -130,7 +137,17 @@ describe('agent routes', () => {
       `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl3', 'user3', 'T3', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
 
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => 'ok' } as any);
+    const fetchMock = vi.fn((url) => {
+      if (typeof url === 'string' && url.includes('api/v3/account')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+          }),
+        } as any);
+      }
+      return Promise.resolve({ text: async () => 'ok' } as any);
+    });
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -187,7 +204,17 @@ describe('agent routes', () => {
       `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run('tmpl5', 'user4', 'T5', 'BTC', 'SOL', 60, 10, 20, 'low', '1h', 'prompt');
 
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => 'ok' } as any);
+    const fetchMock = vi.fn((url) => {
+      if (typeof url === 'string' && url.includes('api/v3/account')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+          }),
+        } as any);
+      }
+      return Promise.resolve({ text: async () => 'ok' } as any);
+    });
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -220,6 +247,55 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject(errorResponse(lengthMessage('model', 50)));
+
+    await app.close();
+    (globalThis as any).fetch = originalFetch;
+  });
+
+  it('returns current pnl for agent', async () => {
+    const app = await buildServer();
+    addUser('user5');
+    db.prepare(
+      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('tmpl6', 'user5', 'T6', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
+
+    const fetchMock = vi.fn();
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+        }),
+      } as any)
+      .mockResolvedValueOnce({ text: async () => 'ok' } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          balances: [{ asset: 'USDT', free: '150', locked: '0' }],
+        }),
+      } as any);
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+
+    const resCreate = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'user5' },
+      payload: { templateId: 'tmpl6', userId: 'user5', model: 'm1' },
+    });
+    const id = resCreate.json().id as string;
+
+    const resPnl = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${id}/pnl`,
+      headers: { 'x-user-id': 'user5' },
+    });
+    expect(resPnl.statusCode).toBe(200);
+    expect(resPnl.json()).toEqual({
+      startBalanceUsd: 100,
+      currentBalanceUsd: 150,
+      pnlUsd: 50,
+    });
 
     await app.close();
     (globalThis as any).fetch = originalFetch;

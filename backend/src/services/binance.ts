@@ -27,3 +27,24 @@ export async function fetchAccount(id: string) {
     balances: { asset: string; free: string; locked: string }[];
   };
 }
+
+export async function fetchTotalBalanceUsd(id: string) {
+  const account = await fetchAccount(id);
+  if (!account) return null;
+  let total = 0;
+  for (const b of account.balances) {
+    const amount = Number(b.free) + Number(b.locked);
+    if (!amount) continue;
+    if (b.asset === 'USDT') {
+      total += amount;
+      continue;
+    }
+    const priceRes = await fetch(
+      `https://api.binance.com/api/v3/ticker/price?symbol=${b.asset}USDT`,
+    );
+    if (!priceRes.ok) continue;
+    const priceJson = (await priceRes.json()) as { price: string };
+    total += amount * Number(priceJson.price);
+  }
+  return total;
+}
