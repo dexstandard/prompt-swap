@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Eye } from 'lucide-react';
@@ -8,6 +8,9 @@ import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
 import AgentBalance from '../components/AgentBalance';
 import Button from '../components/ui/Button';
+import AgentForm from '../components/forms/AgentForm';
+import PriceChart from '../components/forms/PriceChart';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 interface Agent {
   id: string;
@@ -21,6 +24,14 @@ interface Agent {
 export default function Dashboard() {
   const { user } = useUser();
   const [page, setPage] = useState(1);
+  const [tokens, setTokens] = useState({ tokenA: 'USDT', tokenB: 'SOL' });
+  const [showForm, setShowForm] = useState(false);
+
+  const handleTokensChange = useCallback((a: string, b: string) => {
+    setTokens((prev) =>
+      prev.tokenA === a && prev.tokenB === b ? prev : { tokenA: a, tokenB: b }
+    );
+  }, []);
 
   const { data } = useQuery({
     queryKey: ['agents', page, user?.id],
@@ -54,6 +65,28 @@ export default function Dashboard() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">My Agents</h1>
+      {(showForm || items.length === 0) && (
+        <div className="flex gap-3 items-stretch mb-4">
+          <ErrorBoundary>
+            <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
+          </ErrorBoundary>
+          <AgentForm
+            onTokensChange={handleTokensChange}
+            onSubmitSuccess={() => setShowForm(false)}
+          />
+        </div>
+      )}
+      {items.length > 0 && (
+        <div className="mb-4">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowForm((s) => !s)}
+          >
+            {showForm ? 'Hide' : 'New Agent Draft'}
+          </Button>
+        </div>
+      )}
       {items.length === 0 ? (
         <p>You don't have any agents yet.</p>
       ) : (

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS agents(
   user_id TEXT,
   model TEXT,
   status TEXT,
+  draft INTEGER DEFAULT 1,
   created_at INTEGER,
   start_balance REAL,
   name TEXT,

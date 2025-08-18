@@ -23,6 +23,6 @@ export function getActiveAgents(agentId?: string): ActiveAgentRow[] {
                       u.ai_api_key_enc
                  FROM agents a
                  JOIN users u ON u.id = a.user_id
-                WHERE a.status = 'active' ${agentId ? 'AND a.id = ?' : ''}`;
+                WHERE a.status = 'active' AND a.draft = 0 ${agentId ? 'AND a.id = ?' : ''}`;
   return db.prepare(sql).all(agentId ? [agentId] : []) as ActiveAgentRow[];
 }

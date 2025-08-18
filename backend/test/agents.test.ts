@@ -37,7 +37,7 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
-    expect(res.json().status).toBe('inactive');
+    expect(res.json()).toMatchObject({ status: 'inactive', draft: true });
 
     const fetchMock = vi.fn();
     fetchMock.mockResolvedValueOnce({
@@ -54,6 +54,7 @@ describe('agent routes', () => {
       userId: 'user1',
       model: 'gpt-5',
       status: 'active',
+      draft: false,
       name: 'BTC 60 / ETH 40',
       tokenA: 'BTC',
       tokenB: 'ETH',
@@ -160,6 +161,7 @@ describe('agent routes', () => {
     const payload = {
       userId: 'user3',
       status: 'active',
+      draft: false,
       model: 'm1',
       name: 'n',
       tokenA: 'BTC',

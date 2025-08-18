@@ -29,6 +29,7 @@ interface AgentRow {
   user_id: string;
   model: string | null;
   status: string;
+  draft: number;
   created_at: number;
   start_balance: number | null;
   name: string | null;
@@ -48,6 +49,7 @@ function toApi(row: AgentRow) {
     userId: row.user_id,
     model: row.model,
     status: row.status as AgentStatus,
+    draft: !!row.draft,
     createdAt: row.created_at,
     startBalance: row.start_balance,
     name: row.name,
@@ -157,6 +159,7 @@ export default async function agentRoutes(app: FastifyInstance) {
         .send(errorResponse(ERROR_MESSAGES.forbidden));
 
     const status: AgentStatus = body.status ?? AgentStatus.Inactive;
+    const draft = body.draft === undefined ? 1 : body.draft ? 1 : 0;
     const validationError = validateLengths(body, reply);
     if (validationError) return validationError;
 
@@ -223,12 +226,13 @@ export default async function agentRoutes(app: FastifyInstance) {
     const id = randomUUID();
     const createdAt = Date.now();
     db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, start_balance, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO agents (id, user_id, model, status, draft, created_at, start_balance, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       body.userId,
       body.model ?? null,
       status,
+      draft,
       createdAt,
       startBalance,
       body.name ?? null,
@@ -366,11 +370,12 @@ export default async function agentRoutes(app: FastifyInstance) {
     }
 
     db.prepare(
-      `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ? WHERE id = ?`
+      `UPDATE agents SET user_id = ?, model = ?, status = ?, draft = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ? WHERE id = ?`
     ).run(
       body.userId,
       model ?? null,
       status,
+      body.draft ? 1 : 0,
       name ?? null,
       tokenA ?? null,
       tokenB ?? null,
