@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
@@ -8,6 +8,9 @@ import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
 import AgentBalance from '../components/AgentBalance';
 import Button from '../components/ui/Button';
+import PriceChart from '../components/forms/PriceChart';
+import AgentForm from '../components/forms/AgentForm';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 interface Agent {
   id: string;
@@ -21,7 +24,10 @@ interface Agent {
 
 export default function Dashboard() {
   const { user } = useUser();
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  const [tokens, setTokens] = useState({ tokenA: 'USDT', tokenB: 'SOL' });
+  const [showForm, setShowForm] = useState(false);
 
   const { data } = useQuery({
     queryKey: ['agents', page, user?.id],
@@ -52,9 +58,39 @@ export default function Dashboard() {
 
   const items = data?.items ?? [];
 
+  useEffect(() => {
+    if (data && data.items.length === 0) {
+      setShowForm(true);
+    }
+  }, [data]);
+
+  const handleTokensChange = useCallback((a: string, b: string) => {
+    setTokens((prev) =>
+      prev.tokenA === a && prev.tokenB === b ? prev : { tokenA: a, tokenB: b }
+    );
+  }, []);
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">My Agents</h1>
+      {showForm ? (
+        <div className="flex gap-3 items-stretch mb-4">
+          <ErrorBoundary>
+            <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
+          </ErrorBoundary>
+          <AgentForm
+            onTokensChange={handleTokensChange}
+            onCreate={(id) => navigate(`/agents/${id}`)}
+            onCancel={() => setShowForm(false)}
+          />
+        </div>
+      ) : (
+        items.length > 0 && (
+          <Button type="button" className="mb-4" onClick={() => setShowForm(true)}>
+            New Agent
+          </Button>
+        )
+      )}
       {items.length === 0 ? (
         <p>You don't have any agents yet.</p>
       ) : (
