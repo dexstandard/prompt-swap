@@ -2,7 +2,7 @@ import { Link, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from '../../lib/axios';
 import GoogleLoginButton from '../GoogleLoginButton';
-import { Bot, FileText, Key, Settings as SettingsIcon } from 'lucide-react';
+import { Bot, Key, Settings as SettingsIcon } from 'lucide-react';
 
 function ApiStatus() {
   const { isSuccess } = useQuery({
@@ -28,10 +28,6 @@ export default function AppShell() {
           <Link to="/" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
             <Bot className="w-4 h-4" />
             Agents
-          </Link>
-          <Link to="/agent-templates" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
-            <FileText className="w-4 h-4" />
-            Templates
           </Link>
           <Link to="/keys" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
             <Key className="w-4 h-4" />
