@@ -17,12 +17,11 @@ export interface ActiveAgentRow {
 
 export function getActiveAgents(agentId?: string): ActiveAgentRow[] {
   const sql = `SELECT a.id, a.user_id, a.model,
-                      t.token_a, t.token_b, t.target_allocation,
-                      t.min_a_allocation, t.min_b_allocation,
-                      t.risk, t.review_interval, t.agent_instructions,
+                      a.token_a, a.token_b, a.target_allocation,
+                      a.min_a_allocation, a.min_b_allocation,
+                      a.risk, a.review_interval, a.agent_instructions,
                       u.ai_api_key_enc
                  FROM agents a
-                 JOIN agent_templates t ON a.template_id = t.id
                  JOIN users u ON u.id = a.user_id
                 WHERE a.status = 'active' ${agentId ? 'AND a.id = ?' : ''}`;
   return db.prepare(sql).all(agentId ? [agentId] : []) as ActiveAgentRow[];

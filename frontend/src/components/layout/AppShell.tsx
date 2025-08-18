@@ -25,13 +25,9 @@ export default function AppShell() {
       </header>
       <div className="flex flex-1">
         <nav className="w-48 bg-gray-100 p-4">
-          <Link to="/" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
+          <Link to="/agents" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
             <Bot className="w-4 h-4" />
             Agents
-          </Link>
-          <Link to="/agent-templates" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
-            <FileText className="w-4 h-4" />
-            Templates
           </Link>
           <Link to="/keys" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
             <Key className="w-4 h-4" />

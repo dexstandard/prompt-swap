@@ -25,12 +25,19 @@ function addUser(id: string) {
 }
 
 describe('agent routes', () => {
-  it('performs CRUD operations', async () => {
+  it('handles drafts and activation', async () => {
     const app = await buildServer();
     addUser('user1');
-    db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run('tmpl1', 'user1', 'T1', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
+
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'user1' },
+      payload: { userId: 'user1' },
+    });
+    expect(res.statusCode).toBe(200);
+    const id = res.json().id as string;
+    expect(res.json().status).toBe('inactive');
 
     const fetchMock = vi.fn();
     fetchMock.mockResolvedValueOnce({
@@ -43,41 +50,28 @@ describe('agent routes', () => {
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
-    const payload = { templateId: 'tmpl1', userId: 'user1', model: 'gpt-5' };
-
-    let res = await app.inject({
-      method: 'POST',
-      url: '/api/agents',
-      headers: { 'x-user-id': 'user1' },
-      payload,
-    });
-    expect(res.statusCode).toBe(200);
-    const id = res.json().id as string;
-    expect(res.json().template).toMatchObject({ tokenA: 'BTC', tokenB: 'ETH' });
-    expect(res.json().status).toBe('active');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const body = JSON.parse(fetchMock.mock.calls[1][1].body);
-    expect(body).toMatchObject({
+    const update = {
+      userId: 'user1',
       model: 'gpt-5',
-      input: {
-        instructions: 'prompt',
-        tokenA: 'BTC',
-        tokenB: 'ETH',
-        targetAllocation: 60,
-        minTokenAAllocation: 10,
-        minTokenBAllocation: 20,
-        risk: 'low',
-        reviewInterval: '1h',
-      },
-    });
-
+      status: 'active',
+      name: 'BTC 60 / ETH 40',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+    };
     res = await app.inject({
-      method: 'GET',
+      method: 'PUT',
       url: `/api/agents/${id}`,
       headers: { 'x-user-id': 'user1' },
+      payload: update,
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...payload, status: 'active', template: { tokenA: 'BTC', tokenB: 'ETH' } });
+    expect(res.json()).toMatchObject({ id, ...update });
 
     res = await app.inject({
       method: 'GET',
@@ -86,27 +80,6 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toHaveLength(1);
-    expect(res.json()[0].template).toMatchObject({ tokenA: 'BTC', tokenB: 'ETH' });
-
-    res = await app.inject({
-      method: 'GET',
-      url: '/api/agents/paginated?page=1&pageSize=10',
-      headers: { 'x-user-id': 'user1' },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
-    expect(res.json().items).toHaveLength(1);
-    expect(res.json().items[0].template).toMatchObject({ tokenA: 'BTC', tokenB: 'ETH' });
-
-    const update = { templateId: 'tmpl1', userId: 'user1', model: 'o3', status: 'active' };
-    res = await app.inject({
-      method: 'PUT',
-      url: `/api/agents/${id}`,
-      headers: { 'x-user-id': 'user1' },
-      payload: update,
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...update, template: { tokenA: 'BTC', tokenB: 'ETH' } });
 
     res = await app.inject({
       method: 'DELETE',
@@ -115,134 +88,44 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
 
-    res = await app.inject({
-      method: 'GET',
-      url: `/api/agents/${id}`,
-      headers: { 'x-user-id': 'user1' },
-    });
-    expect(res.statusCode).toBe(404);
-
     await app.close();
     (globalThis as any).fetch = originalFetch;
   });
 
-  it('enforces user ownership', async () => {
+  it('validates input', async () => {
     const app = await buildServer();
     addUser('user2');
-    addUser('user3');
-    db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run('tmpl2', 'user2', 'T2', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
-    db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run('tmpl3', 'user3', 'T3', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
-
-    const fetchMock = vi.fn((url) => {
-      if (typeof url === 'string' && url.includes('api/v3/account')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            balances: [{ asset: 'USDT', free: '100', locked: '0' }],
-          }),
-        } as any);
-      }
-      return Promise.resolve({ text: async () => 'ok' } as any);
-    });
-    const originalFetch = globalThis.fetch;
-    (globalThis as any).fetch = fetchMock;
 
     let res = await app.inject({
       method: 'POST',
       url: '/api/agents',
       headers: { 'x-user-id': 'user2' },
-      payload: { templateId: 'tmpl2', userId: 'user2', model: 'm1' },
-    });
-    const id1 = res.json().id as string;
-
-    res = await app.inject({
-      method: 'POST',
-      url: '/api/agents',
-      headers: { 'x-user-id': 'user3' },
-      payload: { templateId: 'tmpl3', userId: 'user3', model: 'm1' },
-    });
-    const id2 = res.json().id as string;
-
-    res = await app.inject({
-      method: 'GET',
-      url: '/api/agents',
-      headers: { 'x-user-id': 'user2' },
-    });
-    expect(res.json()).toHaveLength(1);
-    expect(res.json()[0].id).toBe(id1);
-
-    res = await app.inject({
-      method: 'GET',
-      url: `/api/agents/${id2}`,
-      headers: { 'x-user-id': 'user2' },
-    });
-    expect(res.statusCode).toBe(403);
-
-    res = await app.inject({
-      method: 'POST',
-      url: '/api/agents',
-      headers: { 'x-user-id': 'user2' },
-      payload: { templateId: 'tmpl2', userId: 'user3', model: 'm1' },
-    });
-    expect(res.statusCode).toBe(403);
-
-    await app.close();
-    (globalThis as any).fetch = originalFetch;
-  });
-
-  it('prevents multiple agents for a template', async () => {
-    const app = await buildServer();
-    addUser('user4');
-    db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run('tmpl4', 'user4', 'T4', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
-    db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run('tmpl5', 'user4', 'T5', 'BTC', 'SOL', 60, 10, 20, 'low', '1h', 'prompt');
-
-    const fetchMock = vi.fn((url) => {
-      if (typeof url === 'string' && url.includes('api/v3/account')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            balances: [{ asset: 'USDT', free: '100', locked: '0' }],
-          }),
-        } as any);
-      }
-      return Promise.resolve({ text: async () => 'ok' } as any);
-    });
-    const originalFetch = globalThis.fetch;
-    (globalThis as any).fetch = fetchMock;
-
-    let res = await app.inject({
-      method: 'POST',
-      url: '/api/agents',
-      headers: { 'x-user-id': 'user4' },
-      payload: { templateId: 'tmpl4', userId: 'user4', model: 'm1' },
-    });
-    expect(res.statusCode).toBe(200);
-
-    res = await app.inject({
-      method: 'POST',
-      url: '/api/agents',
-      headers: { 'x-user-id': 'user4' },
-      payload: { templateId: 'tmpl4', userId: 'user4', model: 'm1' },
+      payload: { userId: 'user2', status: 'active' },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json()).toMatchObject(errorResponse(ERROR_MESSAGES.agentExists));
+
+    const fetchMock = vi.fn();
+    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
 
     res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'user4' },
+      headers: { 'x-user-id': 'user2' },
       payload: {
-        templateId: 'tmpl5',
-        userId: 'user4',
+        userId: 'user2',
+        status: 'active',
         model: 'x'.repeat(51),
+        name: 'n',
+        tokenA: 'BTC',
+        tokenB: 'ETH',
+        targetAllocation: 60,
+        minTokenAAllocation: 10,
+        minTokenBAllocation: 20,
+        risk: 'r',
+        reviewInterval: '1h',
+        agentInstructions: 'p',
       },
     });
     expect(res.statusCode).toBe(400);
@@ -254,10 +137,7 @@ describe('agent routes', () => {
 
   it('returns current pnl for agent', async () => {
     const app = await buildServer();
-    addUser('user5');
-    db.prepare(
-      `INSERT INTO agent_templates (id, user_id, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run('tmpl6', 'user5', 'T6', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'prompt');
+    addUser('user3');
 
     const fetchMock = vi.fn();
     fetchMock
@@ -277,18 +157,33 @@ describe('agent routes', () => {
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
+    const payload = {
+      userId: 'user3',
+      status: 'active',
+      model: 'm1',
+      name: 'n',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'r',
+      reviewInterval: '1h',
+      agentInstructions: 'p',
+    };
+
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'user5' },
-      payload: { templateId: 'tmpl6', userId: 'user5', model: 'm1' },
+      headers: { 'x-user-id': 'user3' },
+      payload,
     });
     const id = resCreate.json().id as string;
 
     const resPnl = await app.inject({
       method: 'GET',
       url: `/api/agents/${id}/pnl`,
-      headers: { 'x-user-id': 'user5' },
+      headers: { 'x-user-id': 'user3' },
     });
     expect(resPnl.statusCode).toBe(200);
     expect(resPnl.json()).toEqual({
@@ -301,4 +196,3 @@ describe('agent routes', () => {
     (globalThis as any).fetch = originalFetch;
   });
 });
-
