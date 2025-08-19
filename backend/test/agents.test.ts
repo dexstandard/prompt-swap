@@ -7,6 +7,7 @@ process.env.GOOGLE_CLIENT_ID = 'test-client';
 const { db, migrate } = await import('../src/db/index.js');
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
+const { getActiveAgents } = await import('../src/repos/agents.js');
 
 migrate();
 
@@ -17,6 +18,10 @@ function addUser(id: string) {
   db.prepare(
     'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
   ).run(id, ai, bk, bs);
+}
+
+function addUserNoKeys(id: string) {
+  db.prepare('INSERT INTO users (id) VALUES (?)').run(id);
 }
 
 describe('agent routes', () => {
@@ -176,6 +181,81 @@ describe('agent routes', () => {
       currentBalanceUsd: 150,
       pnlUsd: 50,
     });
+
+    await app.close();
+    (globalThis as any).fetch = originalFetch;
+  });
+
+  it('handles drafts and api key validation', async () => {
+    const app = await buildServer();
+    addUserNoKeys('u1');
+
+    const basePayload = {
+      userId: 'u1',
+      model: '',
+      name: 'Draft1',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 50,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+    };
+
+    let res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'u1' },
+      payload: { ...basePayload, draft: false },
+    });
+    expect(res.statusCode).toBe(400);
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'u1' },
+      payload: { ...basePayload, draft: true },
+    });
+    expect(res.statusCode).toBe(200);
+    const draftId = res.json().id as string;
+
+    addUser('u2');
+    const fetchMock = vi.fn();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+      }),
+    } as any);
+    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+
+    res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'u2' },
+      payload: { ...basePayload, userId: 'u2', name: 'Active', draft: false },
+    });
+    expect(res.statusCode).toBe(200);
+    const activeId = res.json().id as string;
+
+    const resDraft2 = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'u2' },
+      payload: { ...basePayload, userId: 'u2', name: 'Draft2', draft: true },
+    });
+    const draft2Id = resDraft2.json().id as string;
+
+    db.prepare('UPDATE agents SET status = ? WHERE id = ?').run('active', draft2Id);
+
+    const activeAgents = getActiveAgents();
+    expect(activeAgents.find((a) => a.id === activeId)).toBeDefined();
+    expect(activeAgents.find((a) => a.id === draftId)).toBeUndefined();
+    expect(activeAgents.find((a) => a.id === draft2Id)).toBeUndefined();
 
     await app.close();
     (globalThis as any).fetch = originalFetch;

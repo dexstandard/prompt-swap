@@ -70,6 +70,7 @@ export default function AgentPreview() {
     });
     const [model, setModel] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [isSavingDraft, setIsSavingDraft] = useState(false);
     useEffect(() => {
         if (modelsQuery.data && modelsQuery.data.length) {
             setModel(modelsQuery.data[0]);
@@ -165,6 +166,41 @@ export default function AgentPreview() {
                 {!user && (
                     <p className="text-sm text-gray-600 mb-2 mt-4">Log in to continue</p>
                 )}
+                <Button
+                    className="mt-4 mr-2"
+                    disabled={isSavingDraft || !user}
+                    loading={isSavingDraft}
+                    onClick={async () => {
+                        if (!user) return;
+                        setIsSavingDraft(true);
+                        try {
+                            const res = await api.post('/agents', {
+                                userId: user.id,
+                                model,
+                                name: data.name,
+                                tokenA: data.tokenA,
+                                tokenB: data.tokenB,
+                                targetAllocation: data.targetAllocation,
+                                minTokenAAllocation: data.minTokenAAllocation,
+                                minTokenBAllocation: data.minTokenBAllocation,
+                                risk: data.risk,
+                                reviewInterval: data.reviewInterval,
+                                agentInstructions: data.agentInstructions,
+                                draft: true,
+                            });
+                            navigate(`/agents/${res.data.id}`);
+                        } catch (err) {
+                            setIsSavingDraft(false);
+                            if (axios.isAxiosError(err) && err.response?.data?.error) {
+                                toast.show(err.response.data.error);
+                            } else {
+                                toast.show('Failed to save draft');
+                            }
+                        }
+                    }}
+                >
+                    Save Draft
+                </Button>
                 <Button
                     className="mt-4"
                     disabled={
