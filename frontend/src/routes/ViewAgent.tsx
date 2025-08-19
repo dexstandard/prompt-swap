@@ -86,14 +86,25 @@ export default function ViewAgent() {
   });
 
   const [model, setModel] = useState('');
+  const [hadModel, setHadModel] = useState(false);
   useEffect(() => {
     setModel(data?.model || '');
+    if (data?.model) setHadModel(true);
   }, [data?.model]);
   useEffect(() => {
-    if (!data?.model && modelsQuery.data && modelsQuery.data.length && !model) {
+    if (!hasOpenAIKey) setModel('');
+  }, [hasOpenAIKey]);
+  useEffect(() => {
+    if (
+      !data?.model &&
+      modelsQuery.data &&
+      modelsQuery.data.length &&
+      !model &&
+      !hadModel
+    ) {
       setModel(modelsQuery.data[0]);
     }
-  }, [modelsQuery.data, data?.model, model]);
+  }, [modelsQuery.data, data?.model, model, hadModel]);
 
   const updateMut = useMutation({
     mutationFn: async (newModel: string) => {
@@ -202,7 +213,7 @@ export default function ViewAgent() {
         <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
       </div>
       <div className="mt-4">
-        {data.draft && !hasOpenAIKey && !data.model ? (
+        {data.draft && !hasOpenAIKey ? (
           <AiApiKeySection label="OpenAI API Key" />
         ) : (
           <div>
@@ -216,6 +227,9 @@ export default function ViewAgent() {
                 onChange={(e) => setModel(e.target.value)}
                 className="border rounded p-2"
               >
+                <option value="" disabled>
+                  Select a model
+                </option>
                 {modelsQuery.data.map((m) => (
                   <option key={m} value={m}>
                     {m}
@@ -272,7 +286,7 @@ export default function ViewAgent() {
       ) : data.draft && hasOpenAIKey && !data.model && modelsQuery.data ? (
         <Button
           className="mt-4"
-          disabled={updateMut.isPending}
+          disabled={updateMut.isPending || !model}
           loading={updateMut.isPending}
           onClick={() => updateMut.mutate(model)}
         >
