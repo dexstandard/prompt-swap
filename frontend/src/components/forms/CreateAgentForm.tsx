@@ -3,8 +3,6 @@ import {useNavigate} from 'react-router-dom';
 import {Controller, useForm} from 'react-hook-form';
 import {z} from 'zod';
 import {zodResolver} from '@hookform/resolvers/zod';
-import {useQueryClient} from '@tanstack/react-query';
-import api from '../../lib/axios';
 import {useUser} from '../../lib/useUser';
 import {normalizeAllocations} from '../../lib/allocations';
 import TokenSelect from './TokenSelect';
@@ -12,8 +10,6 @@ import TextInput from './TextInput';
 import SelectInput from './SelectInput';
 import FormField from './FormField';
 import RiskDisplay from '../RiskDisplay';
-import axios from 'axios';
-import {useToast} from '../Toast';
 import Button from '../ui/Button';
 
 const schema = z
@@ -80,55 +76,21 @@ const defaultValues: FormValues = {
 
 export default function CreateAgentForm({
                                       onTokensChange,
-                                      template,
-                                      onSubmitSuccess,
-                                      onCancel,
                                   }: {
     onTokensChange?: (tokenA: string, tokenB: string) => void;
-    template?: {
-        id: string;
-        tokenA: string;
-        tokenB: string;
-        targetAllocation: number;
-        minTokenAAllocation: number;
-        minTokenBAllocation: number;
-        risk: string;
-        reviewInterval: string;
-        agentInstructions: string;
-    };
-    onSubmitSuccess?: () => void;
-    onCancel?: () => void;
 }) {
     const {user} = useUser();
-    const queryClient = useQueryClient();
     const {
         register,
         handleSubmit,
         watch,
         setValue,
         control,
-        reset,
         formState: {isSubmitting},
     } = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues,
     });
-
-    useEffect(() => {
-        if (template) {
-            reset({
-                tokenA: template.tokenA,
-                tokenB: template.tokenB,
-                targetAllocation: template.targetAllocation,
-                minTokenAAllocation: template.minTokenAAllocation,
-                minTokenBAllocation: template.minTokenBAllocation,
-                risk: template.risk as any,
-                reviewInterval: template.reviewInterval as any,
-            });
-        } else {
-            reset(defaultValues);
-        }
-    }, [template, reset]);
 
     const tokenA = watch('tokenA');
     const tokenB = watch('tokenB');
@@ -174,49 +136,26 @@ export default function CreateAgentForm({
     ]);
 
     const navigate = useNavigate();
-    const toast = useToast();
 
     const onSubmit = handleSubmit(async (values) => {
         if (!user) return;
-        try {
-            const {targetAllocation} = normalizeAllocations(
-                values.targetAllocation,
-                values.minTokenAAllocation,
-                values.minTokenBAllocation
-            );
-            const name = `${values.tokenA.toUpperCase()} ${targetAllocation} / ${values.tokenB.toUpperCase()} ${100 - targetAllocation}`;
-            if (template) {
-                await api.put(`/agent-templates/${template.id}`, {
-                    userId: user.id,
-                    name,
-                    ...values,
-                    tokenA: values.tokenA.toUpperCase(),
-                    tokenB: values.tokenB.toUpperCase(),
-                    agentInstructions: template.agentInstructions,
-                });
-                queryClient.invalidateQueries({queryKey: ['agent-templates']});
-                onSubmitSuccess?.();
-            } else {
-                const previewData = {
-                    name,
-                    tokenA: values.tokenA.toUpperCase(),
-                    tokenB: values.tokenB.toUpperCase(),
-                    targetAllocation,
-                    minTokenAAllocation: values.minTokenAAllocation,
-                    minTokenBAllocation: values.minTokenBAllocation,
-                    risk: values.risk,
-                    reviewInterval: values.reviewInterval,
-                    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
-                };
-                navigate('/agent-preview', {state: previewData});
-            }
-        } catch (err) {
-            if (axios.isAxiosError(err) && err.response?.data?.error) {
-                toast.show(err.response.data.error);
-            } else {
-                toast.show('Failed to save template');
-            }
-        }
+        const {targetAllocation} = normalizeAllocations(
+            values.targetAllocation,
+            values.minTokenAAllocation,
+            values.minTokenBAllocation
+        );
+        const previewData = {
+            name: `${values.tokenA.toUpperCase()} ${targetAllocation} / ${values.tokenB.toUpperCase()} ${100 - targetAllocation}`,
+            tokenA: values.tokenA.toUpperCase(),
+            tokenB: values.tokenB.toUpperCase(),
+            targetAllocation,
+            minTokenAAllocation: values.minTokenAAllocation,
+            minTokenBAllocation: values.minTokenBAllocation,
+            risk: values.risk,
+            reviewInterval: values.reviewInterval,
+            agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+        };
+        navigate('/agent-preview', {state: previewData});
     });
 
     return (
@@ -225,7 +164,7 @@ export default function CreateAgentForm({
                 onSubmit={onSubmit}
                 className="bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem]"
             >
-                <h2 className="text-xl font-bold">{template ? 'Edit Agent' : 'Create Agent'}</h2>
+                <h2 className="text-xl font-bold">Create Agent</h2>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField label="Token A" htmlFor="tokenA">
                         <Controller
@@ -368,35 +307,14 @@ export default function CreateAgentForm({
                 {!user && (
                     <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
                 )}
-                {template ? (
-                    <div className="flex gap-2">
-                        <Button
-                            type="submit"
-                            className="flex-1"
-                            disabled={!user}
-                            loading={isSubmitting}
-                        >
-                            Update
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            className="flex-1"
-                            onClick={onCancel}
-                        >
-                            Cancel
-                        </Button>
-                    </div>
-                ) : (
-                    <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={!user}
-                        loading={isSubmitting}
-                    >
-                        Preview
-                    </Button>
-                )}
+                <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={!user}
+                    loading={isSubmitting}
+                >
+                    Preview
+                </Button>
             </form>
         </>
     );

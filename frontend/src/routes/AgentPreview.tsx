@@ -14,7 +14,6 @@ import {useToast} from '../components/Toast';
 import Button from '../components/ui/Button';
 
 interface AgentPreviewDetails {
-    id?: string;
     name: string;
     tokenA: string;
     tokenB: string;
@@ -181,9 +180,18 @@ export default function AgentPreview() {
                         setIsCreating(true);
                         try {
                             const res = await api.post('/agents', {
-                                templateId: data.id,
                                 userId: user.id,
                                 model,
+                                name: data.name,
+                                tokenA: data.tokenA,
+                                tokenB: data.tokenB,
+                                targetAllocation: data.targetAllocation,
+                                minTokenAAllocation: data.minTokenAAllocation,
+                                minTokenBAllocation: data.minTokenBAllocation,
+                                risk: data.risk,
+                                reviewInterval: data.reviewInterval,
+                                agentInstructions: data.agentInstructions,
+                                draft: false,
                             });
                             navigate(`/agents/${res.data.id}`);
                         } catch (err) {

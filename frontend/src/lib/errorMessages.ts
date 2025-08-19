@@ -1,5 +1,4 @@
 export const ERROR_MESSAGES = {
-  templateExists: 'template already exists',
   agentExists: 'agent already exists',
 };
 
