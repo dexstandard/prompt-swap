@@ -201,41 +201,31 @@ export default function ViewAgent() {
         <h2 className="text-xl font-bold">Trading Agent Instructions</h2>
         <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
       </div>
-      {data.model && (
-        <p>
-          <strong>Model:</strong> {data.model}
-        </p>
-      )}
-      {data.draft && !hasOpenAIKey && !data.model && (
-        <div className="mt-4">
+      <div className="mt-4">
+        {data.draft && !hasOpenAIKey && !data.model ? (
           <AiApiKeySection label="OpenAI API Key" />
-        </div>
-      )}
-      {data.draft && hasOpenAIKey && !data.model && modelsQuery.data && (
-        <div className="mt-4">
-          <h2 className="text-md font-bold">Model</h2>
-          <select
-            id="model"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="border rounded p-2"
-          >
-            {modelsQuery.data.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <Button
-            className="mt-2"
-            disabled={updateMut.isPending}
-            loading={updateMut.isPending}
-            onClick={() => updateMut.mutate(model)}
-          >
-            Save Draft
-          </Button>
-        </div>
-      )}
+        ) : (
+          <div>
+            <h2 className="text-md font-bold mb-1">Model</h2>
+            {data.model ? (
+              <p>{data.model}</p>
+            ) : data.draft && hasOpenAIKey && modelsQuery.data ? (
+              <select
+                id="model"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="border rounded p-2"
+              >
+                {modelsQuery.data.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
+        )}
+      </div>
       {data.draft && !hasBinanceKey && (
         <div className="mt-4">
           <ExchangeApiKeySection
@@ -278,6 +268,15 @@ export default function ViewAgent() {
           onClick={() => stopMut.mutate()}
         >
           Stop Agent
+        </Button>
+      ) : data.draft && hasOpenAIKey && !data.model && modelsQuery.data ? (
+        <Button
+          className="mt-4"
+          disabled={updateMut.isPending}
+          loading={updateMut.isPending}
+          onClick={() => updateMut.mutate(model)}
+        >
+          Save Draft
         </Button>
       ) : null}
     </div>
