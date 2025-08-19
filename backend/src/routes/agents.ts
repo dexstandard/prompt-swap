@@ -124,15 +124,65 @@ export default async function agentRoutes(app: FastifyInstance) {
       return reply
         .code(400)
         .send(errorResponse(lengthMessage('model', 50)));
-    const duplicate = db
-      .prepare(
-        'SELECT id FROM agents WHERE user_id = ? AND token_a = ? AND token_b = ?',
-      )
-      .get(body.userId, body.tokenA, body.tokenB) as { id: string } | undefined;
-    if (duplicate)
-      return reply
-        .code(400)
-        .send(errorResponse(ERROR_MESSAGES.agentExists));
+    if (body.draft) {
+      const dupDraft = db
+        .prepare(
+          `SELECT id, name FROM agents
+             WHERE user_id = ? AND draft = 1 AND model = ? AND name = ?
+               AND token_a = ? AND token_b = ? AND target_allocation = ?
+               AND min_a_allocation = ? AND min_b_allocation = ?
+               AND risk = ? AND review_interval = ? AND agent_instructions = ?`,
+        )
+        .get(
+          body.userId,
+          body.model,
+          body.name,
+          body.tokenA,
+          body.tokenB,
+          body.targetAllocation,
+          body.minTokenAAllocation,
+          body.minTokenBAllocation,
+          body.risk,
+          body.reviewInterval,
+          body.agentInstructions,
+        ) as { id: string; name: string } | undefined;
+      if (dupDraft)
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              `identical draft already exists: ${dupDraft.name} (${dupDraft.id})`,
+            ),
+          );
+    } else {
+      const dupRows = db
+        .prepare(
+          `SELECT id, name, token_a, token_b FROM agents
+             WHERE user_id = ? AND status = 'active' AND draft = 0
+               AND (token_a IN (?, ?) OR token_b IN (?, ?))`,
+        )
+        .all(
+          body.userId,
+          body.tokenA,
+          body.tokenB,
+          body.tokenA,
+          body.tokenB,
+        ) as { id: string; name: string; token_a: string; token_b: string }[];
+      if (dupRows.length) {
+        const conflicts: { token: string; id: string; name: string }[] = [];
+        for (const row of dupRows) {
+          if (row.token_a === body.tokenA || row.token_b === body.tokenA)
+            conflicts.push({ token: body.tokenA, id: row.id, name: row.name });
+          if (row.token_a === body.tokenB || row.token_b === body.tokenB)
+            conflicts.push({ token: body.tokenB, id: row.id, name: row.name });
+        }
+        const parts = conflicts.map(
+          (c) => `${c.token} used by ${c.name} (${c.id})`,
+        );
+        const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
+        return reply.code(400).send(errorResponse(msg));
+      }
+    }
     let startBalance: number | null = null;
     if (!body.draft) {
       const userRow = db
@@ -261,12 +311,73 @@ export default async function agentRoutes(app: FastifyInstance) {
             binance_api_secret_enc?: string;
           }
         | undefined;
-      if (
+    if (
         !userRow?.ai_api_key_enc ||
         !userRow.binance_api_key_enc ||
         !userRow.binance_api_secret_enc
       )
         return reply.code(400).send(errorResponse('missing api keys'));
+    }
+    if (body.draft) {
+      const dupDraft = db
+        .prepare(
+          `SELECT id, name FROM agents
+             WHERE user_id = ? AND draft = 1 AND id != ? AND model = ? AND name = ?
+               AND token_a = ? AND token_b = ? AND target_allocation = ?
+               AND min_a_allocation = ? AND min_b_allocation = ?
+               AND risk = ? AND review_interval = ? AND agent_instructions = ?`,
+        )
+        .get(
+          body.userId,
+          id,
+          body.model,
+          body.name,
+          body.tokenA,
+          body.tokenB,
+          body.targetAllocation,
+          body.minTokenAAllocation,
+          body.minTokenBAllocation,
+          body.risk,
+          body.reviewInterval,
+          body.agentInstructions,
+        ) as { id: string; name: string } | undefined;
+      if (dupDraft)
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              `identical draft already exists: ${dupDraft.name} (${dupDraft.id})`,
+            ),
+          );
+    } else if (body.status === AgentStatus.Active) {
+      const dupRows = db
+        .prepare(
+          `SELECT id, name, token_a, token_b FROM agents
+             WHERE user_id = ? AND status = 'active' AND draft = 0 AND id != ?
+               AND (token_a IN (?, ?) OR token_b IN (?, ?))`,
+        )
+        .all(
+          body.userId,
+          id,
+          body.tokenA,
+          body.tokenB,
+          body.tokenA,
+          body.tokenB,
+        ) as { id: string; name: string; token_a: string; token_b: string }[];
+      if (dupRows.length) {
+        const conflicts: { token: string; id: string; name: string }[] = [];
+        for (const row of dupRows) {
+          if (row.token_a === body.tokenA || row.token_b === body.tokenA)
+            conflicts.push({ token: body.tokenA, id: row.id, name: row.name });
+          if (row.token_a === body.tokenB || row.token_b === body.tokenB)
+            conflicts.push({ token: body.tokenB, id: row.id, name: row.name });
+        }
+        const parts = conflicts.map(
+          (c) => `${c.token} used by ${c.name} (${c.id})`,
+        );
+        const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
+        return reply.code(400).send(errorResponse(msg));
+      }
     }
     const status = body.draft ? AgentStatus.Inactive : body.status;
     db.prepare(

@@ -43,3 +43,20 @@ CREATE TABLE IF NOT EXISTS agent_exec_log(
   log TEXT,
   created_at INTEGER
 );
+
+-- Indexes to optimize duplicate detection queries
+CREATE INDEX IF NOT EXISTS idx_agents_draft_all_fields
+  ON agents(
+    user_id, model, name, token_a, token_b,
+    target_allocation, min_a_allocation, min_b_allocation,
+    risk, review_interval, agent_instructions
+  )
+  WHERE draft = 1;
+
+CREATE INDEX IF NOT EXISTS idx_agents_active_token_a
+  ON agents(user_id, token_a)
+  WHERE status = 'active' AND draft = 0;
+
+CREATE INDEX IF NOT EXISTS idx_agents_active_token_b
+  ON agents(user_id, token_b)
+  WHERE status = 'active' AND draft = 0;
