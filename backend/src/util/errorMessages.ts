@@ -1,5 +1,4 @@
 export const ERROR_MESSAGES = {
-  agentExists: 'agent already exists',
   forbidden: 'forbidden',
   notFound: 'not found',
 };

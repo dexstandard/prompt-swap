@@ -260,4 +260,113 @@ describe('agent routes', () => {
     await app.close();
     (globalThis as any).fetch = originalFetch;
   });
+
+  it('checks duplicates based on status and tokens', async () => {
+    const app = await buildServer();
+    addUser('dupUser');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({ balances: [{ asset: 'USDT', free: '100', locked: '0' }] }),
+        text: async () => 'ok',
+      } as any);
+    const origFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+
+    const base = {
+      userId: 'dupUser',
+      model: 'm',
+      name: 'A1',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'p',
+      draft: false,
+    };
+
+    const res1 = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'dupUser' },
+      payload: base,
+    });
+    const existingId = res1.json().id as string;
+
+    const resDup = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'dupUser' },
+      payload: { ...base, name: 'B1', tokenA: 'BTC', tokenB: 'SOL' },
+    });
+    expect(resDup.statusCode).toBe(400);
+    expect(resDup.json().error).toContain('BTC');
+    expect(resDup.json().error).toContain('A1');
+    expect(resDup.json().error).toContain(existingId);
+
+    db.prepare('UPDATE agents SET status = ? WHERE id = ?').run('inactive', existingId);
+
+    const resOk = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'dupUser' },
+      payload: { ...base, name: 'B2', tokenA: 'BTC', tokenB: 'SOL' },
+    });
+    expect(resOk.statusCode).toBe(200);
+
+    await app.close();
+    (globalThis as any).fetch = origFetch;
+  });
+
+  it('detects identical drafts', async () => {
+    const app = await buildServer();
+    addUserNoKeys('draftUser');
+
+    const draftPayload = {
+      userId: 'draftUser',
+      model: 'm',
+      name: 'Draft',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 50,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'p',
+      draft: true,
+    };
+
+    const res1 = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'draftUser' },
+      payload: draftPayload,
+    });
+    const draftId = res1.json().id as string;
+
+    const resDup = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'draftUser' },
+      payload: draftPayload,
+    });
+    expect(resDup.statusCode).toBe(400);
+    expect(resDup.json().error).toContain('Draft');
+    expect(resDup.json().error).toContain(draftId);
+
+    const resOk = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'draftUser' },
+      payload: { ...draftPayload, name: 'Draft2' },
+    });
+    expect(resOk.statusCode).toBe(200);
+
+    await app.close();
+  });
 });

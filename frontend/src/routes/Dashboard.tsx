@@ -101,7 +101,7 @@ export default function Dashboard() {
                           '-'
                         )}
                       </td>
-                      <td>{agent.model}</td>
+                      <td>{agent.model || '-'}</td>
                       <td>
                         <AgentStatusLabel status={agent.status} />
                       </td>
