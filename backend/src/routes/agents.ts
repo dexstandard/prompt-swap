@@ -133,33 +133,37 @@ export default async function agentRoutes(app: FastifyInstance) {
       return reply
         .code(400)
         .send(errorResponse(ERROR_MESSAGES.agentExists));
-    const userRow = db
-      .prepare('SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?')
-      .get(body.userId) as
-      | {
-          ai_api_key_enc?: string;
-          binance_api_key_enc?: string;
-          binance_api_secret_enc?: string;
-        }
-      | undefined;
-    if (
-      !userRow?.ai_api_key_enc ||
-      !userRow.binance_api_key_enc ||
-      !userRow.binance_api_secret_enc
-    )
-      return reply.code(400).send(errorResponse('missing api keys'));
-    let startBalance;
-    try {
-      startBalance = await fetchTotalBalanceUsd(userId);
-    } catch {
-      return reply
-        .code(500)
-        .send(errorResponse('failed to fetch balance'));
+    let startBalance: number | null = null;
+    if (!body.draft) {
+      const userRow = db
+        .prepare(
+          'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
+        )
+        .get(body.userId) as
+        | {
+            ai_api_key_enc?: string;
+            binance_api_key_enc?: string;
+            binance_api_secret_enc?: string;
+          }
+        | undefined;
+      if (
+        !userRow?.ai_api_key_enc ||
+        !userRow.binance_api_key_enc ||
+        !userRow.binance_api_secret_enc
+      )
+        return reply.code(400).send(errorResponse('missing api keys'));
+      try {
+        startBalance = await fetchTotalBalanceUsd(userId);
+      } catch {
+        return reply
+          .code(500)
+          .send(errorResponse('failed to fetch balance'));
+      }
+      if (startBalance === null)
+        return reply.code(500).send(errorResponse('failed to fetch balance'));
     }
-    if (startBalance === null)
-      return reply.code(500).send(errorResponse('failed to fetch balance'));
     const id = randomUUID();
-    const status = AgentStatus.Active;
+    const status = body.draft ? AgentStatus.Inactive : AgentStatus.Active;
     const createdAt = Date.now();
     db.prepare(
       `INSERT INTO agents (id, user_id, model, status, created_at, start_balance, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions, draft)
@@ -235,8 +239,8 @@ export default async function agentRoutes(app: FastifyInstance) {
       draft: boolean;
     };
     const existing = db
-      .prepare('SELECT user_id FROM agents WHERE id = ?')
-      .get(id) as { user_id: string } | undefined;
+      .prepare('SELECT user_id, draft FROM agents WHERE id = ?')
+      .get(id) as { user_id: string; draft: number } | undefined;
     if (!existing)
       return reply
         .code(404)
@@ -245,12 +249,32 @@ export default async function agentRoutes(app: FastifyInstance) {
       return reply
         .code(403)
         .send(errorResponse(ERROR_MESSAGES.forbidden));
+    if (!body.draft) {
+      const userRow = db
+        .prepare(
+          'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
+        )
+        .get(body.userId) as
+        | {
+            ai_api_key_enc?: string;
+            binance_api_key_enc?: string;
+            binance_api_secret_enc?: string;
+          }
+        | undefined;
+      if (
+        !userRow?.ai_api_key_enc ||
+        !userRow.binance_api_key_enc ||
+        !userRow.binance_api_secret_enc
+      )
+        return reply.code(400).send(errorResponse('missing api keys'));
+    }
+    const status = body.draft ? AgentStatus.Inactive : body.status;
     db.prepare(
       `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, draft = ? WHERE id = ?`
     ).run(
       body.userId,
       body.model,
-      body.status,
+      status,
       body.name,
       body.tokenA,
       body.tokenB,
