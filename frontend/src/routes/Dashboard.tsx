@@ -25,6 +25,7 @@ export default function Dashboard() {
   const { user } = useUser();
   const [page, setPage] = useState(1);
   const [tokens, setTokens] = useState({ tokenA: 'USDT', tokenB: 'SOL' });
+  const [onlyActive, setOnlyActive] = useState(false);
 
   const handleTokensChange = useCallback((a: string, b: string) => {
     setTokens((prev) =>
@@ -33,10 +34,15 @@ export default function Dashboard() {
   }, []);
 
   const { data } = useQuery({
-    queryKey: ['agents', page, user?.id],
+    queryKey: ['agents', page, user?.id, onlyActive],
     queryFn: async () => {
       const res = await api.get('/agents/paginated', {
-        params: { page, pageSize: 10, userId: user!.id },
+        params: {
+          page,
+          pageSize: 10,
+          userId: user!.id,
+          status: onlyActive ? 'active' : undefined,
+        },
       });
       return res.data as {
         items: Agent[];
@@ -61,7 +67,19 @@ export default function Dashboard() {
       </div>
       <ErrorBoundary>
         <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
-          <h2 className="text-xl font-bold mb-4">My Agents</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">My Agents</h2>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <span>Only Active</span>
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={onlyActive}
+                onChange={(e) => setOnlyActive(e.target.checked)}
+              />
+              <div className="relative w-11 h-6 bg-gray-200 rounded-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white" />
+            </label>
+          </div>
           {!user ? (
             <p>Please log in to view your agents.</p>
           ) : items.length === 0 ? (
