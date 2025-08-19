@@ -69,28 +69,40 @@ export default async function agentRoutes(app: FastifyInstance) {
   app.get('/agents', async (req, reply) => {
     const userId = requireUserId(req, reply);
     if (!userId) return;
-    const rows = db
-      .prepare<[string], AgentRow>(`${baseSelect} WHERE user_id = ?`)
-      .all(userId);
+    const { status } = req.query as { status?: AgentStatus };
+    let sql = `${baseSelect} WHERE user_id = ?`;
+    const params: unknown[] = [userId];
+    if (status === AgentStatus.Active || status === AgentStatus.Inactive) {
+      sql += ' AND status = ?';
+      params.push(status);
+    }
+    const rows = db.prepare(sql).all(...params) as AgentRow[];
     return rows.map(toApi);
   });
 
   app.get('/agents/paginated', async (req, reply) => {
     const userId = requireUserId(req, reply);
     if (!userId) return;
-    const { page = '1', pageSize = '10' } = req.query as {
+    const { page = '1', pageSize = '10', status } = req.query as {
       page?: string;
       pageSize?: string;
+      status?: AgentStatus;
     };
     const p = Math.max(parseInt(page, 10), 1);
     const ps = Math.max(parseInt(pageSize, 10), 1);
     const offset = (p - 1) * ps;
+    let where = 'WHERE user_id = ?';
+    const params: unknown[] = [userId];
+    if (status === AgentStatus.Active || status === AgentStatus.Inactive) {
+      where += ' AND status = ?';
+      params.push(status);
+    }
     const totalRow = db
-      .prepare('SELECT COUNT(*) as count FROM agents WHERE user_id = ?')
-      .get(userId) as { count: number };
+      .prepare(`SELECT COUNT(*) as count FROM agents ${where}`)
+      .get(...params) as { count: number };
     const rows = db
-      .prepare(`${baseSelect} WHERE user_id = ? LIMIT ? OFFSET ?`)
-      .all(userId, ps, offset) as AgentRow[];
+      .prepare(`${baseSelect} ${where} LIMIT ? OFFSET ?`)
+      .all(...params, ps, offset) as AgentRow[];
     return {
       items: rows.map(toApi),
       total: totalRow.count,
