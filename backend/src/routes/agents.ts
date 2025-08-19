@@ -420,4 +420,101 @@ export default async function agentRoutes(app: FastifyInstance) {
     db.prepare('DELETE FROM agents WHERE id = ?').run(id);
     return { ok: true };
   });
+
+  app.post('/agents/:id/start', async (req, reply) => {
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
+    const id = (req.params as any).id;
+    const existing = getAgent(id);
+    if (!existing)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (existing.user_id !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
+    const dupRows = db
+      .prepare(
+        `SELECT id, name, token_a, token_b FROM agents
+             WHERE user_id = ? AND status = 'active' AND draft = 0 AND id != ?
+               AND (token_a IN (?, ?) OR token_b IN (?, ?))`,
+      )
+      .all(
+        userId,
+        id,
+        existing.token_a,
+        existing.token_b,
+        existing.token_a,
+        existing.token_b,
+      ) as { id: string; name: string; token_a: string; token_b: string }[];
+    if (dupRows.length) {
+      const conflicts: { token: string; id: string; name: string }[] = [];
+      for (const row of dupRows) {
+        if (row.token_a === existing.token_a || row.token_b === existing.token_a)
+          conflicts.push({ token: existing.token_a, id: row.id, name: row.name });
+        if (row.token_a === existing.token_b || row.token_b === existing.token_b)
+          conflicts.push({ token: existing.token_b, id: row.id, name: row.name });
+      }
+      const parts = conflicts.map(
+        (c) => `${c.token} used by ${c.name} (${c.id})`,
+      );
+      const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
+      return reply.code(400).send(errorResponse(msg));
+    }
+    const userRow = db
+      .prepare(
+        'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
+      )
+      .get(userId) as
+      | {
+          ai_api_key_enc?: string;
+          binance_api_key_enc?: string;
+          binance_api_secret_enc?: string;
+        }
+      | undefined;
+    if (
+      !userRow?.ai_api_key_enc ||
+      !userRow.binance_api_key_enc ||
+      !userRow.binance_api_secret_enc
+    )
+      return reply.code(400).send(errorResponse('missing api keys'));
+    let startBalance: number | null = null;
+    try {
+      startBalance = await fetchTotalBalanceUsd(userId);
+    } catch {
+      return reply
+        .code(500)
+        .send(errorResponse('failed to fetch balance'));
+    }
+    if (startBalance === null)
+      return reply.code(500).send(errorResponse('failed to fetch balance'));
+    db.prepare(
+      'UPDATE agents SET status = ?, draft = 0, start_balance = ? WHERE id = ?',
+    ).run(AgentStatus.Active, startBalance, id);
+    await reviewPortfolio(req.log, id);
+    const row = getAgent(id)!;
+    return toApi(row);
+  });
+
+  app.post('/agents/:id/stop', async (req, reply) => {
+    const userId = requireUserId(req, reply);
+    if (!userId) return;
+    const id = (req.params as any).id;
+    const existing = getAgent(id);
+    if (!existing)
+      return reply
+        .code(404)
+        .send(errorResponse(ERROR_MESSAGES.notFound));
+    if (existing.user_id !== userId)
+      return reply
+        .code(403)
+        .send(errorResponse(ERROR_MESSAGES.forbidden));
+    db.prepare('UPDATE agents SET status = ?, start_balance = NULL WHERE id = ?').run(
+      AgentStatus.Inactive,
+      id,
+    );
+    const row = getAgent(id)!;
+    return toApi(row);
+  });
 }
