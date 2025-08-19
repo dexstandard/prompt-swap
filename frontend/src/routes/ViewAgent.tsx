@@ -11,6 +11,7 @@ import RiskDisplay from '../components/RiskDisplay';
 import Button from '../components/ui/Button';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
+import WalletBalances from '../components/WalletBalances';
 import { useToast } from '../components/Toast';
 
 interface Agent {
@@ -47,7 +48,7 @@ export default function ViewAgent() {
 
   const aiKeyQuery = useQuery<string | null>({
     queryKey: ['ai-key', user?.id],
-    enabled: !!user && !!data?.draft && !data?.model,
+    enabled: !!user && !!data?.draft,
     queryFn: async () => {
       try {
         const res = await api.get(`/users/${user!.id}/ai-key`);
@@ -198,7 +199,7 @@ export default function ViewAgent() {
       <p>
         <strong>Model:</strong> {data.model || '-'}
       </p>
-      {data.draft && !data.model && (
+      {data.draft && !hasOpenAIKey && !data.model && (
         <div className="mt-4">
           <AiApiKeySection label="OpenAI API Key" />
         </div>
@@ -233,16 +234,23 @@ export default function ViewAgent() {
           />
         </div>
       )}
+      {data.draft && hasBinanceKey && (
+        <div className="mt-4">
+          <WalletBalances tokens={[data.tokenA, data.tokenB]} />
+        </div>
+      )}
       <p>
         <strong>Status:</strong> <AgentStatusLabel status={data.status} />
       </p>
       <p>
         <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
       </p>
-      <p>
-        <strong>Balance (USD):</strong>{' '}
-        <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB} />
-      </p>
+      {!data.draft && (
+        <p>
+          <strong>Balance (USD):</strong>{' '}
+          <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB} />
+        </p>
+      )}
       {!isActive && data.draft && data.model && hasOpenAIKey && hasBinanceKey ? (
         <Button
           className="mt-4"
