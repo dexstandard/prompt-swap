@@ -8,7 +8,7 @@ import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
 import AgentBalance from '../components/AgentBalance';
 import Button from '../components/ui/Button';
-import AgentTemplateForm from '../components/forms/AgentTemplateForm';
+import CreateAgentForm from '../components/forms/CreateAgentForm';
 import PriceChart from '../components/forms/PriceChart';
 import ErrorBoundary from '../components/ErrorBoundary';
 
@@ -61,7 +61,7 @@ export default function Dashboard() {
         <ErrorBoundary>
           <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
         </ErrorBoundary>
-        <AgentTemplateForm onTokensChange={handleTokensChange} />
+        <CreateAgentForm onTokensChange={handleTokensChange} />
       </div>
       <ErrorBoundary>
         <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">

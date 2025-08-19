@@ -13,7 +13,7 @@ import SelectInput from './SelectInput';
 import FormField from './FormField';
 import RiskDisplay from '../RiskDisplay';
 import axios from 'axios';
-import { useToast } from '../Toast';
+import {useToast} from '../Toast';
 import Button from '../ui/Button';
 
 const schema = z
@@ -78,7 +78,7 @@ const defaultValues: FormValues = {
     reviewInterval: '1h',
 };
 
-export default function AgentTemplateForm({
+export default function CreateAgentForm({
                                       onTokensChange,
                                       template,
                                       onSubmitSuccess,
@@ -197,16 +197,18 @@ export default function AgentTemplateForm({
                 queryClient.invalidateQueries({queryKey: ['agent-templates']});
                 onSubmitSuccess?.();
             } else {
-                const res = await api.post('/agent-templates', {
-                    userId: user.id,
+                const previewData = {
                     name,
-                    ...values,
                     tokenA: values.tokenA.toUpperCase(),
                     tokenB: values.tokenB.toUpperCase(),
+                    targetAllocation,
+                    minTokenAAllocation: values.minTokenAAllocation,
+                    minTokenBAllocation: values.minTokenBAllocation,
+                    risk: values.risk,
+                    reviewInterval: values.reviewInterval,
                     agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
-                });
-                queryClient.invalidateQueries({queryKey: ['agent-templates']});
-                navigate(`/agent-templates/${res.data.id}`);
+                };
+                navigate('/agent-preview', {state: previewData});
             }
         } catch (err) {
             if (axios.isAxiosError(err) && err.response?.data?.error) {
@@ -223,7 +225,7 @@ export default function AgentTemplateForm({
                 onSubmit={onSubmit}
                 className="bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem]"
             >
-                <h2 className="text-xl font-bold">{template ? 'Edit Agent Template' : 'Create Agent Template'}</h2>
+                <h2 className="text-xl font-bold">{template ? 'Edit Agent' : 'Create Agent'}</h2>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField label="Token A" htmlFor="tokenA">
                         <Controller
@@ -392,7 +394,7 @@ export default function AgentTemplateForm({
                         disabled={!user}
                         loading={isSubmitting}
                     >
-                        Save Template
+                        Preview
                     </Button>
                 )}
             </form>

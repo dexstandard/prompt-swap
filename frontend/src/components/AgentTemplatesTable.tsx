@@ -106,7 +106,8 @@ export default function AgentTemplatesTable({
                     <td>{reviewInterval}</td>
                     <td className="flex gap-2">
                       <Link
-                        to={`/agent-templates/${t.id}`}
+                        to="/agent-preview"
+                        state={t}
                         className="text-blue-600 underline inline-flex"
                         aria-label="View template"
                       >

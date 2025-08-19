@@ -60,7 +60,8 @@ export default function ViewAgent() {
           <p>
             <strong>Template:</strong>{' '}
             <Link
-              to={`/agent-templates/${template.id}`}
+              to="/agent-preview"
+              state={template}
               className="text-blue-600 underline"
             >
               {template.name}

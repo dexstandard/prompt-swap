@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
 import RiskDisplay from '../components/RiskDisplay';
 import TokenDisplay from '../components/TokenDisplay';
-import {useParams, useNavigate} from 'react-router-dom';
+import {useNavigate, useLocation} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../lib/axios';
@@ -10,14 +10,11 @@ import {useUser} from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 import WalletBalances from '../components/WalletBalances';
-import TradingAgentInstructions from '../components/TradingAgentInstructions';
-import AgentTemplateName from '../components/AgentTemplateName';
-import { useToast } from '../components/Toast';
+import {useToast} from '../components/Toast';
 import Button from '../components/ui/Button';
 
-interface AgentTemplateDetails {
-    id: string;
-    userId: string;
+interface AgentPreviewDetails {
+    id?: string;
     name: string;
     tokenA: string;
     tokenB: string;
@@ -29,19 +26,13 @@ interface AgentTemplateDetails {
     agentInstructions: string;
 }
 
-export default function ViewAgentTemplate() {
-    const {id} = useParams();
+export default function AgentPreview() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const data = location.state as AgentPreviewDetails | undefined;
     const {user} = useUser();
     const toast = useToast();
-    const {data} = useQuery({
-        queryKey: ['agent-template', id, user?.id],
-        queryFn: async () => {
-            const res = await api.get(`/agent-templates/${id}`);
-            return res.data as AgentTemplateDetails;
-        },
-        enabled: !!id && !!user,
-    });
+    if (!data) return <div className="p-4">No preview data</div>;
     const aiKeyQuery = useQuery<string | null>({
         queryKey: ['ai-key', user?.id],
         enabled: !!user,
@@ -79,26 +70,12 @@ export default function ViewAgentTemplate() {
         },
     });
     const [model, setModel] = useState('');
-    const [instructions, setInstructions] = useState('');
-    const [name, setName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     useEffect(() => {
         if (modelsQuery.data && modelsQuery.data.length) {
             setModel(modelsQuery.data[0]);
         }
     }, [modelsQuery.data]);
-    useEffect(() => {
-        if (data?.agentInstructions) {
-            setInstructions(data.agentInstructions);
-        }
-    }, [data?.agentInstructions]);
-    useEffect(() => {
-        if (data?.name) {
-            setName(data.name);
-        }
-    }, [data?.name]);
-
-    if (!data) return <div className="p-4">Loading...</div>;
 
     const reviewIntervalMap: Record<string, string> = {
         '1h': '1 Hour',
@@ -121,8 +98,8 @@ export default function ViewAgentTemplate() {
 
     return (
         <div className="p-4">
-            <h1 className="text-2xl font-bold mb-2">Agent Template</h1>
-            <AgentTemplateName templateId={data.id} name={name} onChange={setName} />
+            <h1 className="text-2xl font-bold mb-2">Agent Preview</h1>
+            <h2 className="text-xl font-bold mb-2">{data.name}</h2>
             <p className="flex items-center gap-1">
                 <strong>Tokens:</strong>
                 <TokenDisplay token={data.tokenA} />
@@ -144,11 +121,10 @@ export default function ViewAgentTemplate() {
             <p>
                 <strong>Review Interval:</strong> {reviewIntervalLabel}
             </p>
-            <TradingAgentInstructions
-                templateId={data.id}
-                instructions={instructions}
-                onChange={setInstructions}
-            />
+            <div className="mt-4">
+                <h2 className="text-xl font-bold">Trading Agent Instructions</h2>
+                <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
+            </div>
             {user && !hasOpenAIKey && (
                 <div className="mt-4">
                     <AiApiKeySection label="OpenAI API Key"/>
@@ -205,7 +181,7 @@ export default function ViewAgentTemplate() {
                         setIsCreating(true);
                         try {
                             const res = await api.post('/agents', {
-                                templateId: id,
+                                templateId: data.id,
                                 userId: user.id,
                                 model,
                             });
