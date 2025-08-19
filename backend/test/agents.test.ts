@@ -186,6 +186,65 @@ describe('agent routes', () => {
     (globalThis as any).fetch = originalFetch;
   });
 
+  it('starts and stops agent', async () => {
+    const app = await buildServer();
+    addUser('starter');
+    const draftPayload = {
+      userId: 'starter',
+      model: 'm',
+      name: 'Draft',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      draft: true,
+    };
+    const resCreate = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'starter' },
+      payload: draftPayload,
+    });
+    const id = resCreate.json().id as string;
+
+    const fetchMock = vi.fn();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+      }),
+    } as any);
+    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+
+    let res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${id}/start`,
+      headers: { 'x-user-id': 'starter' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ status: 'active', draft: false });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(getActiveAgents().find((a) => a.id === id)).toBeDefined();
+
+    res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${id}/stop`,
+      headers: { 'x-user-id': 'starter' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ status: 'inactive' });
+    expect(getActiveAgents().find((a) => a.id === id)).toBeUndefined();
+
+    await app.close();
+    (globalThis as any).fetch = originalFetch;
+  });
+
   it('handles drafts and api key validation', async () => {
     const app = await buildServer();
     addUserNoKeys('u1');
