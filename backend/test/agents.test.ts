@@ -428,4 +428,52 @@ describe('agent routes', () => {
 
     await app.close();
   });
+
+  it('rejects duplicate draft updates', async () => {
+    const app = await buildServer();
+    addUserNoKeys('updUser');
+
+    const base = {
+      userId: 'updUser',
+      model: 'm1',
+      name: 'Draft1',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 50,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'p',
+      draft: true,
+    };
+
+    const res1 = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'updUser' },
+      payload: base,
+    });
+    const draft1 = res1.json().id as string;
+
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'updUser' },
+      payload: { ...base, name: 'Draft2', tokenB: 'SOL' },
+    });
+    const draft2 = res2.json().id as string;
+
+    const resUpd = await app.inject({
+      method: 'PUT',
+      url: `/api/agents/${draft2}`,
+      headers: { 'x-user-id': 'updUser' },
+      payload: { ...base, status: 'inactive' },
+    });
+    expect(resUpd.statusCode).toBe(400);
+    expect(resUpd.json().error).toContain('Draft1');
+    expect(resUpd.json().error).toContain(draft1);
+
+    await app.close();
+  });
 });
