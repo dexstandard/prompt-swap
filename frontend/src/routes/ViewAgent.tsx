@@ -89,6 +89,11 @@ export default function ViewAgent() {
   useEffect(() => {
     setModel(data?.model || '');
   }, [data?.model]);
+  useEffect(() => {
+    if (!data?.model && modelsQuery.data && modelsQuery.data.length && !model) {
+      setModel(modelsQuery.data[0]);
+    }
+  }, [modelsQuery.data, data?.model, model]);
 
   const updateMut = useMutation({
     mutationFn: async (newModel: string) => {
@@ -196,9 +201,11 @@ export default function ViewAgent() {
         <h2 className="text-xl font-bold">Trading Agent Instructions</h2>
         <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
       </div>
-      <p>
-        <strong>Model:</strong> {data.model || '-'}
-      </p>
+      {data.model && (
+        <p>
+          <strong>Model:</strong> {data.model}
+        </p>
+      )}
       {data.draft && !hasOpenAIKey && !data.model && (
         <div className="mt-4">
           <AiApiKeySection label="OpenAI API Key" />
@@ -210,20 +217,23 @@ export default function ViewAgent() {
           <select
             id="model"
             value={model}
-            onChange={(e) => {
-              const val = e.target.value;
-              setModel(val);
-              if (val) updateMut.mutate(val);
-            }}
+            onChange={(e) => setModel(e.target.value)}
             className="border rounded p-2"
           >
-            <option value="">Select a model</option>
             {modelsQuery.data.map((m) => (
               <option key={m} value={m}>
                 {m}
               </option>
             ))}
           </select>
+          <Button
+            className="mt-2"
+            disabled={updateMut.isPending}
+            loading={updateMut.isPending}
+            onClick={() => updateMut.mutate(model)}
+          >
+            Save Draft
+          </Button>
         </div>
       )}
       {data.draft && !hasBinanceKey && (
