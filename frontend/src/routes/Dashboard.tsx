@@ -69,7 +69,7 @@ export default function Dashboard() {
         <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">My Agents</h2>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-1 text-sm cursor-pointer">
               <span>Only Active</span>
               <input
                 type="checkbox"
@@ -77,7 +77,7 @@ export default function Dashboard() {
                 checked={onlyActive}
                 onChange={(e) => setOnlyActive(e.target.checked)}
               />
-              <div className="relative w-11 h-6 bg-gray-200 rounded-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white" />
+              <div className="relative w-10 h-5 bg-gray-200 rounded-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 peer-checked:after:border-white" />
             </label>
           </div>
           {!user ? (
