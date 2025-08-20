@@ -54,9 +54,9 @@ const reviewIntervalOptions = [
 
 export default function AgentStrategy({ data, onChange }: Props) {
   return (
-    <div className="space-y-2">
-      <p className="flex items-center gap-1">
-        <strong>Tokens:</strong>
+    <dl className="grid grid-cols-[max-content,1fr] gap-x-2 gap-y-2">
+      <dt className="font-semibold flex items-center">Tokens:</dt>
+      <dd className="flex items-center gap-1">
         <EditableText
           value={data.tokenA}
           onChange={(v) => onChange('tokenA', v)}
@@ -94,17 +94,22 @@ export default function AgentStrategy({ data, onChange }: Props) {
             />
           )}
         />
-      </p>
-      <p className="flex items-center gap-1">
-        <strong>Target Allocation:</strong>
+      </dd>
+
+      <dt className="font-semibold flex items-center">Target Allocation:</dt>
+      <dd>
         <EditableText
           value={String(data.targetAllocation)}
           onChange={(v) => onChange('targetAllocation', Number(v))}
           renderDisplay={(v) => (
             <span className="flex items-center gap-2">
-              <span className="w-24 text-right">{v}</span>
+              <span className="w-24 text-right">
+                {v}% {data.tokenA.toUpperCase()}
+              </span>
               <span>/</span>
-              <span className="w-24">{100 - Number(v)}</span>
+              <span className="w-24">
+                {100 - Number(v)}% {data.tokenB.toUpperCase()}
+              </span>
             </span>
           )}
           renderEditor={(local, setLocal, finish) => (
@@ -128,25 +133,32 @@ export default function AgentStrategy({ data, onChange }: Props) {
             </span>
           )}
         />
-      </p>
-      <p>
-        <strong>Minimum {data.tokenA.toUpperCase()} Allocation:</strong>{' '}
+      </dd>
+
+      <dt className="font-semibold flex items-center">
+        Minimum {data.tokenA.toUpperCase()} Allocation:
+      </dt>
+      <dd>
         <EditableText
           value={String(data.minTokenAAllocation)}
           onChange={(v) => onChange('minTokenAAllocation', Number(v))}
           renderDisplay={(v) => `${v}%`}
         />
-      </p>
-      <p>
-        <strong>Minimum {data.tokenB.toUpperCase()} Allocation:</strong>{' '}
+      </dd>
+
+      <dt className="font-semibold flex items-center">
+        Minimum {data.tokenB.toUpperCase()} Allocation:
+      </dt>
+      <dd>
         <EditableText
           value={String(data.minTokenBAllocation)}
           onChange={(v) => onChange('minTokenBAllocation', Number(v))}
           renderDisplay={(v) => `${v}%`}
         />
-      </p>
-      <p className="flex items-center gap-1">
-        <strong>Risk Tolerance:</strong>
+      </dd>
+
+      <dt className="font-semibold flex items-center">Risk Tolerance:</dt>
+      <dd className="flex items-center gap-1">
         <EditableText
           value={data.risk}
           onChange={(v) => onChange('risk', v)}
@@ -167,9 +179,10 @@ export default function AgentStrategy({ data, onChange }: Props) {
             </div>
           )}
         />
-      </p>
-      <p className="flex items-center gap-1">
-        <strong>Review Interval:</strong>
+      </dd>
+
+      <dt className="font-semibold flex items-center">Review Interval:</dt>
+      <dd className="flex items-center gap-1">
         <EditableText
           value={data.reviewInterval}
           onChange={(v) => onChange('reviewInterval', v)}
@@ -190,8 +203,8 @@ export default function AgentStrategy({ data, onChange }: Props) {
             </div>
           )}
         />
-      </p>
-    </div>
+      </dd>
+    </dl>
   );
 }
 
