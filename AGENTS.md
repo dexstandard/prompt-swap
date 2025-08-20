@@ -12,3 +12,5 @@ Backend code lives in `/backend`; the React app lives in `/frontend`.
 ## Development Guidelines
 - Do not write DB migrations during early development - edit schema.sql directly (unless this rule is removed).
 - Always cover backend code, especially API endpoints, with sufficient amount of tests.
+- Reuse existing frontend form components (e.g., SelectInput, TokenSelect) for consistent UI and validation.
+
