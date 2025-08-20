@@ -106,18 +106,18 @@ export default function AgentStrategy({ data, onChange }: Props) {
           textClassName="p-0"
           renderDisplay={(v) => (
             <span className="flex items-center gap-2">
-              <span className="w-20 text-right">
+              <span className="w-24 text-right whitespace-nowrap">
                 {v}% {data.tokenA.toUpperCase()}
               </span>
               <span>/</span>
-              <span className="w-20">
+              <span className="w-24 whitespace-nowrap">
                 {100 - Number(v)}% {data.tokenB.toUpperCase()}
               </span>
             </span>
           )}
           renderEditor={(local, setLocal, finish) => (
             <span className="flex items-center gap-2">
-              <span className="w-20 text-right">
+              <span className="w-24 text-right whitespace-nowrap">
                 {local}% {data.tokenA.toUpperCase()}
               </span>
               <input
@@ -130,7 +130,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
                 onBlur={finish}
                 className="flex-1"
               />
-              <span className="w-20">
+              <span className="w-24 whitespace-nowrap">
                 {100 - Number(local)}% {data.tokenB.toUpperCase()}
               </span>
             </span>
@@ -165,11 +165,11 @@ export default function AgentStrategy({ data, onChange }: Props) {
         <EditableText
           value={data.risk}
           onChange={(v) => onChange('risk', v)}
-          className="w-40"
-          textClassName="w-full px-0"
+          className="w-32 h-6"
+          textClassName="w-full px-0 flex items-center h-full"
           renderDisplay={(v) => <RiskDisplay risk={v as any} />}
           renderEditor={(local, setLocal, finish) => (
-            <div className="flex-1">
+            <div className="flex-1 h-full">
               <SelectInput
                 id="risk"
                 value={local}
@@ -178,6 +178,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
                   finish();
                 }}
                 options={riskOptions}
+                className="h-full py-0"
               />
             </div>
           )}
@@ -189,11 +190,11 @@ export default function AgentStrategy({ data, onChange }: Props) {
         <EditableText
           value={data.reviewInterval}
           onChange={(v) => onChange('reviewInterval', v)}
-          className="w-40"
-          textClassName="w-full px-0"
+          className="w-32 h-6"
+          textClassName="w-full px-0 flex items-center h-full"
           renderDisplay={(v) => reviewIntervalMap[v] ?? v}
           renderEditor={(local, setLocal, finish) => (
-            <div className="flex-1">
+            <div className="flex-1 h-full">
               <SelectInput
                 id="reviewInterval"
                 value={local}
@@ -202,6 +203,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
                   finish();
                 }}
                 options={reviewIntervalOptions}
+                className="h-full py-0"
               />
             </div>
           )}
