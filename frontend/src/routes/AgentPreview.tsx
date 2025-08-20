@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import RiskDisplay from '../components/RiskDisplay';
-import TokenDisplay from '../components/TokenDisplay';
+import AgentName from '../components/AgentName';
+import AgentStrategy from '../components/AgentStrategy';
+import AgentInstructions from '../components/AgentInstructions';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -39,10 +40,12 @@ export default function AgentPreview({ draft }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const locationData = location.state as AgentPreviewDetails | undefined;
-  const data = draft ?? locationData;
   const { user } = useUser();
   const toast = useToast();
+  const data = draft ?? locationData;
   if (!data) return <div className="p-4">No preview data</div>;
+  const [agentData, setAgentData] = useState(data);
+  useEffect(() => setAgentData(data), [data]);
   const aiKeyQuery = useQuery<string | null>({
     queryKey: ['ai-key', user?.id],
     enabled: !!user,
@@ -96,17 +99,6 @@ export default function AgentPreview({ draft }: Props) {
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
-  const reviewIntervalMap: Record<string, string> = {
-    '1h': '1 Hour',
-    '3h': '3 Hours',
-    '5h': '5 Hours',
-    '12h': '12 Hours',
-    '24h': '1 Day',
-    '3d': '3 Days',
-    '1w': '1 Week',
-  };
-  const reviewIntervalLabel = reviewIntervalMap[data.reviewInterval] ?? data.reviewInterval;
-
   function WarningSign({ children }: { children: ReactNode }) {
     return (
       <div className="mt-2 p-4 text-sm text-red-600 border border-red-600 rounded bg-red-100">
@@ -122,32 +114,20 @@ export default function AgentPreview({ draft }: Props) {
       <h1 className="text-2xl font-bold mb-2">
         {isDraft ? 'Agent Draft' : 'Agent Preview'}
       </h1>
-      <h2 className="text-xl font-bold mb-2">{data.name}</h2>
-      <p className="flex items-center gap-1">
-        <strong>Tokens:</strong>
-        <TokenDisplay token={data.tokenA} />
-        <span>/</span>
-        <TokenDisplay token={data.tokenB} />
-      </p>
-      <p>
-        <strong>Target Allocation:</strong> {data.targetAllocation} / {100 - data.targetAllocation}
-      </p>
-      <p>
-        <strong>Minimum {data.tokenA.toUpperCase()} Allocation:</strong> {data.minTokenAAllocation}%
-      </p>
-      <p>
-        <strong>Minimum {data.tokenB.toUpperCase()} Allocation:</strong> {data.minTokenBAllocation}%
-      </p>
-      <p className="flex items-center gap-1">
-        <strong>Risk Tolerance:</strong> <RiskDisplay risk={data.risk} />
-      </p>
-      <p>
-        <strong>Review Interval:</strong> {reviewIntervalLabel}
-      </p>
-      <div className="mt-4">
-        <h2 className="text-xl font-bold">Trading Agent Instructions</h2>
-        <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
-      </div>
+      <AgentName
+        name={agentData.name}
+        onChange={(name) => setAgentData((d) => ({ ...d, name }))}
+      />
+      <AgentStrategy
+        data={agentData}
+        onChange={(key, value) =>
+          setAgentData((d) => ({ ...d, [key]: value }))
+        }
+      />
+      <AgentInstructions
+        value={agentData.agentInstructions}
+        onChange={(v) => setAgentData((d) => ({ ...d, agentInstructions: v }))}
+      />
       {user && !hasOpenAIKey && (
         <div className="mt-4">
           <AiApiKeySection label="OpenAI API Key" />
@@ -181,9 +161,9 @@ export default function AgentPreview({ draft }: Props) {
       )}
 
       <div className="mt-4">
-        <WalletBalances tokens={[data.tokenA, data.tokenB]} />
+        <WalletBalances tokens={[agentData.tokenA, agentData.tokenB]} />
         <WarningSign>
-          Trading agent will use all available balance for {data.tokenA.toUpperCase()} and {data.tokenB.toUpperCase()} in
+          Trading agent will use all available balance for {agentData.tokenA.toUpperCase()} and {agentData.tokenB.toUpperCase()} in
           your Binance Spot wallet. Move excess funds to futures wallet before trading.
           <br />
           <strong>DON'T MOVE FUNDS ON SPOT WALLET DURING TRADING!</strong> It will confuse the trading agent and may
@@ -204,15 +184,15 @@ export default function AgentPreview({ draft }: Props) {
                   await api.put(`/agents/${draft!.id}`, {
                     userId: draft!.userId,
                     model,
-                    name: data.name,
-                    tokenA: data.tokenA,
-                    tokenB: data.tokenB,
-                    targetAllocation: data.targetAllocation,
-                    minTokenAAllocation: data.minTokenAAllocation,
-                    minTokenBAllocation: data.minTokenBAllocation,
-                    risk: data.risk,
-                    reviewInterval: data.reviewInterval,
-                    agentInstructions: data.agentInstructions,
+                    name: agentData.name,
+                    tokenA: agentData.tokenA,
+                    tokenB: agentData.tokenB,
+                    targetAllocation: agentData.targetAllocation,
+                    minTokenAAllocation: agentData.minTokenAAllocation,
+                    minTokenBAllocation: agentData.minTokenBAllocation,
+                    risk: agentData.risk,
+                    reviewInterval: agentData.reviewInterval,
+                    agentInstructions: agentData.agentInstructions,
                     status: 'draft',
                   });
                   navigate(`/agents/${draft!.id}`);
@@ -220,15 +200,15 @@ export default function AgentPreview({ draft }: Props) {
                   const res = await api.post('/agents', {
                     userId: user.id,
                     model,
-                    name: data.name,
-                    tokenA: data.tokenA,
-                    tokenB: data.tokenB,
-                    targetAllocation: data.targetAllocation,
-                    minTokenAAllocation: data.minTokenAAllocation,
-                    minTokenBAllocation: data.minTokenBAllocation,
-                    risk: data.risk,
-                    reviewInterval: data.reviewInterval,
-                    agentInstructions: data.agentInstructions,
+                    name: agentData.name,
+                    tokenA: agentData.tokenA,
+                    tokenB: agentData.tokenB,
+                    targetAllocation: agentData.targetAllocation,
+                    minTokenAAllocation: agentData.minTokenAAllocation,
+                    minTokenBAllocation: agentData.minTokenBAllocation,
+                    risk: agentData.risk,
+                    reviewInterval: agentData.reviewInterval,
+                    agentInstructions: agentData.agentInstructions,
                     status: 'draft',
                   });
                   navigate(`/agents/${res.data.id}`);
@@ -265,15 +245,15 @@ export default function AgentPreview({ draft }: Props) {
                   const res = await api.post('/agents', {
                     userId: user.id,
                     model,
-                    name: data.name,
-                    tokenA: data.tokenA,
-                    tokenB: data.tokenB,
-                    targetAllocation: data.targetAllocation,
-                    minTokenAAllocation: data.minTokenAAllocation,
-                    minTokenBAllocation: data.minTokenBAllocation,
-                    risk: data.risk,
-                    reviewInterval: data.reviewInterval,
-                    agentInstructions: data.agentInstructions,
+                    name: agentData.name,
+                    tokenA: agentData.tokenA,
+                    tokenB: agentData.tokenB,
+                    targetAllocation: agentData.targetAllocation,
+                    minTokenAAllocation: agentData.minTokenAAllocation,
+                    minTokenBAllocation: agentData.minTokenBAllocation,
+                    risk: agentData.risk,
+                    reviewInterval: agentData.reviewInterval,
+                    agentInstructions: agentData.agentInstructions,
                     status: 'active',
                   });
                   navigate(`/agents/${res.data.id}`);
