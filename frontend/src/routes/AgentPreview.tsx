@@ -186,7 +186,7 @@ export default function AgentPreview() {
                                 risk: data.risk,
                                 reviewInterval: data.reviewInterval,
                                 agentInstructions: data.agentInstructions,
-                                draft: true,
+                                status: 'draft',
                             });
                             navigate(`/agents/${res.data.id}`);
                         } catch (err) {
@@ -227,7 +227,7 @@ export default function AgentPreview() {
                                 risk: data.risk,
                                 reviewInterval: data.reviewInterval,
                                 agentInstructions: data.agentInstructions,
-                                draft: false,
+                                status: 'active',
                             });
                             navigate(`/agents/${res.data.id}`);
                         } catch (err) {

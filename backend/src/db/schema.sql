@@ -33,8 +33,7 @@ CREATE TABLE IF NOT EXISTS agents(
   min_b_allocation INTEGER,
   risk TEXT,
   review_interval TEXT,
-  agent_instructions TEXT,
-  draft INTEGER
+  agent_instructions TEXT
 );
 
 CREATE TABLE IF NOT EXISTS agent_exec_log(
@@ -51,12 +50,12 @@ CREATE INDEX IF NOT EXISTS idx_agents_draft_all_fields
     target_allocation, min_a_allocation, min_b_allocation,
     risk, review_interval, agent_instructions
   )
-  WHERE draft = 1;
+  WHERE status = 'draft';
 
 CREATE INDEX IF NOT EXISTS idx_agents_active_token_a
   ON agents(user_id, token_a)
-  WHERE status = 'active' AND draft = 0;
+  WHERE status = 'active';
 
 CREATE INDEX IF NOT EXISTS idx_agents_active_token_b
   ON agents(user_id, token_b)
-  WHERE status = 'active' AND draft = 0;
+  WHERE status = 'active';
