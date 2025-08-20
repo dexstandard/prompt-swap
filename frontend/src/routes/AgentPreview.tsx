@@ -112,13 +112,14 @@ export default function AgentPreview({ draft }: Props) {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-2">
-        {isDraft ? 'Agent Draft' : 'Agent Preview'}
+      <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+        <span>{isDraft ? 'Agent Draft:' : 'Agent Preview:'}</span>
+        <AgentName
+          name={agentData.name}
+          onChange={(name) => setAgentData((d) => ({ ...d, name }))}
+          className="text-2xl font-bold"
+        />
       </h1>
-      <AgentName
-        name={agentData.name}
-        onChange={(name) => setAgentData((d) => ({ ...d, name }))}
-      />
       <AgentStrategy
         data={agentData}
         onChange={(key, value) =>
