@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { createChart, LineSeries } from 'lightweight-charts';
 import type { ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import TokenDisplay from '../TokenDisplay';
 
 type PricePoint = { time: number; open: number; high: number; low: number; close: number };
 
@@ -108,7 +109,10 @@ export default function PriceChart({
 
   return (
     <div className="bg-white shadow-md border border-gray-200 rounded p-6 flex-1 min-w-0 flex flex-col">
-      <h2 className="text-xl font-bold mb-4">Price History</h2>
+      <h2 className="text-xl font-bold mb-4">
+        Price History – <TokenDisplay token={tokenA} /> &{' '}
+        <TokenDisplay token={tokenB} />
+      </h2>
       <div className="flex-1 relative">
         <div ref={containerRef} className="absolute inset-0" />
         {query.isLoading && (
