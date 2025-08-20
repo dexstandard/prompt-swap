@@ -60,6 +60,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
         <EditableText
           value={data.tokenA}
           onChange={(v) => onChange('tokenA', v)}
+          textClassName="px-0"
           renderDisplay={(v) => <TokenDisplay token={v} />}
           renderEditor={(local, setLocal, finish) => (
             <TokenSelect
@@ -79,6 +80,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
         <EditableText
           value={data.tokenB}
           onChange={(v) => onChange('tokenB', v)}
+          textClassName="px-0"
           renderDisplay={(v) => <TokenDisplay token={v} />}
           renderEditor={(local, setLocal, finish) => (
             <TokenSelect
@@ -101,20 +103,21 @@ export default function AgentStrategy({ data, onChange }: Props) {
         <EditableText
           value={String(data.targetAllocation)}
           onChange={(v) => onChange('targetAllocation', Number(v))}
+          textClassName="p-0"
           renderDisplay={(v) => (
             <span className="flex items-center gap-2">
-              <span className="w-24 text-right">
+              <span className="w-20 text-right">
                 {v}% {data.tokenA.toUpperCase()}
               </span>
               <span>/</span>
-              <span className="w-24">
+              <span className="w-20">
                 {100 - Number(v)}% {data.tokenB.toUpperCase()}
               </span>
             </span>
           )}
           renderEditor={(local, setLocal, finish) => (
             <span className="flex items-center gap-2">
-              <span className="w-24 text-right">
+              <span className="w-20 text-right">
                 {local}% {data.tokenA.toUpperCase()}
               </span>
               <input
@@ -127,7 +130,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
                 onBlur={finish}
                 className="flex-1"
               />
-              <span className="w-24">
+              <span className="w-20">
                 {100 - Number(local)}% {data.tokenB.toUpperCase()}
               </span>
             </span>
@@ -136,7 +139,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
       </dd>
 
       <dt className="font-semibold flex items-center">
-        Minimum {data.tokenA.toUpperCase()} Allocation:
+        Min {data.tokenA.toUpperCase()} Allocation:
       </dt>
       <dd>
         <EditableText
@@ -147,7 +150,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
       </dd>
 
       <dt className="font-semibold flex items-center">
-        Minimum {data.tokenB.toUpperCase()} Allocation:
+        Min {data.tokenB.toUpperCase()} Allocation:
       </dt>
       <dd>
         <EditableText
@@ -162,8 +165,8 @@ export default function AgentStrategy({ data, onChange }: Props) {
         <EditableText
           value={data.risk}
           onChange={(v) => onChange('risk', v)}
-          className="w-48"
-          textClassName="w-full"
+          className="w-40"
+          textClassName="w-full px-0"
           renderDisplay={(v) => <RiskDisplay risk={v as any} />}
           renderEditor={(local, setLocal, finish) => (
             <div className="flex-1">
@@ -186,8 +189,8 @@ export default function AgentStrategy({ data, onChange }: Props) {
         <EditableText
           value={data.reviewInterval}
           onChange={(v) => onChange('reviewInterval', v)}
-          className="w-48"
-          textClassName="w-full"
+          className="w-40"
+          textClassName="w-full px-0"
           renderDisplay={(v) => reviewIntervalMap[v] ?? v}
           renderEditor={(local, setLocal, finish) => (
             <div className="flex-1">
