@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,10 +8,8 @@ import TokenDisplay from '../components/TokenDisplay';
 import AgentBalance from '../components/AgentBalance';
 import RiskDisplay from '../components/RiskDisplay';
 import Button from '../components/ui/Button';
-import AiApiKeySection from '../components/forms/AiApiKeySection';
-import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
-import WalletBalances from '../components/WalletBalances';
 import { useToast } from '../components/Toast';
+import AgentPreview from './AgentPreview';
 
 interface Agent {
   id: string;
@@ -45,95 +42,6 @@ export default function ViewAgent() {
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  const aiKeyQuery = useQuery<string | null>({
-    queryKey: ['ai-key', user?.id],
-    enabled: !!user && data?.status === 'draft',
-    queryFn: async () => {
-      try {
-        const res = await api.get(`/users/${user!.id}/ai-key`);
-        return res.data.key as string;
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-        throw err;
-      }
-    },
-  });
-  const hasOpenAIKey = !!aiKeyQuery.data;
-
-  const binanceKeyQuery = useQuery<string | null>({
-    queryKey: ['binance-key', user?.id],
-    enabled: !!user && data?.status === 'draft',
-    queryFn: async () => {
-      try {
-        const res = await api.get(`/users/${user!.id}/binance-key`);
-        return res.data.key as string;
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-        throw err;
-      }
-    },
-  });
-  const hasBinanceKey = !!binanceKeyQuery.data;
-
-  const modelsQuery = useQuery<string[]>({
-    queryKey: ['openai-models', user?.id],
-    enabled: !!user && hasOpenAIKey && data?.status === 'draft' && !data?.model,
-    queryFn: async () => {
-      const res = await api.get(`/users/${user!.id}/models`);
-      return res.data.models as string[];
-    },
-  });
-
-  const [model, setModel] = useState('');
-  const [hadModel, setHadModel] = useState(false);
-  useEffect(() => {
-    setModel(data?.model || '');
-    if (data?.model) setHadModel(true);
-  }, [data?.model]);
-  useEffect(() => {
-    if (!hasOpenAIKey) setModel('');
-  }, [hasOpenAIKey]);
-  useEffect(() => {
-    if (
-      !data?.model &&
-      modelsQuery.data &&
-      modelsQuery.data.length &&
-      !model &&
-      !hadModel
-    ) {
-      setModel(modelsQuery.data[0]);
-    }
-  }, [modelsQuery.data, data?.model, model, hadModel]);
-
-  const updateMut = useMutation({
-    mutationFn: async (newModel: string) => {
-      if (!data) return;
-      await api.put(`/agents/${id}`, {
-        userId: data.userId,
-        model: newModel,
-        status: data.status,
-        name: data.name,
-        tokenA: data.tokenA,
-        tokenB: data.tokenB,
-        targetAllocation: data.targetAllocation,
-        minTokenAAllocation: data.minTokenAAllocation,
-        minTokenBAllocation: data.minTokenBAllocation,
-        risk: data.risk,
-        reviewInterval: data.reviewInterval,
-        agentInstructions: data.agentInstructions,
-      });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] }),
-    onError: (err) => {
-      if (axios.isAxiosError(err) && err.response?.data?.error) {
-        toast.show(err.response.data.error);
-      } else {
-        toast.show('Failed to update draft');
-      }
-      setModel(data?.model || '');
-    },
-  });
-
   const startMut = useMutation({
     mutationFn: async () => {
       await api.post(`/agents/${id}/start`);
@@ -164,6 +72,8 @@ export default function ViewAgent() {
   });
 
   if (!data) return <div className="p-4">Loading...</div>;
+  if (data.status === 'draft') return <AgentPreview draft={data} />;
+
   const reviewIntervalMap: Record<string, string> = {
     '1h': '1 Hour',
     '3h': '3 Hours',
@@ -178,9 +88,7 @@ export default function ViewAgent() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-2">
-        Agent {data.status === 'draft' && '(Draft)'}
-      </h1>
+      <h1 className="text-2xl font-bold mb-2">Agent</h1>
       <h2 className="text-xl font-bold mb-2">{data.name}</h2>
       <p className="flex items-center gap-1">
         <strong>Tokens:</strong>
@@ -210,69 +118,17 @@ export default function ViewAgent() {
         <h2 className="text-xl font-bold">Trading Agent Instructions</h2>
         <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
       </div>
-      <div className="mt-4">
-        {data.status === 'draft' && !hasOpenAIKey ? (
-          <AiApiKeySection label="OpenAI API Key" />
-        ) : (
-          <div>
-            <h2 className="text-md font-bold mb-1">Model</h2>
-            {data.model ? (
-              <p>{data.model}</p>
-            ) : data.status === 'draft' && hasOpenAIKey && modelsQuery.data ? (
-              <select
-                id="model"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="border rounded p-2"
-              >
-                <option value="" disabled>
-                  Select a model
-                </option>
-                {modelsQuery.data.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-          </div>
-        )}
-      </div>
-      {data.status === 'draft' && !hasBinanceKey && (
-        <div className="mt-4">
-          <ExchangeApiKeySection
-            exchange="binance"
-            label="Binance API Credentials"
-          />
-        </div>
-      )}
-      {data.status === 'draft' && hasBinanceKey && (
-        <div className="mt-4">
-          <WalletBalances tokens={[data.tokenA, data.tokenB]} />
-        </div>
-      )}
       <p>
         <strong>Status:</strong> <AgentStatusLabel status={data.status} />
       </p>
       <p>
         <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
       </p>
-      {data.status !== 'draft' && (
-        <p>
-          <strong>Balance (USD):</strong>{' '}
-          <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB} />
-        </p>
-      )}
-      {!isActive && data.status === 'draft' && data.model && hasOpenAIKey && hasBinanceKey ? (
-        <Button
-          className="mt-4"
-          disabled={startMut.isPending}
-          loading={startMut.isPending}
-          onClick={() => startMut.mutate()}
-        >
-          Start Agent
-        </Button>
-      ) : isActive ? (
+      <p>
+        <strong>Balance (USD):</strong>{' '}
+        <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB} />
+      </p>
+      {isActive ? (
         <Button
           className="mt-4"
           disabled={stopMut.isPending}
@@ -281,16 +137,16 @@ export default function ViewAgent() {
         >
           Stop Agent
         </Button>
-      ) : data.status === 'draft' && hasOpenAIKey && !data.model && modelsQuery.data ? (
+      ) : (
         <Button
           className="mt-4"
-          disabled={updateMut.isPending || !model}
-          loading={updateMut.isPending}
-          onClick={() => updateMut.mutate(model)}
+          disabled={startMut.isPending}
+          loading={startMut.isPending}
+          onClick={() => startMut.mutate()}
         >
-          Save Draft
+          Start Agent
         </Button>
-      ) : null}
+      )}
     </div>
   );
 }
