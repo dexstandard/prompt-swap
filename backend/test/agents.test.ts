@@ -52,7 +52,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
-      draft: false,
+      status: 'active',
     };
 
     let res = await app.inject({
@@ -63,7 +63,7 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
-    expect(res.json()).toMatchObject({ id, ...payload, status: 'active' });
+    expect(res.json()).toMatchObject({ id, ...payload });
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     res = await app.inject({
@@ -72,7 +72,7 @@ describe('agent routes', () => {
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...payload, status: 'active' });
+    expect(res.json()).toMatchObject({ id, ...payload });
 
     res = await app.inject({
       method: 'GET',
@@ -107,7 +107,7 @@ describe('agent routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
 
-    const update = { ...payload, model: 'o3', status: 'inactive', draft: true };
+    const update = { ...payload, model: 'o3', status: 'draft' };
     res = await app.inject({
       method: 'PUT',
       url: `/api/agents/${id}`,
@@ -127,7 +127,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents?status=inactive',
+      url: '/api/agents?status=draft',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
@@ -197,7 +197,7 @@ describe('agent routes', () => {
         risk: 'low',
         reviewInterval: '1h',
         agentInstructions: 'prompt',
-        draft: false,
+        status: 'active',
       },
     });
     const id = resCreate.json().id as string;
@@ -233,7 +233,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
-      draft: true,
+      status: 'draft',
     };
     const resCreate = await app.inject({
       method: 'POST',
@@ -260,7 +260,7 @@ describe('agent routes', () => {
       headers: { 'x-user-id': 'starter' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ status: 'active', draft: false });
+    expect(res.json()).toMatchObject({ status: 'active' });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(getActiveAgents().find((a) => a.id === id)).toBeDefined();
 
@@ -299,7 +299,7 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/agents',
       headers: { 'x-user-id': 'u1' },
-      payload: { ...basePayload, draft: false },
+      payload: { ...basePayload, status: 'active' },
     });
     expect(res.statusCode).toBe(400);
 
@@ -307,7 +307,7 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/agents',
       headers: { 'x-user-id': 'u1' },
-      payload: { ...basePayload, draft: true },
+      payload: { ...basePayload, status: 'draft' },
     });
     expect(res.statusCode).toBe(200);
     const draftId = res.json().id as string;
@@ -328,7 +328,7 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/agents',
       headers: { 'x-user-id': 'u2' },
-      payload: { ...basePayload, userId: 'u2', name: 'Active', draft: false },
+      payload: { ...basePayload, userId: 'u2', name: 'Active', status: 'active' },
     });
     expect(res.statusCode).toBe(200);
     const activeId = res.json().id as string;
@@ -337,11 +337,9 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/agents',
       headers: { 'x-user-id': 'u2' },
-      payload: { ...basePayload, userId: 'u2', name: 'Draft2', draft: true },
+      payload: { ...basePayload, userId: 'u2', name: 'Draft2', status: 'draft' },
     });
     const draft2Id = resDraft2.json().id as string;
-
-    db.prepare('UPDATE agents SET status = ? WHERE id = ?').run('active', draft2Id);
 
     const activeAgents = getActiveAgents();
     expect(activeAgents.find((a) => a.id === activeId)).toBeDefined();
@@ -377,7 +375,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
-      draft: false,
+      status: 'active',
     };
 
     const res1 = await app.inject({
@@ -429,7 +427,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
-      draft: true,
+      status: 'draft',
     };
 
     const res1 = await app.inject({
@@ -477,7 +475,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
-      draft: true,
+      status: 'draft',
     };
 
     const res1 = await app.inject({
@@ -500,7 +498,7 @@ describe('agent routes', () => {
       method: 'PUT',
       url: `/api/agents/${draft2}`,
       headers: { 'x-user-id': 'updUser' },
-      payload: { ...base, status: 'inactive' },
+      payload: { ...base },
     });
     expect(resUpd.statusCode).toBe(400);
     expect(resUpd.json().error).toContain('Draft1');

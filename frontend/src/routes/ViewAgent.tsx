@@ -18,7 +18,7 @@ interface Agent {
   id: string;
   userId: string;
   model: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'draft';
   createdAt: number;
   name: string;
   tokenA: string;
@@ -29,7 +29,6 @@ interface Agent {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
-  draft: boolean;
 }
 
 export default function ViewAgent() {
@@ -48,7 +47,7 @@ export default function ViewAgent() {
 
   const aiKeyQuery = useQuery<string | null>({
     queryKey: ['ai-key', user?.id],
-    enabled: !!user && !!data?.draft,
+    enabled: !!user && data?.status === 'draft',
     queryFn: async () => {
       try {
         const res = await api.get(`/users/${user!.id}/ai-key`);
@@ -63,7 +62,7 @@ export default function ViewAgent() {
 
   const binanceKeyQuery = useQuery<string | null>({
     queryKey: ['binance-key', user?.id],
-    enabled: !!user && !!data?.draft,
+    enabled: !!user && data?.status === 'draft',
     queryFn: async () => {
       try {
         const res = await api.get(`/users/${user!.id}/binance-key`);
@@ -78,7 +77,7 @@ export default function ViewAgent() {
 
   const modelsQuery = useQuery<string[]>({
     queryKey: ['openai-models', user?.id],
-    enabled: !!user && hasOpenAIKey && !!data?.draft && !data?.model,
+    enabled: !!user && hasOpenAIKey && data?.status === 'draft' && !data?.model,
     queryFn: async () => {
       const res = await api.get(`/users/${user!.id}/models`);
       return res.data.models as string[];
@@ -122,7 +121,6 @@ export default function ViewAgent() {
         risk: data.risk,
         reviewInterval: data.reviewInterval,
         agentInstructions: data.agentInstructions,
-        draft: data.draft,
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] }),
@@ -181,7 +179,7 @@ export default function ViewAgent() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-2">
-        Agent {data.draft && '(Draft)'}
+        Agent {data.status === 'draft' && '(Draft)'}
       </h1>
       <h2 className="text-xl font-bold mb-2">{data.name}</h2>
       <p className="flex items-center gap-1">
@@ -213,14 +211,14 @@ export default function ViewAgent() {
         <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
       </div>
       <div className="mt-4">
-        {data.draft && !hasOpenAIKey ? (
+        {data.status === 'draft' && !hasOpenAIKey ? (
           <AiApiKeySection label="OpenAI API Key" />
         ) : (
           <div>
             <h2 className="text-md font-bold mb-1">Model</h2>
             {data.model ? (
               <p>{data.model}</p>
-            ) : data.draft && hasOpenAIKey && modelsQuery.data ? (
+            ) : data.status === 'draft' && hasOpenAIKey && modelsQuery.data ? (
               <select
                 id="model"
                 value={model}
@@ -240,7 +238,7 @@ export default function ViewAgent() {
           </div>
         )}
       </div>
-      {data.draft && !hasBinanceKey && (
+      {data.status === 'draft' && !hasBinanceKey && (
         <div className="mt-4">
           <ExchangeApiKeySection
             exchange="binance"
@@ -248,7 +246,7 @@ export default function ViewAgent() {
           />
         </div>
       )}
-      {data.draft && hasBinanceKey && (
+      {data.status === 'draft' && hasBinanceKey && (
         <div className="mt-4">
           <WalletBalances tokens={[data.tokenA, data.tokenB]} />
         </div>
@@ -259,13 +257,13 @@ export default function ViewAgent() {
       <p>
         <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
       </p>
-      {!data.draft && (
+      {data.status !== 'draft' && (
         <p>
           <strong>Balance (USD):</strong>{' '}
           <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB} />
         </p>
       )}
-      {!isActive && data.draft && data.model && hasOpenAIKey && hasBinanceKey ? (
+      {!isActive && data.status === 'draft' && data.model && hasOpenAIKey && hasBinanceKey ? (
         <Button
           className="mt-4"
           disabled={startMut.isPending}
@@ -283,7 +281,7 @@ export default function ViewAgent() {
         >
           Stop Agent
         </Button>
-      ) : data.draft && hasOpenAIKey && !data.model && modelsQuery.data ? (
+      ) : data.status === 'draft' && hasOpenAIKey && !data.model && modelsQuery.data ? (
         <Button
           className="mt-4"
           disabled={updateMut.isPending || !model}
