@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import AgentName from '../components/AgentName';
 import AgentStrategy from '../components/AgentStrategy';
 import AgentInstructions from '../components/AgentInstructions';
+import { normalizeAllocations } from '../lib/allocations';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -121,7 +122,15 @@ export default function AgentPreview({ draft }: Props) {
       <AgentStrategy
         data={agentData}
         onChange={(key, value) =>
-          setAgentData((d) => ({ ...d, [key]: value }))
+          setAgentData((d) => {
+            const updated = { ...d, [key]: value };
+            const normalized = normalizeAllocations(
+              updated.targetAllocation,
+              updated.minTokenAAllocation,
+              updated.minTokenBAllocation,
+            );
+            return { ...updated, ...normalized };
+          })
         }
       />
       <AgentInstructions

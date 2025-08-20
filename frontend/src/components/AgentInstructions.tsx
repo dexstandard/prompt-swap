@@ -17,7 +17,15 @@ export default function AgentInstructions({ value, onChange, maxLength = 1000 }:
         <h2 className="text-xl font-bold flex-1">Trading Agent Instructions</h2>
         <Pencil
           className="w-4 h-4 text-gray-500 cursor-pointer"
-          onClick={() => setEditing(true)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            if (editing) {
+              setEditing(false);
+              setLocal(value);
+            } else {
+              setEditing(true);
+            }
+          }}
         />
       </div>
       {editing ? (

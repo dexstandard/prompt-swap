@@ -50,7 +50,15 @@ export default function EditableText({
           )}
       <Pencil
         className="w-4 h-4 text-gray-500 cursor-pointer"
-        onClick={() => setEditing(true)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          if (editing) {
+            setEditing(false);
+            setLocal(value);
+          } else {
+            setEditing(true);
+          }
+        }}
       />
     </span>
   );
