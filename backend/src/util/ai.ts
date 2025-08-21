@@ -1,4 +1,12 @@
-export async function callAi(model: string, input: unknown, apiKey: string): Promise<string> {
+const developerInstructions =
+  'You assist a real trader in taking decisions on a given tokens configuration. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not.';
+
+export async function callAi(
+  model: string,
+  input: unknown,
+  apiKey: string,
+  previousResponses: string[],
+): Promise<string> {
   const schema = {
     type: 'object',
     properties: {
@@ -47,6 +55,8 @@ export async function callAi(model: string, input: unknown, apiKey: string): Pro
     body: JSON.stringify({
       model,
       input: typeof input === 'string' ? input : JSON.stringify(input),
+      developer: developerInstructions,
+      previous_responses: previousResponses,
       tools: [{ type: 'web_search_preview' }],
       text: {
         format: {

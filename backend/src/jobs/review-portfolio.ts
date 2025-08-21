@@ -31,7 +31,13 @@ export default async function reviewPortfolio(
           risk: row.risk,
           reviewInterval: row.review_interval,
         };
-        const text = await callAi(row.model, prompt, key);
+        const prevRows = db
+          .prepare(
+            'SELECT log FROM agent_exec_log WHERE agent_id = ? ORDER BY created_at DESC LIMIT 5',
+          )
+          .all(row.id) as { log: string }[];
+        const previousResponses = prevRows.map((r) => r.log);
+        const text = await callAi(row.model, prompt, key, previousResponses);
         db.prepare(
           'INSERT INTO agent_exec_log (id, agent_id, log, created_at) VALUES (?, ?, ?, ?)',
         ).run(execLogId, row.id, text, Date.now());
