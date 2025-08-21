@@ -1,6 +1,19 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { db } from '../db/index.js';
+import {
+  getAgent,
+  getAgentsPaginated,
+  toApi,
+  findIdenticalDraftAgent,
+  findActiveTokenConflicts,
+  getUserApiKeys,
+  insertAgent,
+  getAgentExecLog,
+  updateAgent,
+  deleteAgent as repoDeleteAgent,
+  startAgent as repoStartAgent,
+  stopAgent as repoStopAgent,
+} from '../repos/agents.js';
 import {
   errorResponse,
   lengthMessage,
@@ -12,57 +25,155 @@ import { fetchTotalBalanceUsd } from '../services/binance.js';
 import { calculatePnl } from '../services/pnl.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 
+interface ValidationErr {
+  code: number;
+  body: unknown;
+}
+
+function validateTokenConflicts(
+  log: any,
+  userId: string,
+  tokenA: string,
+  tokenB: string,
+  id?: string,
+): ValidationErr | null {
+  const dupRows = findActiveTokenConflicts(userId, tokenA, tokenB, id);
+  if (!dupRows.length) return null;
+  const conflicts: { token: string; id: string; name: string }[] = [];
+  for (const row of dupRows) {
+    if (row.token_a === tokenA || row.token_b === tokenA)
+      conflicts.push({ token: tokenA, id: row.id, name: row.name });
+    if (row.token_a === tokenB || row.token_b === tokenB)
+      conflicts.push({ token: tokenB, id: row.id, name: row.name });
+  }
+  const parts = conflicts.map((c) => `${c.token} used by ${c.name} (${c.id})`);
+  const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
+  log.error('token conflict');
+  return { code: 400, body: errorResponse(msg) };
+}
+
+function validateAgentInput(
+  log: any,
+  userId: string,
+  body: {
+    userId: string;
+    model: string;
+    name: string;
+    tokenA: string;
+    tokenB: string;
+    targetAllocation: number;
+    minTokenAAllocation: number;
+    minTokenBAllocation: number;
+    risk: string;
+    reviewInterval: string;
+    agentInstructions: string;
+    status: AgentStatus;
+  },
+  id?: string,
+): ValidationErr | null {
+  if (body.userId !== userId) {
+    log.error('user mismatch');
+    return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
+  }
+  if (body.model.length > 50) {
+    log.error('model too long');
+    return { code: 400, body: errorResponse(lengthMessage('model', 50)) };
+  }
+  if (body.status === AgentStatus.Draft) {
+    const dupDraft = findIdenticalDraftAgent(
+      {
+        userId: body.userId,
+        model: body.model,
+        name: body.name,
+        tokenA: body.tokenA,
+        tokenB: body.tokenB,
+        targetAllocation: body.targetAllocation,
+        minTokenAAllocation: body.minTokenAAllocation,
+        minTokenBAllocation: body.minTokenBAllocation,
+        risk: body.risk,
+        reviewInterval: body.reviewInterval,
+        agentInstructions: body.agentInstructions,
+      },
+      id,
+    );
+    if (dupDraft) {
+      log.error({ agentId: dupDraft.id }, 'identical draft exists');
+      return {
+        code: 400,
+        body: errorResponse(
+          `identical draft already exists: ${dupDraft.name} (${dupDraft.id})`,
+        ),
+      };
+    }
+  } else {
+    const conflict = validateTokenConflicts(
+      log,
+      body.userId,
+      body.tokenA,
+      body.tokenB,
+      id,
+    );
+    if (conflict) return conflict;
+  }
+  return null;
+}
+
+function ensureApiKeys(log: any, userId: string): ValidationErr | null {
+  const userRow = getUserApiKeys(userId);
+  if (
+    !userRow?.ai_api_key_enc ||
+    !userRow.binance_api_key_enc ||
+    !userRow.binance_api_secret_enc
+  ) {
+    log.error('missing api keys');
+    return { code: 400, body: errorResponse('missing api keys') };
+  }
+  return null;
+}
+
+async function getStartBalance(
+  log: any,
+  userId: string,
+): Promise<number | ValidationErr> {
+  try {
+    const startBalance = await fetchTotalBalanceUsd(userId);
+    if (startBalance === null) {
+      log.error('failed to fetch balance');
+      return { code: 500, body: errorResponse('failed to fetch balance') };
+    }
+    return startBalance;
+  } catch {
+    log.error('failed to fetch balance');
+    return { code: 500, body: errorResponse('failed to fetch balance') };
+  }
+}
+
+function getAgentForRequest(
+  req: FastifyRequest,
+  reply: FastifyReply,
+): { userId: string; id: string; log: any; agent: any } | undefined {
+  const userId = requireUserId(req, reply);
+  if (!userId) return;
+  const id = (req.params as any).id;
+  const log = req.log.child({ userId, agentId: id });
+  const agent = getAgent(id);
+  if (!agent) {
+    log.error('agent not found');
+    reply.code(404).send(errorResponse(ERROR_MESSAGES.notFound));
+    return;
+  }
+  if (agent.user_id !== userId) {
+    log.error('forbidden');
+    reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
+    return;
+  }
+  return { userId, id, log, agent };
+}
+
 export enum AgentStatus {
   Active = 'active',
   Inactive = 'inactive',
   Draft = 'draft',
-}
-
-interface AgentRow {
-  id: string;
-  user_id: string;
-  model: string;
-  status: string;
-  created_at: number;
-  name: string;
-  token_a: string;
-  token_b: string;
-  target_allocation: number;
-  min_a_allocation: number;
-  min_b_allocation: number;
-  risk: string;
-  review_interval: string;
-  agent_instructions: string;
-}
-
-function toApi(row: AgentRow) {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    model: row.model,
-    status: row.status as AgentStatus,
-    createdAt: row.created_at,
-    name: row.name,
-    tokenA: row.token_a,
-    tokenB: row.token_b,
-    targetAllocation: row.target_allocation,
-    minTokenAAllocation: row.min_a_allocation,
-    minTokenBAllocation: row.min_b_allocation,
-    risk: row.risk,
-    reviewInterval: row.review_interval,
-    agentInstructions: row.agent_instructions,
-  };
-}
-
-const baseSelect =
-  'SELECT id, user_id, model, status, created_at, name, token_a, token_b, ' +
-  'target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, ' +
-  'agent_instructions FROM agents';
-
-function getAgent(id: string) {
-  return db
-    .prepare<[string], AgentRow>(`${baseSelect} WHERE id = ?`)
-    .get(id) as AgentRow | undefined;
 }
 
 export default async function agentRoutes(app: FastifyInstance) {
@@ -72,36 +183,23 @@ export default async function agentRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const userId = requireUserId(req, reply);
       if (!userId) return;
-    const { page = '1', pageSize = '10', status } = req.query as {
-      page?: string;
-      pageSize?: string;
-      status?: AgentStatus;
-    };
-    const p = Math.max(parseInt(page, 10), 1);
-    const ps = Math.max(parseInt(pageSize, 10), 1);
-    const offset = (p - 1) * ps;
-    let where = 'WHERE user_id = ?';
-    const params: unknown[] = [userId];
-    if (
-      status === AgentStatus.Active ||
-      status === AgentStatus.Inactive ||
-      status === AgentStatus.Draft
-    ) {
-      where += ' AND status = ?';
-      params.push(status);
-    }
-    const totalRow = db
-      .prepare(`SELECT COUNT(*) as count FROM agents ${where}`)
-      .get(...params) as { count: number };
-    const rows = db
-      .prepare(`${baseSelect} ${where} LIMIT ? OFFSET ?`)
-      .all(...params, ps, offset) as AgentRow[];
-    return {
-      items: rows.map(toApi),
-      total: totalRow.count,
-      page: p,
-      pageSize: ps,
-    };
+      const log = req.log.child({ userId });
+      const { page = '1', pageSize = '10', status } = req.query as {
+        page?: string;
+        pageSize?: string;
+        status?: AgentStatus;
+      };
+      const p = Math.max(parseInt(page, 10), 1);
+      const ps = Math.max(parseInt(pageSize, 10), 1);
+      const offset = (p - 1) * ps;
+      const { rows, total } = getAgentsPaginated(userId, status, ps, offset);
+      log.info('listed agents');
+      return {
+        items: rows.map(toApi),
+        total,
+        page: p,
+        pageSize: ps,
+      };
     }
   );
 
@@ -112,140 +210,53 @@ export default async function agentRoutes(app: FastifyInstance) {
       const body = req.body as {
         userId: string;
         model: string;
-      name: string;
-      tokenA: string;
-      tokenB: string;
-      targetAllocation: number;
-      minTokenAAllocation: number;
-      minTokenBAllocation: number;
-      risk: string;
-      reviewInterval: string;
-      agentInstructions: string;
-      status: AgentStatus;
-    };
+        name: string;
+        tokenA: string;
+        tokenB: string;
+        targetAllocation: number;
+        minTokenAAllocation: number;
+        minTokenBAllocation: number;
+        risk: string;
+        reviewInterval: string;
+        agentInstructions: string;
+        status: AgentStatus;
+      };
       const userId = requireUserId(req, reply);
       if (!userId) return;
-    if (body.userId !== userId)
-      return reply
-        .code(403)
-        .send(errorResponse(ERROR_MESSAGES.forbidden));
-    if (body.model.length > 50)
-      return reply
-        .code(400)
-        .send(errorResponse(lengthMessage('model', 50)));
-    if (body.status === AgentStatus.Draft) {
-      const dupDraft = db
-        .prepare(
-          `SELECT id, name FROM agents
-             WHERE user_id = ? AND status = 'draft' AND model = ? AND name = ?
-               AND token_a = ? AND token_b = ? AND target_allocation = ?
-               AND min_a_allocation = ? AND min_b_allocation = ?
-               AND risk = ? AND review_interval = ? AND agent_instructions = ?`,
-        )
-        .get(
-          body.userId,
-          body.model,
-          body.name,
-          body.tokenA,
-          body.tokenB,
-          body.targetAllocation,
-          body.minTokenAAllocation,
-          body.minTokenBAllocation,
-          body.risk,
-          body.reviewInterval,
-          body.agentInstructions,
-        ) as { id: string; name: string } | undefined;
-      if (dupDraft)
-        return reply
-          .code(400)
-          .send(
-            errorResponse(
-              `identical draft already exists: ${dupDraft.name} (${dupDraft.id})`,
-            ),
-          );
-    } else {
-      const dupRows = db
-        .prepare(
-          `SELECT id, name, token_a, token_b FROM agents
-             WHERE user_id = ? AND status = 'active'
-               AND (token_a IN (?, ?) OR token_b IN (?, ?))`,
-        )
-        .all(
-          body.userId,
-          body.tokenA,
-          body.tokenB,
-          body.tokenA,
-          body.tokenB,
-        ) as { id: string; name: string; token_a: string; token_b: string }[];
-      if (dupRows.length) {
-        const conflicts: { token: string; id: string; name: string }[] = [];
-        for (const row of dupRows) {
-          if (row.token_a === body.tokenA || row.token_b === body.tokenA)
-            conflicts.push({ token: body.tokenA, id: row.id, name: row.name });
-          if (row.token_a === body.tokenB || row.token_b === body.tokenB)
-            conflicts.push({ token: body.tokenB, id: row.id, name: row.name });
-        }
-        const parts = conflicts.map(
-          (c) => `${c.token} used by ${c.name} (${c.id})`,
-        );
-        const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
-        return reply.code(400).send(errorResponse(msg));
+      const log = req.log.child({ userId });
+      const err = validateAgentInput(log, userId, body);
+      if (err) return reply.code(err.code).send(err.body);
+      let startBalance: number | null = null;
+      if (body.status === AgentStatus.Active) {
+        const keyErr = ensureApiKeys(log, body.userId);
+        if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
+        const bal = await getStartBalance(log, userId);
+        if (typeof bal === 'number') startBalance = bal;
+        else return reply.code(bal.code).send(bal.body);
       }
-    }
-    let startBalance: number | null = null;
-    if (body.status === AgentStatus.Active) {
-      const userRow = db
-        .prepare(
-          'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
-        )
-        .get(body.userId) as
-        | {
-            ai_api_key_enc?: string;
-            binance_api_key_enc?: string;
-            binance_api_secret_enc?: string;
-          }
-        | undefined;
-      if (
-        !userRow?.ai_api_key_enc ||
-        !userRow.binance_api_key_enc ||
-        !userRow.binance_api_secret_enc
-      )
-        return reply.code(400).send(errorResponse('missing api keys'));
-      try {
-        startBalance = await fetchTotalBalanceUsd(userId);
-      } catch {
-        return reply
-          .code(500)
-          .send(errorResponse('failed to fetch balance'));
-      }
-      if (startBalance === null)
-        return reply.code(500).send(errorResponse('failed to fetch balance'));
-    }
-    const id = randomUUID();
-    const status = body.status;
-    const createdAt = Date.now();
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, start_balance, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      id,
-      body.userId,
-      body.model,
-      status,
-      createdAt,
-      startBalance,
-      body.name,
-      body.tokenA,
-      body.tokenB,
-      body.targetAllocation,
-      body.minTokenAAllocation,
-      body.minTokenBAllocation,
-      body.risk,
-      body.reviewInterval,
-      body.agentInstructions,
-    );
-    const row = getAgent(id)!;
-    if (body.status === AgentStatus.Active) await reviewPortfolio(req.log, id);
+      const id = randomUUID();
+      const status = body.status;
+      const createdAt = Date.now();
+      insertAgent({
+        id,
+        userId: body.userId,
+        model: body.model,
+        status,
+        createdAt,
+        startBalance,
+        name: body.name,
+        tokenA: body.tokenA,
+        tokenB: body.tokenB,
+        targetAllocation: body.targetAllocation,
+        minTokenAAllocation: body.minTokenAAllocation,
+        minTokenBAllocation: body.minTokenBAllocation,
+        risk: body.risk,
+        reviewInterval: body.reviewInterval,
+        agentInstructions: body.agentInstructions,
+      });
+      const row = getAgent(id)!;
+      if (body.status === AgentStatus.Active) await reviewPortfolio(req.log, id);
+      log.info({ agentId: id }, 'created agent');
       return toApi(row);
     }
   );
@@ -254,18 +265,9 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id/exec-log',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
-      const agent = getAgent(id);
-      if (!agent)
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      if (agent.user_id !== userId)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      const ctx = getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { id, log } = ctx;
       const { page = '1', pageSize = '10' } = req.query as {
         page?: string;
         pageSize?: string;
@@ -273,27 +275,15 @@ export default async function agentRoutes(app: FastifyInstance) {
       const p = Math.max(parseInt(page, 10), 1);
       const ps = Math.max(parseInt(pageSize, 10), 1);
       const offset = (p - 1) * ps;
-      const totalRow = db
-        .prepare(
-          'SELECT COUNT(*) as count FROM agent_exec_log WHERE agent_id = ?'
-        )
-        .get(id) as { count: number };
-      const rows = db
-        .prepare(
-          'SELECT id, log, created_at FROM agent_exec_log WHERE agent_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
-        )
-        .all(id, ps, offset) as {
-          id: string;
-          log: string;
-          created_at: number;
-        }[];
+      const { rows, total } = getAgentExecLog(id, ps, offset);
+      log.info('fetched exec log');
       return {
         items: rows.map((r) => ({
           id: r.id,
           log: r.log,
           createdAt: r.created_at,
         })),
-        total: totalRow.count,
+        total,
         page: p,
         pageSize: ps,
       };
@@ -304,18 +294,10 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
-      const row = getAgent(id);
-      if (!row)
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      if (row.user_id !== userId)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      const ctx = getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { log, agent: row } = ctx;
+      log.info('fetched agent');
       return toApi(row);
     }
   );
@@ -324,14 +306,17 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id/pnl',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
+      const ctx = getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { userId, id, log } = ctx;
       const perf = await calculatePnl(id, userId);
-      if (!perf)
+      if (!perf) {
+        log.error('pnl not found');
         return reply
           .code(404)
           .send(errorResponse(ERROR_MESSAGES.notFound));
+      }
+      log.info('fetched pnl');
       return perf;
     }
   );
@@ -340,147 +325,59 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
+      const ctx = getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { userId, id, log } = ctx;
       const body = req.body as {
         userId: string;
         model: string;
-      status: AgentStatus;
-      name: string;
-      tokenA: string;
-      tokenB: string;
-      targetAllocation: number;
-      minTokenAAllocation: number;
-      minTokenBAllocation: number;
-      risk: string;
-      reviewInterval: string;
-      agentInstructions: string;
-    };
-      const existing = db
-        .prepare('SELECT user_id, status FROM agents WHERE id = ?')
-        .get(id) as { user_id: string; status: string } | undefined;
-      if (!existing)
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      if (existing.user_id !== userId || body.userId !== userId)
+        status: AgentStatus;
+        name: string;
+        tokenA: string;
+        tokenB: string;
+        targetAllocation: number;
+        minTokenAAllocation: number;
+        minTokenBAllocation: number;
+        risk: string;
+        reviewInterval: string;
+        agentInstructions: string;
+      };
+      if (body.userId !== userId) {
+        log.error('forbidden');
         return reply
           .code(403)
           .send(errorResponse(ERROR_MESSAGES.forbidden));
-      if (body.status === AgentStatus.Active) {
-      const userRow = db
-        .prepare(
-          'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
-        )
-        .get(body.userId) as
-        | {
-            ai_api_key_enc?: string;
-            binance_api_key_enc?: string;
-            binance_api_secret_enc?: string;
-          }
-        | undefined;
-    if (
-        !userRow?.ai_api_key_enc ||
-        !userRow.binance_api_key_enc ||
-        !userRow.binance_api_secret_enc
-      )
-        return reply.code(400).send(errorResponse('missing api keys'));
       }
-      if (body.status === AgentStatus.Draft) {
-      const dupDraft = db
-        .prepare(
-          `SELECT id, name FROM agents
-             WHERE user_id = ? AND status = 'draft' AND id != ? AND model = ? AND name = ?
-               AND token_a = ? AND token_b = ? AND target_allocation = ?
-               AND min_a_allocation = ? AND min_b_allocation = ?
-               AND risk = ? AND review_interval = ? AND agent_instructions = ?`,
-        )
-        .get(
-          body.userId,
-          id,
-          body.model,
-          body.name,
-          body.tokenA,
-          body.tokenB,
-          body.targetAllocation,
-          body.minTokenAAllocation,
-          body.minTokenBAllocation,
-          body.risk,
-          body.reviewInterval,
-          body.agentInstructions,
-        ) as { id: string; name: string } | undefined;
-      if (dupDraft)
-        return reply
-          .code(400)
-          .send(
-            errorResponse(
-              `identical draft already exists: ${dupDraft.name} (${dupDraft.id})`,
-            ),
-          );
-    } else if (body.status === AgentStatus.Active) {
-      const dupRows = db
-        .prepare(
-          `SELECT id, name, token_a, token_b FROM agents
-             WHERE user_id = ? AND status = 'active' AND id != ?
-               AND (token_a IN (?, ?) OR token_b IN (?, ?))`,
-        )
-        .all(
-          body.userId,
-          id,
-          body.tokenA,
-          body.tokenB,
-          body.tokenA,
-          body.tokenB,
-        ) as { id: string; name: string; token_a: string; token_b: string }[];
-      if (dupRows.length) {
-        const conflicts: { token: string; id: string; name: string }[] = [];
-        for (const row of dupRows) {
-          if (row.token_a === body.tokenA || row.token_b === body.tokenA)
-            conflicts.push({ token: body.tokenA, id: row.id, name: row.name });
-          if (row.token_a === body.tokenB || row.token_b === body.tokenB)
-            conflicts.push({ token: body.tokenB, id: row.id, name: row.name });
-        }
-        const parts = conflicts.map(
-          (c) => `${c.token} used by ${c.name} (${c.id})`,
-        );
-        const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
-        return reply.code(400).send(errorResponse(msg));
-      }
-    }
-      const status = body.status;
+      const err = validateAgentInput(log, userId, body, id);
+      if (err) return reply.code(err.code).send(err.body);
       let startBalance: number | null = null;
-      if (status === AgentStatus.Active) {
-        try {
-          startBalance = await fetchTotalBalanceUsd(userId);
-        } catch {
-          return reply
-            .code(500)
-            .send(errorResponse('failed to fetch balance'));
-        }
-        if (startBalance === null)
-          return reply.code(500).send(errorResponse('failed to fetch balance'));
+      if (body.status === AgentStatus.Active) {
+        const keyErr = ensureApiKeys(log, userId);
+        if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
+        const bal = await getStartBalance(log, userId);
+        if (typeof bal === 'number') startBalance = bal;
+        else return reply.code(bal.code).send(bal.body);
       }
-      db.prepare(
-        `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ? WHERE id = ?`
-      ).run(
-        body.userId,
-        body.model,
-        status,
-        body.name,
-        body.tokenA,
-        body.tokenB,
-        body.targetAllocation,
-        body.minTokenAAllocation,
-        body.minTokenBAllocation,
-        body.risk,
-        body.reviewInterval,
-        body.agentInstructions,
-        startBalance,
+      const status = body.status;
+      updateAgent({
         id,
-      );
+        userId: body.userId,
+        model: body.model,
+        status,
+        name: body.name,
+        tokenA: body.tokenA,
+        tokenB: body.tokenB,
+        targetAllocation: body.targetAllocation,
+        minTokenAAllocation: body.minTokenAAllocation,
+        minTokenBAllocation: body.minTokenBAllocation,
+        risk: body.risk,
+        reviewInterval: body.reviewInterval,
+        agentInstructions: body.agentInstructions,
+        startBalance,
+      });
       const row = getAgent(id)!;
       if (status === AgentStatus.Active) await reviewPortfolio(req.log, id);
+      log.info('updated agent');
       return toApi(row);
     }
   );
@@ -489,21 +386,11 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
-      const existing = db
-        .prepare('SELECT user_id FROM agents WHERE id = ?')
-        .get(id) as { user_id: string } | undefined;
-      if (!existing)
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      if (existing.user_id !== userId)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
-      db.prepare('DELETE FROM agents WHERE id = ?').run(id);
+      const ctx = getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { id, log } = ctx;
+      repoDeleteAgent(id);
+      log.info('deleted agent');
       return { ok: true };
     }
   );
@@ -512,78 +399,25 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id/start',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
-      const existing = getAgent(id);
-      if (!existing)
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      if (existing.user_id !== userId)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
-    const dupRows = db
-      .prepare(
-        `SELECT id, name, token_a, token_b FROM agents
-             WHERE user_id = ? AND status = 'active' AND id != ?
-               AND (token_a IN (?, ?) OR token_b IN (?, ?))`,
-      )
-      .all(
+      const ctx = getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { userId, id, log, agent: existing } = ctx;
+      const conflict = validateTokenConflicts(
+        log,
         userId,
+        existing.token_a,
+        existing.token_b,
         id,
-        existing.token_a,
-        existing.token_b,
-        existing.token_a,
-        existing.token_b,
-      ) as { id: string; name: string; token_a: string; token_b: string }[];
-    if (dupRows.length) {
-      const conflicts: { token: string; id: string; name: string }[] = [];
-      for (const row of dupRows) {
-        if (row.token_a === existing.token_a || row.token_b === existing.token_a)
-          conflicts.push({ token: existing.token_a, id: row.id, name: row.name });
-        if (row.token_a === existing.token_b || row.token_b === existing.token_b)
-          conflicts.push({ token: existing.token_b, id: row.id, name: row.name });
-      }
-      const parts = conflicts.map(
-        (c) => `${c.token} used by ${c.name} (${c.id})`,
       );
-      const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
-      return reply.code(400).send(errorResponse(msg));
-    }
-      const userRow = db
-      .prepare(
-        'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
-      )
-      .get(userId) as
-      | {
-          ai_api_key_enc?: string;
-          binance_api_key_enc?: string;
-          binance_api_secret_enc?: string;
-        }
-      | undefined;
-      if (
-        !userRow?.ai_api_key_enc ||
-        !userRow.binance_api_key_enc ||
-        !userRow.binance_api_secret_enc
-      )
-        return reply.code(400).send(errorResponse('missing api keys'));
-      let startBalance: number | null = null;
-      try {
-        startBalance = await fetchTotalBalanceUsd(userId);
-      } catch {
-        return reply
-          .code(500)
-          .send(errorResponse('failed to fetch balance'));
-      }
-      if (startBalance === null)
-        return reply.code(500).send(errorResponse('failed to fetch balance'));
-      db.prepare(
-        'UPDATE agents SET status = ?, start_balance = ? WHERE id = ?',
-      ).run(AgentStatus.Active, startBalance, id);
+      if (conflict) return reply.code(conflict.code).send(conflict.body);
+      const keyErr = ensureApiKeys(log, userId);
+      if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
+      const bal = await getStartBalance(log, userId);
+      if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
+      repoStartAgent(id, bal);
       await reviewPortfolio(req.log, id);
       const row = getAgent(id)!;
+      log.info('started agent');
       return toApi(row);
     }
   );
@@ -592,23 +426,12 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id/stop',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
-      const existing = getAgent(id);
-      if (!existing)
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      if (existing.user_id !== userId)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
-      db.prepare('UPDATE agents SET status = ?, start_balance = NULL WHERE id = ?').run(
-        AgentStatus.Inactive,
-        id,
-      );
+      const ctx = getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { id, log } = ctx;
+      repoStopAgent(id);
       const row = getAgent(id)!;
+      log.info('stopped agent');
       return toApi(row);
     }
   );

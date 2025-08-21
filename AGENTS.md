@@ -14,4 +14,6 @@ Backend code lives in `/backend`; the React app lives in `/frontend`.
 - Always cover backend code, especially API endpoints, with sufficient amount of tests.
 - Reuse existing frontend form components (e.g., SelectInput, TokenSelect) for consistent UI and validation.
 - New backend API endpoints should use the `RATE_LIMITS` presets for rate limiting.
+- Backend logs should be structured and include `userId`, `agentId`, and `execLogId` when available.
+- Break down complex functions into reusable utilities and check for existing helpers before adding new ones (see the agent service's repository and validation utilities as an example).
 
