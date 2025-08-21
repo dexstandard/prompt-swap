@@ -15,16 +15,32 @@ interface Props {
 
 export default function ExecLogItem({ log }: Props) {
   const [showJson, setShowJson] = useState(false);
-  const hasError = log.error && Object.keys(log.error).length > 0;
+  let error = log.error;
+  let text = log.log;
+
+  if (!error) {
+    try {
+      const parsed = JSON.parse(log.log);
+      if (parsed && typeof parsed === 'object' && 'error' in parsed) {
+        error = (parsed as any).error;
+        const { error: _err, ...rest } = parsed as any;
+        text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  const hasError = error && Object.keys(error).length > 0;
   return (
     <div>
-      <div className="whitespace-pre-wrap">{log.log}</div>
+      {text && <div className="whitespace-pre-wrap">{text}</div>}
       {hasError && (
         <div className="mt-1 rounded border border-red-300 bg-red-50 p-2 text-red-800 flex items-start gap-2">
           <AlertCircle className="h-4 w-4" />
           <div className="flex-1">
             <span className="font-bold mr-1">ERROR</span>
-            <span>{(log.error as any).message || JSON.stringify(log.error)}</span>
+            <span>{(error as any).message || JSON.stringify(error)}</span>
           </div>
           <Eye
             className="h-4 w-4 cursor-pointer"
@@ -32,7 +48,7 @@ export default function ExecLogItem({ log }: Props) {
           />
           <Modal open={showJson} onClose={() => setShowJson(false)}>
             <pre className="whitespace-pre-wrap text-sm">
-              {JSON.stringify(log.error, null, 2)}
+              {JSON.stringify(error, null, 2)}
             </pre>
           </Modal>
         </div>
