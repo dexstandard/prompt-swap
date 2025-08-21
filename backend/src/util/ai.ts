@@ -1,5 +1,5 @@
 const developerInstructions =
-  'You assist a real trader in taking decisions on a given tokens configuration. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not.';
+  "You assist a real trader in taking decisions on a given tokens configuration. The user's comment may be found in the trading instructions field. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not.";
 
 export async function callAi(
   model: string,
@@ -54,9 +54,11 @@ export async function callAi(
     },
     body: JSON.stringify({
       model,
-      input: typeof input === 'string' ? input : JSON.stringify(input),
-      developer: developerInstructions,
-      previous_responses: previousResponses,
+      input:
+        typeof input === 'string'
+          ? JSON.stringify({ prompt: input, previous_responses: previousResponses })
+          : JSON.stringify({ ...(input as Record<string, unknown>), previous_responses: previousResponses }),
+      instructions: developerInstructions,
       tools: [{ type: 'web_search_preview' }],
       text: {
         format: {
