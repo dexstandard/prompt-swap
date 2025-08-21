@@ -27,7 +27,7 @@ describe('model routes', () => {
       ok: true,
       json: async () => ({
         data: [
-          { id: 'gpt-4.1-mini' },
+          { id: 'search' },
           { id: 'gpt-3.5' },
           { id: 'o3-mini' },
           { id: 'gpt-5' },
@@ -41,7 +41,7 @@ describe('model routes', () => {
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ models: ['gpt-4.1-mini', 'o3-mini', 'gpt-5'] });
+    expect(res.json()).toEqual({ models: ['search', 'o3-mini', 'gpt-5'] });
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
