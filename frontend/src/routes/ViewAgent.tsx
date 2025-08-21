@@ -33,6 +33,12 @@ interface Agent {
   agentInstructions: string;
 }
 
+interface ExecLog {
+  id: string;
+  log: string;
+  createdAt: number;
+}
+
 export default function ViewAgent() {
   const { id } = useParams();
   const { user } = useUser();
@@ -114,6 +120,23 @@ export default function ViewAgent() {
     },
   });
 
+  const [logPage, setLogPage] = useState(1);
+  const { data: logData } = useQuery({
+    queryKey: ['agent-log', id, logPage, user?.id],
+    queryFn: async () => {
+      const res = await api.get(`/agents/${id}/exec-log`, {
+        params: { page: logPage, pageSize: 10 },
+      });
+      return res.data as {
+        items: ExecLog[];
+        total: number;
+        page: number;
+        pageSize: number;
+      };
+    },
+    enabled: !!id && !!user,
+  });
+
   if (!data) return <div className="p-4">Loading...</div>;
   if (data.status === 'draft') return <AgentPreview draft={data} />;
 
@@ -130,8 +153,9 @@ export default function ViewAgent() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-2">Agent</h1>
-      <h2 className="text-xl font-bold mb-2">{data.name}</h2>
+      <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+        <span>Agent:</span> <span>{data.name}</span>
+      </h1>
       <p className="flex items-center gap-1">
         <strong>Tokens:</strong>
         <TokenDisplay token={data.tokenA} />
@@ -221,6 +245,53 @@ export default function ViewAgent() {
         >
           Start Agent
         </Button>
+      )}
+      {logData && (
+        <div className="mt-6">
+          <h2 className="text-xl font-bold mb-2">Execution Log</h2>
+          {logData.items.length === 0 ? (
+            <p>No logs yet.</p>
+          ) : (
+            <>
+              <table className="w-full mb-2">
+                <thead>
+                  <tr>
+                    <th className="text-left">Time</th>
+                    <th className="text-left">Log</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logData.items.map((log) => (
+                    <tr key={log.id}>
+                      <td className="align-top pr-2">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                      <td className="whitespace-pre-wrap">{log.log}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex items-center gap-2">
+                <Button
+                  disabled={logPage === 1}
+                  onClick={() => setLogPage((p) => Math.max(p - 1, 1))}
+                >
+                  Prev
+                </Button>
+                <span>
+                  Page {logData.page} of{' '}
+                  {Math.ceil(logData.total / logData.pageSize)}
+                </span>
+                <Button
+                  disabled={logData.page * logData.pageSize >= logData.total}
+                  onClick={() => setLogPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       )}
       <Modal open={showUpdate} onClose={() => setShowUpdate(false)}>
         <h2 className="text-xl font-bold mb-2">Update Agent</h2>
