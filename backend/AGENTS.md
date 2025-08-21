@@ -17,3 +17,6 @@ users table; executions table.
 
 ## Config
 DATABASE_URL, CRON.
+
+## Logging
+Use structured logging and include `userId`, `agentId`, and `execLogId` in log context whenever those values are available.

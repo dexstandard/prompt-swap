@@ -13,6 +13,12 @@ export default async function reviewPortfolio(
   const rows = getActiveAgents(agentId);
   await Promise.all(
     rows.map(async (row) => {
+      const execLogId = randomUUID();
+      const childLog = log.child({
+        userId: row.user_id,
+        agentId: row.id,
+        execLogId,
+      });
       try {
         const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
         const prompt = {
@@ -28,10 +34,10 @@ export default async function reviewPortfolio(
         const text = await callAi(row.model, prompt, key);
         db.prepare(
           'INSERT INTO agent_exec_log (id, agent_id, log, created_at) VALUES (?, ?, ?, ?)',
-        ).run(randomUUID(), row.id, text, Date.now());
-        log.info({ agentId: row.id }, 'agent run complete');
+        ).run(execLogId, row.id, text, Date.now());
+        childLog.info('agent run complete');
       } catch (err) {
-        log.error({ err, agentId: row.id }, 'agent run failed');
+        childLog.error({ err }, 'agent run failed');
       }
     }),
   );
