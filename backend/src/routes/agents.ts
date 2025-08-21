@@ -421,7 +421,9 @@ export default async function agentRoutes(app: FastifyInstance) {
       const bal = await getStartBalance(log, userId);
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
       repoStartAgent(id, bal);
-      await reviewPortfolio(req.log, id);
+      reviewPortfolio(req.log, id).catch((err) =>
+        log.error({ err }, 'initial review failed')
+      );
       const row = getAgent(id)!;
       log.info('started agent');
       return toApi(row);
