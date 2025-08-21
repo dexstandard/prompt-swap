@@ -157,12 +157,12 @@ export default function ViewAgent() {
         <span>/</span>
         <TokenDisplay token={data.tokenB} />
       </p>
-      <div className="mt-4">
+      <div className="mt-2">
         <div
           className="flex items-center gap-1 cursor-pointer"
           onClick={() => setShowStrategy((s) => !s)}
         >
-          <h2 className="text-xl font-bold">Strategy</h2>
+          <h2 className="text-l font-bold">Strategy</h2>
           {showStrategy ? (
             <ChevronDown className="w-4 h-4" />
           ) : (
@@ -175,9 +175,9 @@ export default function ViewAgent() {
           </div>
         )}
       </div>
-      <div className="mt-4">
+      <div className="mt-2">
         <div className="flex items-center gap-1">
-          <h2 className="text-xl font-bold">Trading Instructions</h2>
+          <h2 className="text-l font-bold">Trading Instructions</h2>
           {showPrompt ? (
             <EyeOff
               className="w-4 h-4 cursor-pointer"
@@ -196,13 +196,11 @@ export default function ViewAgent() {
           </pre>
         )}
       </div>
-      <p className="mt-4">
+      <p className="mt-2">
         <strong>Status:</strong> <AgentStatusLabel status={data.status} />
+        <strong className="ml-2">Created:</strong> {new Date(data.createdAt).toLocaleString()}
       </p>
-      <p>
-        <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
-      </p>
-      <p>
+      <p className="mt-2">
         <strong>Balance (USD):</strong>{' '}
         <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB} />
       </p>
