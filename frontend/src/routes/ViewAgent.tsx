@@ -76,23 +76,18 @@ export default function ViewAgent() {
     },
   });
 
-  if (!data) return <div className="p-4">Loading...</div>;
-  if (data.status === 'draft') return <AgentPreview draft={data} />;
-
-  const isActive = data.status === 'active';
-
   const [showStrategy, setShowStrategy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
   const [updateData, setUpdateData] = useState({
-    tokenA: data.tokenA,
-    tokenB: data.tokenB,
-    targetAllocation: data.targetAllocation,
-    minTokenAAllocation: data.minTokenAAllocation,
-    minTokenBAllocation: data.minTokenBAllocation,
-    risk: data.risk,
-    reviewInterval: data.reviewInterval,
-    agentInstructions: data.agentInstructions,
+    tokenA: '',
+    tokenB: '',
+    targetAllocation: 0,
+    minTokenAAllocation: 0,
+    minTokenBAllocation: 0,
+    risk: '',
+    reviewInterval: '',
+    agentInstructions: '',
   });
 
   const updateMut = useMutation({
@@ -119,6 +114,10 @@ export default function ViewAgent() {
     },
   });
 
+  if (!data) return <div className="p-4">Loading...</div>;
+  if (data.status === 'draft') return <AgentPreview draft={data} />;
+
+  const isActive = data.status === 'active';
   const strategyData = {
     tokenA: data.tokenA,
     tokenB: data.tokenB,
