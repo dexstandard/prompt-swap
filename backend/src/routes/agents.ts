@@ -251,6 +251,56 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.get(
+    '/agents/:id/exec-log',
+    { config: { rateLimit: RATE_LIMITS.RELAXED } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const agent = getAgent(id);
+      if (!agent)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      if (agent.user_id !== userId)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      const { page = '1', pageSize = '10' } = req.query as {
+        page?: string;
+        pageSize?: string;
+      };
+      const p = Math.max(parseInt(page, 10), 1);
+      const ps = Math.max(parseInt(pageSize, 10), 1);
+      const offset = (p - 1) * ps;
+      const totalRow = db
+        .prepare(
+          'SELECT COUNT(*) as count FROM agent_exec_log WHERE agent_id = ?'
+        )
+        .get(id) as { count: number };
+      const rows = db
+        .prepare(
+          'SELECT id, log, created_at FROM agent_exec_log WHERE agent_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+        )
+        .all(id, ps, offset) as {
+          id: string;
+          log: string;
+          created_at: number;
+        }[];
+      return {
+        items: rows.map((r) => ({
+          id: r.id,
+          log: r.log,
+          createdAt: r.created_at,
+        })),
+        total: totalRow.count,
+        page: p,
+        pageSize: ps,
+      };
+    }
+  );
+
+  app.get(
     '/agents/:id',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
