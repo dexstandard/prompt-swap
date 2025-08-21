@@ -42,6 +42,15 @@ export default function AppShell() {
           <Outlet />
         </main>
       </div>
+      <footer className="bg-gray-100 text-center text-sm text-gray-600 p-4">
+        <Link to="/terms" className="mx-2 hover:text-gray-800">
+          Terms
+        </Link>
+        •
+        <Link to="/privacy" className="mx-2 hover:text-gray-800">
+          Privacy
+        </Link>
+      </footer>
     </div>
   );
 }
