@@ -44,7 +44,6 @@ export default function AgentPreview({ draft }: Props) {
   const { user } = useUser();
   const toast = useToast();
   const data = draft ?? locationData;
-  if (!data) return <div className="p-4">No preview data</div>;
   const [agentData, setAgentData] = useState(data);
   useEffect(() => setAgentData(data), [data]);
   const aiKeyQuery = useQuery<string | null>({
@@ -109,6 +108,8 @@ export default function AgentPreview({ draft }: Props) {
   }
 
   const isDraft = !!draft;
+
+  if (!data) return <div className="p-4">No preview data</div>;
 
   return (
     <div className="p-4">
