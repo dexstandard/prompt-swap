@@ -10,11 +10,13 @@ export default function SelectInput({
   onChange,
   options,
   id,
+  className = '',
 }: {
   value: string;
   onChange: (v: string) => void;
   options: Option[];
   id: string;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
@@ -25,7 +27,7 @@ export default function SelectInput({
         type="button"
         id={id}
         onClick={() => setOpen(!open)}
-        className="w-full border rounded px-2 py-1 flex items-center justify-between"
+        className={`w-full border rounded px-2 py-1 flex items-center justify-between ${className}`}
       >
         <span className={`${selected ? '' : 'text-gray-500'} flex items-center gap-1`}>
           {selected ? selected.label : 'Select'}
