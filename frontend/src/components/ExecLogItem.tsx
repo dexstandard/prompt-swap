@@ -6,6 +6,11 @@ import ExecSuccessItem from './ExecSuccessItem';
 export interface ExecLog {
   id: string;
   log: string;
+  response?: {
+    rebalance: boolean;
+    newAllocation?: number;
+    shortReport: string;
+  };
   error?: Record<string, unknown>;
   createdAt: number;
 }
@@ -16,67 +21,7 @@ interface Props {
 
 export default function ExecLogItem({ log }: Props) {
   const [showJson, setShowJson] = useState(false);
-  let error = log.error;
-  let response: Record<string, unknown> | undefined;
-  let text = log.log;
-
-  if (!error) {
-    try {
-      const parsed = JSON.parse(log.log);
-      if (parsed && typeof parsed === 'object') {
-        const body = (parsed as any).body;
-        if ('error' in parsed) {
-          error = (parsed as any).error;
-          const { error: _err, ...rest } = parsed as any;
-          text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
-        } else if (body && typeof body === 'object' && 'error' in body) {
-          error = body.error;
-          const { body: _body, ...rest } = parsed as any;
-          text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
-        } else if ((parsed as any).object === 'response') {
-          const outputs = Array.isArray((parsed as any).output)
-            ? (parsed as any).output
-            : [];
-          const msg = outputs.find((o: any) => o.type === 'message');
-          const textPart = msg?.content?.find((c: any) => c.type === 'output_text');
-          if (textPart && typeof textPart.text === 'string') {
-            try {
-              const out = JSON.parse(textPart.text);
-              if (out.result && typeof out.result === 'object') {
-                if ('error' in out.result)
-                  error = { message: (out.result as any).error };
-                else response = out.result as Record<string, unknown>;
-              }
-            } catch {
-              // ignore
-            }
-          }
-          text = '';
-        } else if (body && typeof body === 'object' && body.object === 'response') {
-          const outputs = Array.isArray(body.output) ? body.output : [];
-          const msg = outputs.find((o: any) => o.type === 'message');
-          const textPart = msg?.content?.find((c: any) => c.type === 'output_text');
-          if (textPart && typeof textPart.text === 'string') {
-            try {
-              const out = JSON.parse(textPart.text);
-              if (out.result && typeof out.result === 'object') {
-                if ('error' in out.result)
-                  error = { message: (out.result as any).error };
-                else response = out.result as Record<string, unknown>;
-              }
-            } catch {
-              // ignore
-            }
-          }
-          const { body: _body, ...rest } = parsed as any;
-          text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
-        }
-      }
-    } catch {
-      // ignore parse errors
-    }
-  }
-
+  const { log: text, error, response } = log;
   const hasError = error && Object.keys(error).length > 0;
   const hasResponse = response && Object.keys(response).length > 0;
   return (
@@ -100,7 +45,7 @@ export default function ExecLogItem({ log }: Props) {
           </Modal>
         </div>
       )}
-      {hasResponse && <ExecSuccessItem response={response as any} />}
+      {hasResponse && <ExecSuccessItem response={response} />}
     </div>
   );
 }

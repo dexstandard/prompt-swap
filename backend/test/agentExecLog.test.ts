@@ -44,4 +44,45 @@ describe('agent exec log routes', () => {
     expect(res.statusCode).toBe(403);
     await app.close();
   });
+
+  it('parses openai response text field', async () => {
+    const app = await buildServer();
+    addUser('u3');
+    const agentId = 'a2';
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'inst')`
+    ).run(agentId, 'u3');
+    const aiLog = JSON.stringify({
+      object: 'response',
+      output: [
+        {
+          type: 'message',
+          id: 'msg',
+          role: 'assistant',
+          content: [
+            {
+              type: 'output_text',
+              text: '{"result":{"rebalance":false,"shortReport":"ok"}}',
+            },
+          ],
+        },
+      ],
+    });
+    db.prepare(
+      'INSERT INTO agent_exec_log (id, agent_id, log, created_at) VALUES (?, ?, ?, ?)'
+    ).run('log-new', agentId, aiLog, 0);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
+      headers: { 'x-user-id': 'u3' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.items[0]).toMatchObject({
+      log: '{"result":{"rebalance":false,"shortReport":"ok"}}',
+      response: { rebalance: false, shortReport: 'ok' },
+    });
+    await app.close();
+  });
 });
