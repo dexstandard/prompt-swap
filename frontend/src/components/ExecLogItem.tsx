@@ -26,7 +26,9 @@ export default function ExecLogItem({ log }: Props) {
   const hasResponse = response && Object.keys(response).length > 0;
   return (
     <div>
-      {text && <div className="whitespace-pre-wrap">{text}</div>}
+      {!hasError && !hasResponse && text && (
+        <div className="whitespace-pre-wrap">{text}</div>
+      )}
       {hasError && (
         <div className="mt-1 flex items-center gap-2 rounded border border-red-300 bg-red-50 p-2 text-red-800">
           <AlertCircle className="h-4 w-4" />
