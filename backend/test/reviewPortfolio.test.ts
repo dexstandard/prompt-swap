@@ -14,10 +14,20 @@ vi.mock('../src/util/crypto.js', () => ({
   decrypt: vi.fn().mockReturnValue('key'),
 }));
 
+vi.mock('../src/services/binance.js', () => ({
+  fetchAccount: vi.fn().mockResolvedValue({
+    balances: [
+      { asset: 'BTC', free: '1', locked: '0.5' },
+      { asset: 'ETH', free: '2', locked: '0' },
+    ],
+  }),
+}));
+
 migrate();
 
 const reviewPortfolio = (await import('../src/jobs/review-portfolio.js')).default;
 const { callAi } = await import('../src/util/ai.js');
+const { fetchAccount } = await import('../src/services/binance.js');
 
 describe('reviewPortfolio', () => {
   it('passes last five responses to callAi', async () => {
@@ -34,5 +44,27 @@ describe('reviewPortfolio', () => {
     expect(callAi).toHaveBeenCalledTimes(1);
     const args = (callAi as any).mock.calls[0];
     expect(args[3]).toEqual(['resp-5', 'resp-4', 'resp-3', 'resp-2', 'resp-1']);
+    expect(args[1].tokenABalance).toBe(1.5);
+    expect(args[1].tokenBBalance).toBe(2);
+  });
+
+  it('logs error when token balances missing and skips callAi', async () => {
+    vi.mocked(callAi).mockClear();
+    vi.mocked(fetchAccount).mockResolvedValueOnce({
+      balances: [{ asset: 'BTC', free: '1', locked: '0' }],
+    });
+    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u2', 'enc');
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'Agent2', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'inst')`
+    ).run('a2', 'u2');
+    const log: any = { child: () => log, info: () => {}, error: () => {} };
+    await reviewPortfolio(log, 'a2');
+    expect(callAi).not.toHaveBeenCalled();
+    const rows = db
+      .prepare('SELECT log FROM agent_exec_log WHERE agent_id = ?')
+      .all('a2') as { log: string }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].log).toContain('failed to fetch token balances');
   });
 });

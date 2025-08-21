@@ -30,12 +30,17 @@ describe('agent routes', () => {
     addUser('user1');
 
     const fetchMock = vi.fn();
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        balances: [{ asset: 'USDT', free: '100', locked: '0' }],
-      }),
-    } as any);
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+        }),
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [] }),
+      } as any);
     fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
@@ -158,7 +163,10 @@ describe('agent routes', () => {
           balances: [{ asset: 'USDT', free: '100', locked: '0' }],
         }),
       } as any)
-      .mockResolvedValueOnce({ text: async () => 'ok' } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [] }),
+      } as any)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -231,13 +239,17 @@ describe('agent routes', () => {
     const id = resCreate.json().id as string;
 
     const fetchMock = vi.fn();
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        balances: [{ asset: 'USDT', free: '100', locked: '0' }],
-      }),
-    } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+        }),
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [] }),
+      } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -275,14 +287,20 @@ describe('agent routes', () => {
           balances: [{ asset: 'USDT', free: '100', locked: '0' }],
         }),
       } as any)
-      .mockResolvedValueOnce({ text: async () => 'ok' } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [] }),
+      } as any)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           balances: [{ asset: 'USDT', free: '200', locked: '0' }],
         }),
       } as any)
-      .mockResolvedValueOnce({ text: async () => 'ok' } as any);
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [] }),
+      } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
