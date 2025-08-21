@@ -5,7 +5,11 @@ export async function callAi(model: string, input: unknown, apiKey: string): Pro
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ model, input }),
+    body: JSON.stringify({
+      model,
+      input: typeof input === 'string' ? input : JSON.stringify(input),
+      tools: [{ type: 'web_search_preview' }],
+    }),
   });
   return await res.text();
 }
