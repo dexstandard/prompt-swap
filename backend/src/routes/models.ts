@@ -4,12 +4,16 @@ import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import { requireUserId } from '../util/auth.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
+import { RATE_LIMITS } from '../rate-limit.js';
 
 export default async function modelsRoutes(app: FastifyInstance) {
-  app.get('/users/:id/models', async (req, reply) => {
-    const id = (req.params as any).id;
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
+  app.get(
+    '/users/:id/models',
+    { config: { rateLimit: RATE_LIMITS.MODERATE } },
+    async (req, reply) => {
+      const id = (req.params as any).id;
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
     if (userId !== id)
       return reply
         .code(403)
@@ -35,10 +39,11 @@ export default async function modelsRoutes(app: FastifyInstance) {
         .map((m) => m.id)
         .filter((id: string) => /^(gpt-5|o3|gpt-4\.1|gpt-4o)/.test(id));
       return { models };
-    } catch {
-      return reply
-        .code(500)
-        .send(errorResponse('failed to fetch models'));
+      } catch {
+        return reply
+          .code(500)
+          .send(errorResponse('failed to fetch models'));
+      }
     }
-  });
+  );
 }

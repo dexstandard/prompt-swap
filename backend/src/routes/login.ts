@@ -4,14 +4,18 @@ import { z } from 'zod';
 import { authenticator } from 'otplib';
 import { db } from '../db/index.js';
 import { env } from '../util/env.js';
+import { RATE_LIMITS } from '../rate-limit.js';
 
 const client = new OAuth2Client();
 
 export default async function loginRoutes(app: FastifyInstance) {
-  app.post('/login', async (req, reply) => {
-    const body = z
-      .object({ token: z.string(), otp: z.string().optional() })
-      .parse(req.body);
+  app.post(
+    '/login',
+    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
+    async (req, reply) => {
+      const body = z
+        .object({ token: z.string(), otp: z.string().optional() })
+        .parse(req.body);
     const ticket = await client.verifyIdToken({
       idToken: body.token,
       audience: env.GOOGLE_CLIENT_ID,
@@ -34,5 +38,6 @@ export default async function loginRoutes(app: FastifyInstance) {
       if (!valid) return reply.code(401).send({ error: 'invalid otp' });
     }
     return { id, email: payload.email };
-  });
+  }
+  );
 }
