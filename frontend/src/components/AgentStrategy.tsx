@@ -60,40 +60,46 @@ export default function AgentStrategy({ data, onChange }: Props) {
         <EditableText
           value={data.tokenA}
           onChange={(v) => onChange('tokenA', v)}
-          textClassName="px-0"
+          className="w-24"
+          textClassName="flex-1 px-0"
           renderDisplay={(v) => <TokenDisplay token={v} />}
           renderEditor={(local, setLocal, finish) => (
-            <TokenSelect
-              id="tokenA"
-              value={local}
-              onChange={(v) => {
-                setLocal(v);
-                finish();
-              }}
-              options={tokens.filter(
-                (t) => t.value === data.tokenA || t.value !== data.tokenB
-              )}
-            />
+            <div className="flex-1">
+              <TokenSelect
+                id="tokenA"
+                value={local}
+                onChange={(v) => {
+                  setLocal(v);
+                  finish();
+                }}
+                options={tokens.filter(
+                  (t) => t.value === data.tokenA || t.value !== data.tokenB
+                )}
+              />
+            </div>
           )}
         />
         <span>/</span>
         <EditableText
           value={data.tokenB}
           onChange={(v) => onChange('tokenB', v)}
-          textClassName="px-0"
+          className="w-24"
+          textClassName="flex-1 px-0"
           renderDisplay={(v) => <TokenDisplay token={v} />}
           renderEditor={(local, setLocal, finish) => (
-            <TokenSelect
-              id="tokenB"
-              value={local}
-              onChange={(v) => {
-                setLocal(v);
-                finish();
-              }}
-              options={tokens.filter(
-                (t) => t.value === data.tokenB || t.value !== data.tokenA
-              )}
-            />
+            <div className="flex-1">
+              <TokenSelect
+                id="tokenB"
+                value={local}
+                onChange={(v) => {
+                  setLocal(v);
+                  finish();
+                }}
+                options={tokens.filter(
+                  (t) => t.value === data.tokenB || t.value !== data.tokenA
+                )}
+              />
+            </div>
           )}
         />
       </dd>
@@ -106,7 +112,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
           textClassName="p-0"
           renderDisplay={(v) => (
             <span className="flex items-center gap-2">
-              <span className="w-24 text-right whitespace-nowrap">
+              <span className="w-24 whitespace-nowrap">
                 {v}% {data.tokenA.toUpperCase()}
               </span>
               <span>/</span>
@@ -117,7 +123,7 @@ export default function AgentStrategy({ data, onChange }: Props) {
           )}
           renderEditor={(local, setLocal, finish) => (
             <span className="flex items-center gap-2">
-              <span className="w-24 text-right whitespace-nowrap">
+              <span className="w-24 whitespace-nowrap">
                 {local}% {data.tokenA.toUpperCase()}
               </span>
               <input
