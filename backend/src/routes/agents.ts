@@ -256,7 +256,10 @@ export default async function agentRoutes(app: FastifyInstance) {
         agentInstructions: body.agentInstructions,
       });
       const row = getAgent(id)!;
-      if (body.status === AgentStatus.Active) await reviewPortfolio(req.log, id);
+      if (body.status === AgentStatus.Active)
+        reviewPortfolio(req.log, id).catch((err) =>
+          log.error({ err, agentId: id }, 'initial review failed'),
+        );
       log.info({ agentId: id }, 'created agent');
       return toApi(row);
     }
