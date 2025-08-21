@@ -1,4 +1,43 @@
 export async function callAi(model: string, input: unknown, apiKey: string): Promise<string> {
+  const schema = {
+    type: 'object',
+    properties: {
+      result: {
+        anyOf: [
+          {
+            type: 'object',
+            properties: {
+              rebalance: { type: 'boolean', const: false },
+              shortReport: { type: 'string' },
+            },
+            required: ['rebalance', 'shortReport'],
+            additionalProperties: false,
+          },
+          {
+            type: 'object',
+            properties: {
+              rebalance: { type: 'boolean', const: true },
+              newAllocation: { type: 'number' },
+              shortReport: { type: 'string' },
+            },
+            required: ['rebalance', 'newAllocation', 'shortReport'],
+            additionalProperties: false,
+          },
+          {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+            },
+            required: ['error'],
+            additionalProperties: false,
+          },
+        ],
+      },
+    },
+    required: ['result'],
+    additionalProperties: false,
+  };
+
   const res = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -9,6 +48,14 @@ export async function callAi(model: string, input: unknown, apiKey: string): Pro
       model,
       input: typeof input === 'string' ? input : JSON.stringify(input),
       tools: [{ type: 'web_search_preview' }],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'rebalance_response',
+          strict: true,
+          schema,
+        },
+      },
     }),
   });
   return await res.text();

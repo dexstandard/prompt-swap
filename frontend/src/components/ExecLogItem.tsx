@@ -34,10 +34,40 @@ export default function ExecLogItem({ log }: Props) {
           const { body: _body, ...rest } = parsed as any;
           text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
         } else if ((parsed as any).object === 'response') {
-          response = parsed as Record<string, unknown>;
+          const outputs = Array.isArray((parsed as any).output)
+            ? (parsed as any).output
+            : [];
+          const msg = outputs.find((o: any) => o.type === 'message');
+          const textPart = msg?.content?.find((c: any) => c.type === 'output_text');
+          if (textPart && typeof textPart.text === 'string') {
+            try {
+              const out = JSON.parse(textPart.text);
+              if (out.result && typeof out.result === 'object') {
+                if ('error' in out.result)
+                  error = { message: (out.result as any).error };
+                else response = out.result as Record<string, unknown>;
+              }
+            } catch {
+              // ignore
+            }
+          }
           text = '';
         } else if (body && typeof body === 'object' && body.object === 'response') {
-          response = body as Record<string, unknown>;
+          const outputs = Array.isArray(body.output) ? body.output : [];
+          const msg = outputs.find((o: any) => o.type === 'message');
+          const textPart = msg?.content?.find((c: any) => c.type === 'output_text');
+          if (textPart && typeof textPart.text === 'string') {
+            try {
+              const out = JSON.parse(textPart.text);
+              if (out.result && typeof out.result === 'object') {
+                if ('error' in out.result)
+                  error = { message: (out.result as any).error };
+                else response = out.result as Record<string, unknown>;
+              }
+            } catch {
+              // ignore
+            }
+          }
           const { body: _body, ...rest } = parsed as any;
           text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
         }
