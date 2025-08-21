@@ -14,7 +14,7 @@ export default function Modal({ open, onClose, children }: Props) {
         {children}
         <button
           type="button"
-          className="absolute top-2 right-2 text-gray-600"
+          className="absolute top-2 right-2 mr-2 text-gray-600"
           onClick={onClose}
         >
           ×
