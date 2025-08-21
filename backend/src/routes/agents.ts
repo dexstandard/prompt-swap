@@ -251,42 +251,6 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.get(
-    '/agents/:id',
-    { config: { rateLimit: RATE_LIMITS.RELAXED } },
-    async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
-      const row = getAgent(id);
-      if (!row)
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      if (row.user_id !== userId)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
-      return toApi(row);
-    }
-  );
-
-  app.get(
-    '/agents/:id/pnl',
-    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
-    async (req, reply) => {
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const id = (req.params as any).id;
-      const perf = await calculatePnl(id, userId);
-      if (!perf)
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      return perf;
-    }
-  );
-
-  app.get(
     '/agents/:id/exec-log',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
@@ -333,6 +297,42 @@ export default async function agentRoutes(app: FastifyInstance) {
         page: p,
         pageSize: ps,
       };
+    }
+  );
+
+  app.get(
+    '/agents/:id',
+    { config: { rateLimit: RATE_LIMITS.RELAXED } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const row = getAgent(id);
+      if (!row)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      if (row.user_id !== userId)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      return toApi(row);
+    }
+  );
+
+  app.get(
+    '/agents/:id/pnl',
+    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const perf = await calculatePnl(id, userId);
+      if (!perf)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      return perf;
     }
   );
 
