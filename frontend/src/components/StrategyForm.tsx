@@ -17,6 +17,7 @@ interface StrategyData {
 interface Props {
   data: StrategyData;
   onChange: <K extends keyof StrategyData>(key: K, value: StrategyData[K]) => void;
+  disabled?: boolean;
 }
 
 const tokens = [
@@ -42,7 +43,7 @@ const reviewIntervalOptions = [
   { value: '1w', label: '1 Week' },
 ];
 
-export default function StrategyForm({ data, onChange }: Props) {
+export default function StrategyForm({ data, onChange, disabled = false }: Props) {
   const {
     tokenA,
     tokenB,
@@ -62,6 +63,7 @@ export default function StrategyForm({ data, onChange }: Props) {
             value={tokenA}
             onChange={(v) => onChange('tokenA', v)}
             options={tokens.filter((t) => t.value === tokenA || t.value !== tokenB)}
+            disabled={disabled}
           />
         </FormField>
         <FormField label="Token B" htmlFor="tokenB">
@@ -70,6 +72,7 @@ export default function StrategyForm({ data, onChange }: Props) {
             value={tokenB}
             onChange={(v) => onChange('tokenB', v)}
             options={tokens.filter((t) => t.value === tokenB || t.value !== tokenA)}
+            disabled={disabled}
           />
         </FormField>
       </div>
@@ -86,6 +89,7 @@ export default function StrategyForm({ data, onChange }: Props) {
             value={targetAllocation}
             onChange={(e) => onChange('targetAllocation', Number(e.target.value))}
             className="flex-1"
+            disabled={disabled}
           />
           <span className="w-24">
             {100 - targetAllocation}% {tokenB.toUpperCase()}
@@ -101,6 +105,7 @@ export default function StrategyForm({ data, onChange }: Props) {
             max={100}
             value={minTokenAAllocation}
             onChange={(e) => onChange('minTokenAAllocation', Number(e.target.value))}
+            disabled={disabled}
           />
         </FormField>
         <FormField label={`Min ${tokenB.toUpperCase()} allocation`} htmlFor="minTokenBAllocation">
@@ -111,6 +116,7 @@ export default function StrategyForm({ data, onChange }: Props) {
             max={100}
             value={minTokenBAllocation}
             onChange={(e) => onChange('minTokenBAllocation', Number(e.target.value))}
+            disabled={disabled}
           />
         </FormField>
       </div>
@@ -121,6 +127,7 @@ export default function StrategyForm({ data, onChange }: Props) {
             value={risk}
             onChange={(v) => onChange('risk', v)}
             options={riskOptions}
+            disabled={disabled}
           />
         </FormField>
         <FormField
@@ -133,6 +140,7 @@ export default function StrategyForm({ data, onChange }: Props) {
             value={reviewInterval}
             onChange={(v) => onChange('reviewInterval', v)}
             options={reviewIntervalOptions}
+            disabled={disabled}
           />
         </FormField>
       </div>
