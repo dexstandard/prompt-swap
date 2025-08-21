@@ -62,6 +62,10 @@ export default function Dashboard() {
   const items = data?.items ?? [];
 
   const handleDelete = async (id: string) => {
+    const confirmed = window.confirm('Delete this agent?');
+    if (!confirmed) {
+      return;
+    }
     try {
       await api.delete(`/agents/${id}`);
       queryClient.invalidateQueries({ queryKey: ['agents'] });
