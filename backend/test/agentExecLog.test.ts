@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 process.env.DATABASE_URL = ':memory:';
 process.env.KEY_PASSWORD = 'test-pass';
@@ -42,6 +44,36 @@ describe('agent exec log routes', () => {
       headers: { 'x-user-id': 'u2' },
     });
     expect(res.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it('parses openai response text field', async () => {
+    const app = await buildServer();
+    addUser('u3');
+    const agentId = 'a2';
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'inst')`
+    ).run(agentId, 'u3');
+    const aiLog = readFileSync(
+      join(__dirname, 'fixtures/real-openai-log.json'),
+      'utf8',
+    );
+    db.prepare(
+      'INSERT INTO agent_exec_log (id, agent_id, log, created_at) VALUES (?, ?, ?, ?)',
+    ).run('log-new', agentId, aiLog, 0);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
+      headers: { 'x-user-id': 'u3' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.items[0].log).toContain('Data-driven note');
+    expect(body.items[0].response).toMatchObject({
+      rebalance: true,
+      newAllocation: 0,
+    });
     await app.close();
   });
 });
