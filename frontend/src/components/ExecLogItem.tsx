@@ -36,7 +36,7 @@ export default function ExecLogItem({ log }: Props) {
     <div>
       {text && <div className="whitespace-pre-wrap">{text}</div>}
       {hasError && (
-        <div className="mt-1 rounded border border-red-300 bg-red-50 p-2 text-red-800 flex items-start gap-2">
+        <div className="mt-1 flex items-center gap-2 rounded border border-red-300 bg-red-50 p-2 text-red-800">
           <AlertCircle className="h-4 w-4" />
           <div className="flex-1">
             <span className="font-bold mr-1">ERROR</span>
