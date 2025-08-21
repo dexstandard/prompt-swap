@@ -34,12 +34,18 @@ export function parseExecLog(log: unknown): ParsedExecLog {
       const outputs = Array.isArray((parsed as any).output)
         ? (parsed as any).output
         : [];
-      const msg = outputs.find((o: any) => o.type === 'message');
-      const textPart = msg?.content?.find((c: any) => c.type === 'output_text');
-      if (textPart && typeof textPart.text === 'string') {
-        text = textPart.text;
+      // final assistant reply is in the output entry whose id starts with "msg_"
+      // and the text lives at content[0].text
+      const msg = outputs.find(
+        (o: any) => typeof o?.id === 'string' && o.id.startsWith('msg_'),
+      );
+      const textField = Array.isArray(msg?.content)
+        ? msg.content[0]?.text
+        : undefined;
+      if (typeof textField === 'string') {
+        text = textField;
         try {
-          const out = JSON.parse(textPart.text);
+          const out = JSON.parse(textField);
           if (out && typeof out === 'object' && 'result' in out) {
             const result = (out as any).result;
             if (result && typeof result === 'object') {

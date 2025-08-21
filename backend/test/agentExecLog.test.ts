@@ -58,7 +58,7 @@ describe('agent exec log routes', () => {
       output: [
         {
           type: 'message',
-          id: 'msg',
+          id: 'msg_0',
           role: 'assistant',
           content: [
             {
