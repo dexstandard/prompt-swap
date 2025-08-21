@@ -24,33 +24,34 @@ export default function AppShell() {
         </div>
       </header>
       <div className="flex flex-1">
-        <nav className="w-48 bg-gray-100 p-4">
-          <Link to="/" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
-            <Bot className="w-4 h-4" />
-            Agents
-          </Link>
-          <Link to="/keys" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
-            <Key className="w-4 h-4" />
-            Keys
-          </Link>
-          <Link to="/settings" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
-            <SettingsIcon className="w-4 h-4" />
-            Settings
-          </Link>
+        <nav className="w-48 bg-gray-100 p-4 flex flex-col justify-between h-full">
+          <div>
+            <Link to="/" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
+              <Bot className="w-4 h-4" />
+              Agents
+            </Link>
+            <Link to="/keys" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
+              <Key className="w-4 h-4" />
+              Keys
+            </Link>
+            <Link to="/settings" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
+              <SettingsIcon className="w-4 h-4" />
+              Settings
+            </Link>
+          </div>
+          <div className="text-sm text-gray-600">
+            <Link to="/terms" className="block mb-2 hover:text-gray-900">
+              Terms
+            </Link>
+            <Link to="/privacy" className="block hover:text-gray-900">
+              Privacy
+            </Link>
+          </div>
         </nav>
         <main className="flex-1 p-3 bg-white">
           <Outlet />
         </main>
       </div>
-      <footer className="bg-gray-100 text-center text-sm text-gray-600 p-4">
-        <Link to="/terms" className="mx-2 hover:text-gray-800">
-          Terms
-        </Link>
-        •
-        <Link to="/privacy" className="mx-2 hover:text-gray-800">
-          Privacy
-        </Link>
-      </footer>
     </div>
   );
 }

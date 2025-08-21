@@ -10,7 +10,7 @@ export default function Terms() {
         You are free to review the source code and run your own instance on your
         infrastructure. The code is available at{' '}
         <a
-          href="https://github.com/prompt-swap/prompt-swap"
+          href="https://github.com/dexstandard/prompt-swap"
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 underline"

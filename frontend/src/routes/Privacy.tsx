@@ -4,7 +4,7 @@ export default function Privacy() {
       <h2 className="text-xl font-bold">Privacy Policy</h2>
       <p>
         We collect only the information required to run the service. When you sign
-        in with Google we record your Google account ID; your email is used only for
+        in with Google we record your Google account ID. Your email is used only for
         display and is not stored in our database. Agent configuration data and
         optional two-factor authentication secrets are also saved.
       </p>
