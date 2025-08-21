@@ -141,7 +141,7 @@ export default function ViewAgent() {
       </p>
       <div className="mt-4">
         <div
-          className="flex items-center justify-between cursor-pointer"
+          className="flex items-center gap-1 cursor-pointer"
           onClick={() => setShowStrategy((s) => !s)}
         >
           <h2 className="text-xl font-bold">Strategy</h2>
@@ -159,7 +159,7 @@ export default function ViewAgent() {
       </div>
       <div className="mt-4">
         <div className="flex items-center gap-1">
-          <h2 className="text-xl font-bold flex-1">Trading Agent Instructions</h2>
+          <h2 className="text-xl font-bold">Trading Instructions</h2>
           {showPrompt ? (
             <EyeOff
               className="w-4 h-4 cursor-pointer"
