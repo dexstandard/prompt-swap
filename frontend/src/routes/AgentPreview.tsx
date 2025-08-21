@@ -120,20 +120,22 @@ export default function AgentPreview({ draft }: Props) {
           className="text-2xl font-bold"
         />
       </h1>
-      <StrategyForm
-        data={agentData}
-        onChange={(key, value) =>
-          setAgentData((d) => {
-            const updated = { ...d, [key]: value };
-            const normalized = normalizeAllocations(
-              updated.targetAllocation,
-              updated.minTokenAAllocation,
-              updated.minTokenBAllocation,
-            );
-            return { ...updated, ...normalized };
-          })
-        }
-      />
+      <div className="max-w-2xl">
+        <StrategyForm
+          data={agentData}
+          onChange={(key, value) =>
+            setAgentData((d) => {
+              const updated = { ...d, [key]: value };
+              const normalized = normalizeAllocations(
+                updated.targetAllocation,
+                updated.minTokenAAllocation,
+                updated.minTokenBAllocation,
+              );
+              return { ...updated, ...normalized };
+            })
+          }
+        />
+      </div>
       <AgentInstructions
         value={agentData.agentInstructions}
         onChange={(v) => setAgentData((d) => ({ ...d, agentInstructions: v }))}
