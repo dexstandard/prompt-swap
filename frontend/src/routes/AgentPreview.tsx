@@ -44,8 +44,10 @@ export default function AgentPreview({ draft }: Props) {
   const { user } = useUser();
   const toast = useToast();
   const data = draft ?? locationData;
-  const [agentData, setAgentData] = useState(data);
-  useEffect(() => setAgentData(data), [data]);
+  const [agentData, setAgentData] = useState<AgentPreviewDetails | undefined>(data);
+  useEffect(() => {
+    if (data) setAgentData(data);
+  }, [data]);
   const aiKeyQuery = useQuery<string | null>({
     queryKey: ['ai-key', user?.id],
     enabled: !!user,
@@ -109,7 +111,7 @@ export default function AgentPreview({ draft }: Props) {
 
   const isDraft = !!draft;
 
-  if (!data) return <div className="p-4">No preview data</div>;
+  if (!agentData) return <div className="p-4">No preview data</div>;
 
   return (
     <div className="p-4">
@@ -117,7 +119,7 @@ export default function AgentPreview({ draft }: Props) {
         <span>{isDraft ? 'Agent Draft:' : 'Agent Preview:'}</span>
         <AgentName
           name={agentData.name}
-          onChange={(name) => setAgentData((d) => ({ ...d, name }))}
+          onChange={(name) => setAgentData((d) => (d ? { ...d, name } : d))}
           className="text-2xl font-bold"
         />
       </h1>
@@ -126,7 +128,8 @@ export default function AgentPreview({ draft }: Props) {
           data={agentData}
           onChange={(key, value) =>
             setAgentData((d) => {
-              const updated = { ...d, [key]: value };
+              if (!d) return d;
+              const updated = { ...d, [key]: value } as AgentPreviewDetails;
               const normalized = normalizeAllocations(
                 updated.targetAllocation,
                 updated.minTokenAAllocation,
@@ -139,7 +142,7 @@ export default function AgentPreview({ draft }: Props) {
       </div>
       <AgentInstructions
         value={agentData.agentInstructions}
-        onChange={(v) => setAgentData((d) => ({ ...d, agentInstructions: v }))}
+        onChange={(v) => setAgentData((d) => (d ? { ...d, agentInstructions: v } : d))}
       />
       {user && !hasOpenAIKey && (
         <div className="mt-4">
