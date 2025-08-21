@@ -264,6 +264,70 @@ describe('agent routes', () => {
     (globalThis as any).fetch = originalFetch;
   });
 
+  it('updates running agent and refreshes start balance', async () => {
+    const app = await buildServer();
+    addUser('update-user');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+        }),
+      } as any)
+      .mockResolvedValueOnce({ text: async () => 'ok' } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          balances: [{ asset: 'USDT', free: '200', locked: '0' }],
+        }),
+      } as any)
+      .mockResolvedValueOnce({ text: async () => 'ok' } as any);
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+
+    const createPayload = {
+      userId: 'update-user',
+      model: 'm',
+      name: 'A',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      targetAllocation: 60,
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      status: 'active',
+    };
+
+    const resCreate = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'update-user' },
+      payload: createPayload,
+    });
+    expect(resCreate.statusCode).toBe(200);
+    const id = resCreate.json().id as string;
+
+    const updatePayload = { ...createPayload, targetAllocation: 70 };
+    const resUpdate = await app.inject({
+      method: 'PUT',
+      url: `/api/agents/${id}`,
+      headers: { 'x-user-id': 'update-user' },
+      payload: updatePayload,
+    });
+    expect(resUpdate.statusCode).toBe(200);
+    const row = db
+      .prepare('SELECT start_balance FROM agents WHERE id = ?')
+      .get(id) as { start_balance: number };
+    expect(row.start_balance).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    await app.close();
+    (globalThis as any).fetch = originalFetch;
+  });
+
   it('handles drafts and api key validation', async () => {
     const app = await buildServer();
     addUserNoKeys('u1');

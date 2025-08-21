@@ -399,8 +399,20 @@ export default async function agentRoutes(app: FastifyInstance) {
       }
     }
       const status = body.status;
+      let startBalance: number | null = null;
+      if (status === AgentStatus.Active) {
+        try {
+          startBalance = await fetchTotalBalanceUsd(userId);
+        } catch {
+          return reply
+            .code(500)
+            .send(errorResponse('failed to fetch balance'));
+        }
+        if (startBalance === null)
+          return reply.code(500).send(errorResponse('failed to fetch balance'));
+      }
       db.prepare(
-        `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ? WHERE id = ?`
+        `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ? WHERE id = ?`
       ).run(
         body.userId,
         body.model,
@@ -414,9 +426,11 @@ export default async function agentRoutes(app: FastifyInstance) {
         body.risk,
         body.reviewInterval,
         body.agentInstructions,
+        startBalance,
         id,
       );
       const row = getAgent(id)!;
+      if (status === AgentStatus.Active) await reviewPortfolio(req.log, id);
       return toApi(row);
     }
   );

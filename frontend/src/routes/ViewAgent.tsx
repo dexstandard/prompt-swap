@@ -1,15 +1,20 @@
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
 import AgentBalance from '../components/AgentBalance';
-import RiskDisplay from '../components/RiskDisplay';
 import Button from '../components/ui/Button';
 import { useToast } from '../components/Toast';
 import AgentPreview from './AgentPreview';
+import StrategyForm from '../components/StrategyForm';
+import { Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
+import Modal from '../components/ui/Modal';
+import AgentInstructions from '../components/AgentInstructions';
+import { normalizeAllocations } from '../lib/allocations';
 
 interface Agent {
   id: string;
@@ -74,17 +79,55 @@ export default function ViewAgent() {
   if (!data) return <div className="p-4">Loading...</div>;
   if (data.status === 'draft') return <AgentPreview draft={data} />;
 
-  const reviewIntervalMap: Record<string, string> = {
-    '1h': '1 Hour',
-    '3h': '3 Hours',
-    '5h': '5 Hours',
-    '12h': '12 Hours',
-    '24h': '1 Day',
-    '3d': '3 Days',
-    '1w': '1 Week',
-  };
-  const reviewIntervalLabel = reviewIntervalMap[data.reviewInterval] ?? data.reviewInterval;
   const isActive = data.status === 'active';
+
+  const [showStrategy, setShowStrategy] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [showUpdate, setShowUpdate] = useState(false);
+  const [updateData, setUpdateData] = useState({
+    tokenA: data.tokenA,
+    tokenB: data.tokenB,
+    targetAllocation: data.targetAllocation,
+    minTokenAAllocation: data.minTokenAAllocation,
+    minTokenBAllocation: data.minTokenBAllocation,
+    risk: data.risk,
+    reviewInterval: data.reviewInterval,
+    agentInstructions: data.agentInstructions,
+  });
+
+  const updateMut = useMutation({
+    mutationFn: async () => {
+      if (!id) return;
+      await api.put(`/agents/${id}`, {
+        userId: data!.userId,
+        model: data!.model,
+        status: data!.status,
+        name: data!.name,
+        ...updateData,
+      });
+    },
+    onSuccess: () => {
+      setShowUpdate(false);
+      queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] });
+    },
+    onError: (err) => {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        toast.show(err.response.data.error);
+      } else {
+        toast.show('Failed to update agent');
+      }
+    },
+  });
+
+  const strategyData = {
+    tokenA: data.tokenA,
+    tokenB: data.tokenB,
+    targetAllocation: data.targetAllocation,
+    minTokenAAllocation: data.minTokenAAllocation,
+    minTokenBAllocation: data.minTokenBAllocation,
+    risk: data.risk,
+    reviewInterval: data.reviewInterval,
+  };
 
   return (
     <div className="p-4">
@@ -96,29 +139,46 @@ export default function ViewAgent() {
         <span>/</span>
         <TokenDisplay token={data.tokenB} />
       </p>
-      <p>
-        <strong>Target Allocation:</strong> {data.targetAllocation} /{' '}
-        {100 - data.targetAllocation}
-      </p>
-      <p>
-        <strong>Minimum {data.tokenA.toUpperCase()} Allocation:</strong>{' '}
-        {data.minTokenAAllocation}%
-      </p>
-      <p>
-        <strong>Minimum {data.tokenB.toUpperCase()} Allocation:</strong>{' '}
-        {data.minTokenBAllocation}%
-      </p>
-      <p className="flex items-center gap-1">
-        <strong>Risk Tolerance:</strong> <RiskDisplay risk={data.risk} />
-      </p>
-      <p>
-        <strong>Review Interval:</strong> {reviewIntervalLabel}
-      </p>
       <div className="mt-4">
-        <h2 className="text-xl font-bold">Trading Agent Instructions</h2>
-        <pre className="whitespace-pre-wrap">{data.agentInstructions}</pre>
+        <div
+          className="flex items-center justify-between cursor-pointer"
+          onClick={() => setShowStrategy((s) => !s)}
+        >
+          <h2 className="text-xl font-bold">Strategy</h2>
+          {showStrategy ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
+        </div>
+        {showStrategy && (
+          <div className="mt-2 max-w-2xl">
+            <StrategyForm data={strategyData} onChange={() => {}} disabled />
+          </div>
+        )}
       </div>
-      <p>
+      <div className="mt-4">
+        <div className="flex items-center gap-1">
+          <h2 className="text-xl font-bold flex-1">Trading Agent Instructions</h2>
+          {showPrompt ? (
+            <EyeOff
+              className="w-4 h-4 cursor-pointer"
+              onClick={() => setShowPrompt(false)}
+            />
+          ) : (
+            <Eye
+              className="w-4 h-4 cursor-pointer"
+              onClick={() => setShowPrompt(true)}
+            />
+          )}
+        </div>
+        {showPrompt && (
+          <pre className="whitespace-pre-wrap mt-2">
+            {data.agentInstructions}
+          </pre>
+        )}
+      </div>
+      <p className="mt-4">
         <strong>Status:</strong> <AgentStatusLabel status={data.status} />
       </p>
       <p>
@@ -129,14 +189,30 @@ export default function ViewAgent() {
         <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB} />
       </p>
       {isActive ? (
-        <Button
-          className="mt-4"
-          disabled={stopMut.isPending}
-          loading={stopMut.isPending}
-          onClick={() => stopMut.mutate()}
-        >
-          Stop Agent
-        </Button>
+        <div className="mt-4 flex gap-2">
+          <Button onClick={() => {
+            setUpdateData({
+              tokenA: data.tokenA,
+              tokenB: data.tokenB,
+              targetAllocation: data.targetAllocation,
+              minTokenAAllocation: data.minTokenAAllocation,
+              minTokenBAllocation: data.minTokenBAllocation,
+              risk: data.risk,
+              reviewInterval: data.reviewInterval,
+              agentInstructions: data.agentInstructions,
+            });
+            setShowUpdate(true);
+          }}>
+            Update Agent
+          </Button>
+          <Button
+            disabled={stopMut.isPending}
+            loading={stopMut.isPending}
+            onClick={() => stopMut.mutate()}
+          >
+            Stop Agent
+          </Button>
+        </div>
       ) : (
         <Button
           className="mt-4"
@@ -147,6 +223,43 @@ export default function ViewAgent() {
           Start Agent
         </Button>
       )}
+      <Modal open={showUpdate} onClose={() => setShowUpdate(false)}>
+        <h2 className="text-xl font-bold mb-2">Update Agent</h2>
+        <div className="max-w-2xl">
+          <StrategyForm
+            data={updateData}
+            onChange={(key, value) =>
+              setUpdateData((d) => {
+                const updated = { ...d, [key]: value };
+                const normalized = normalizeAllocations(
+                  updated.targetAllocation,
+                  updated.minTokenAAllocation,
+                  updated.minTokenBAllocation,
+                );
+                return { ...updated, ...normalized };
+              })
+            }
+          />
+        </div>
+        <AgentInstructions
+          value={updateData.agentInstructions}
+          onChange={(v) =>
+            setUpdateData((d) => ({ ...d, agentInstructions: v }))
+          }
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <Button onClick={() => setShowUpdate(false)}>Cancel</Button>
+          <Button
+            disabled={updateMut.isPending}
+            loading={updateMut.isPending}
+            onClick={() => {
+              if (window.confirm('Update running agent?')) updateMut.mutate();
+            }}
+          >
+            Confirm
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -10,11 +10,13 @@ export default function TokenSelect({
   onChange,
   options,
   id,
+  disabled = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: Option[];
   id: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
@@ -24,7 +26,8 @@ export default function TokenSelect({
       <button
         type="button"
         id={id}
-        onClick={() => setOpen(!open)}
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(!open)}
         className="w-full border rounded px-2 py-1 flex items-center justify-between"
       >
         {selected ? (
@@ -34,7 +37,7 @@ export default function TokenSelect({
         )}
         <span className="ml-2">▾</span>
       </button>
-      {open && (
+      {open && !disabled && (
         <ul className="absolute z-10 w-full bg-white border rounded mt-1 max-h-40 overflow-auto">
           {options.map((opt) => (
             <li key={opt.value}>
