@@ -37,7 +37,10 @@ export default async function modelsRoutes(app: FastifyInstance) {
       const json = await res.json();
       const models = (json.data as { id: string }[])
         .map((m) => m.id)
-        .filter((id: string) => /^(gpt-5|o3|search)/.test(id));
+        .filter(
+          (id: string) =>
+            id.startsWith('gpt-5') || id.startsWith('o3') || id.includes('search'),
+        );
       return { models };
       } catch {
         return reply
