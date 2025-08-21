@@ -24,6 +24,7 @@ import { requireUserId } from '../util/auth.js';
 import { fetchTotalBalanceUsd } from '../services/binance.js';
 import { calculatePnl } from '../services/pnl.js';
 import { RATE_LIMITS } from '../rate-limit.js';
+import { parseExecLog } from '../util/parse-exec-log.js';
 
 interface ValidationErr {
   code: number;
@@ -278,11 +279,16 @@ export default async function agentRoutes(app: FastifyInstance) {
       const { rows, total } = getAgentExecLog(id, ps, offset);
       log.info('fetched exec log');
       return {
-        items: rows.map((r) => ({
-          id: r.id,
-          log: r.log,
-          createdAt: r.created_at,
-        })),
+        items: rows.map((r) => {
+          const parsed = parseExecLog(r.log);
+          return {
+            id: r.id,
+            log: parsed.text,
+            response: parsed.response,
+            error: parsed.error,
+            createdAt: r.created_at,
+          };
+        }),
         total,
         page: p,
         pageSize: ps,
