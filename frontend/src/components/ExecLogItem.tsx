@@ -24,13 +24,22 @@ export default function ExecLogItem({ log }: Props) {
     try {
       const parsed = JSON.parse(log.log);
       if (parsed && typeof parsed === 'object') {
+        const body = (parsed as any).body;
         if ('error' in parsed) {
           error = (parsed as any).error;
           const { error: _err, ...rest } = parsed as any;
           text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
+        } else if (body && typeof body === 'object' && 'error' in body) {
+          error = body.error;
+          const { body: _body, ...rest } = parsed as any;
+          text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
         } else if ((parsed as any).object === 'response') {
           response = parsed as Record<string, unknown>;
           text = '';
+        } else if (body && typeof body === 'object' && body.object === 'response') {
+          response = body as Record<string, unknown>;
+          const { body: _body, ...rest } = parsed as any;
+          text = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : '';
         }
       }
     } catch {
