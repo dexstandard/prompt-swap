@@ -12,6 +12,7 @@ import { useToast } from '../components/Toast';
 import AgentPreview from './AgentPreview';
 import StrategyForm from '../components/StrategyForm';
 import { Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
+import ExecLogItem, { type ExecLog } from '../components/ExecLogItem';
 import Modal from '../components/ui/Modal';
 import AgentInstructions from '../components/AgentInstructions';
 import { normalizeAllocations } from '../lib/allocations';
@@ -31,12 +32,6 @@ interface Agent {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
-}
-
-interface ExecLog {
-  id: string;
-  log: string;
-  createdAt: number;
 }
 
 export default function ViewAgent() {
@@ -266,7 +261,9 @@ export default function ViewAgent() {
                       <td className="align-top pr-2">
                         {new Date(log.createdAt).toLocaleString()}
                       </td>
-                      <td className="whitespace-pre-wrap">{log.log}</td>
+                      <td>
+                        <ExecLogItem log={log} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
