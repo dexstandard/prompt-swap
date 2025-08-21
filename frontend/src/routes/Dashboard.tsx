@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Eye } from 'lucide-react';
+import { Eye, Trash } from 'lucide-react';
+import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
@@ -11,6 +12,7 @@ import Button from '../components/ui/Button';
 import CreateAgentForm from '../components/forms/CreateAgentForm';
 import PriceChart from '../components/forms/PriceChart';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { useToast } from '../components/Toast';
 
 interface Agent {
   id: string;
@@ -26,6 +28,8 @@ export default function Dashboard() {
   const [page, setPage] = useState(1);
   const [tokens, setTokens] = useState({ tokenA: 'USDT', tokenB: 'SOL' });
   const [onlyActive, setOnlyActive] = useState(false);
+  const queryClient = useQueryClient();
+  const toast = useToast();
 
   const handleTokensChange = useCallback((a: string, b: string) => {
     setTokens((prev) =>
@@ -56,6 +60,24 @@ export default function Dashboard() {
 
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
   const items = data?.items ?? [];
+
+  const handleDelete = async (id: string) => {
+    const confirmed = window.confirm('Delete this agent?');
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await api.delete(`/agents/${id}`);
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      toast.show('Agent deleted', 'success');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        toast.show(err.response.data.error);
+      } else {
+        toast.show('Failed to delete agent');
+      }
+    }
+  };
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -124,13 +146,22 @@ export default function Dashboard() {
                         <AgentStatusLabel status={agent.status} />
                       </td>
                       <td>
-                        <Link
-                          className="text-blue-600 underline inline-flex"
-                          to={`/agents/${agent.id}`}
-                          aria-label="View agent"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            className="text-blue-600 underline inline-flex"
+                            to={`/agents/${agent.id}`}
+                            aria-label="View agent"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <button
+                            className="text-red-600"
+                            onClick={() => handleDelete(agent.id)}
+                            aria-label="Delete agent"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

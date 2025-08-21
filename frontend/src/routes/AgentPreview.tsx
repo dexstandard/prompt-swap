@@ -211,9 +211,8 @@ export default function AgentPreview({ draft }: Props) {
                     agentInstructions: agentData.agentInstructions,
                     status: 'draft',
                   });
-                  navigate(`/agents/${draft!.id}`);
                 } else {
-                  const res = await api.post('/agents', {
+                  await api.post('/agents', {
                     userId: user.id,
                     model,
                     name: agentData.name,
@@ -227,8 +226,10 @@ export default function AgentPreview({ draft }: Props) {
                     agentInstructions: agentData.agentInstructions,
                     status: 'draft',
                   });
-                  navigate(`/agents/${res.data.id}`);
                 }
+                setIsSavingDraft(false);
+                toast.show('Draft saved successfully', 'success');
+                navigate('/');
               } catch (err) {
                 setIsSavingDraft(false);
                 if (axios.isAxiosError(err) && err.response?.data?.error) {
@@ -239,7 +240,7 @@ export default function AgentPreview({ draft }: Props) {
               }
             }}
           >
-            Save Draft
+            {isDraft ? 'Update Draft' : 'Save Draft'}
           </Button>
           <Button
             disabled={
