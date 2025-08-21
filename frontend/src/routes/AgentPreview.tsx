@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import AgentName from '../components/AgentName';
-import AgentStrategy from '../components/AgentStrategy';
+import StrategyForm from '../components/StrategyForm';
 import AgentInstructions from '../components/AgentInstructions';
 import { normalizeAllocations } from '../lib/allocations';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -120,7 +120,7 @@ export default function AgentPreview({ draft }: Props) {
           className="text-2xl font-bold"
         />
       </h1>
-      <AgentStrategy
+      <StrategyForm
         data={agentData}
         onChange={(key, value) =>
           setAgentData((d) => {
