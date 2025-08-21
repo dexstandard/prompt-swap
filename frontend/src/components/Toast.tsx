@@ -1,24 +1,30 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface ToastContext {
-  show: (message: string) => void;
+  show: (message: string, variant?: 'error' | 'success') => void;
 }
 const Context = createContext<ToastContext>({ show: () => {} });
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [message, setMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<
+    { message: string; variant: 'error' | 'success' } | null
+  >(null);
 
-  const show = (msg: string) => {
-    setMessage(msg);
-    setTimeout(() => setMessage(null), 3000);
+  const show = (msg: string, variant: 'error' | 'success' = 'error') => {
+    setToast({ message: msg, variant });
+    setTimeout(() => setToast(null), 3000);
   };
 
   return (
     <Context.Provider value={{ show }}>
       {children}
-      {message && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded shadow">
-          {message}
+      {toast && (
+        <div
+          className={`fixed top-4 left-1/2 -translate-x-1/2 text-white px-4 py-2 rounded shadow ${
+            toast.variant === 'error' ? 'bg-red-600' : 'bg-green-600'
+          }`}
+        >
+          {toast.message}
         </div>
       )}
     </Context.Provider>
