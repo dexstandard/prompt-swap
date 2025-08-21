@@ -10,6 +10,7 @@ import reviewPortfolio from '../jobs/review-portfolio.js';
 import { requireUserId } from '../util/auth.js';
 import { fetchTotalBalanceUsd } from '../services/binance.js';
 import { calculatePnl } from '../services/pnl.js';
+import { RATE_LIMITS } from '../rate-limit.js';
 
 export enum AgentStatus {
   Active = 'active',
@@ -65,27 +66,12 @@ function getAgent(id: string) {
 }
 
 export default async function agentRoutes(app: FastifyInstance) {
-  app.get('/agents', async (req, reply) => {
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
-    const { status } = req.query as { status?: AgentStatus };
-    let sql = `${baseSelect} WHERE user_id = ?`;
-    const params: unknown[] = [userId];
-    if (
-      status === AgentStatus.Active ||
-      status === AgentStatus.Inactive ||
-      status === AgentStatus.Draft
-    ) {
-      sql += ' AND status = ?';
-      params.push(status);
-    }
-    const rows = db.prepare(sql).all(...params) as AgentRow[];
-    return rows.map(toApi);
-  });
-
-  app.get('/agents/paginated', async (req, reply) => {
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
+  app.get(
+    '/agents/paginated',
+    { config: { rateLimit: RATE_LIMITS.RELAXED } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
     const { page = '1', pageSize = '10', status } = req.query as {
       page?: string;
       pageSize?: string;
@@ -116,12 +102,16 @@ export default async function agentRoutes(app: FastifyInstance) {
       page: p,
       pageSize: ps,
     };
-  });
+    }
+  );
 
-  app.post('/agents', async (req, reply) => {
-    const body = req.body as {
-      userId: string;
-      model: string;
+  app.post(
+    '/agents',
+    { config: { rateLimit: RATE_LIMITS.TIGHT } },
+    async (req, reply) => {
+      const body = req.body as {
+        userId: string;
+        model: string;
       name: string;
       tokenA: string;
       tokenB: string;
@@ -133,8 +123,8 @@ export default async function agentRoutes(app: FastifyInstance) {
       agentInstructions: string;
       status: AgentStatus;
     };
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
     if (body.userId !== userId)
       return reply
         .code(403)
@@ -256,44 +246,56 @@ export default async function agentRoutes(app: FastifyInstance) {
     );
     const row = getAgent(id)!;
     if (body.status === AgentStatus.Active) await reviewPortfolio(req.log, id);
-    return toApi(row);
-  });
+      return toApi(row);
+    }
+  );
 
-  app.get('/agents/:id', async (req, reply) => {
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
-    const id = (req.params as any).id;
-    const row = getAgent(id);
-    if (!row)
-      return reply
-        .code(404)
-        .send(errorResponse(ERROR_MESSAGES.notFound));
-    if (row.user_id !== userId)
-      return reply
-        .code(403)
-        .send(errorResponse(ERROR_MESSAGES.forbidden));
-    return toApi(row);
-  });
+  app.get(
+    '/agents/:id',
+    { config: { rateLimit: RATE_LIMITS.RELAXED } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const row = getAgent(id);
+      if (!row)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      if (row.user_id !== userId)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      return toApi(row);
+    }
+  );
 
-  app.get('/agents/:id/pnl', async (req, reply) => {
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
-    const id = (req.params as any).id;
-    const perf = await calculatePnl(id, userId);
-    if (!perf)
-      return reply
-        .code(404)
-        .send(errorResponse(ERROR_MESSAGES.notFound));
-    return perf;
-  });
+  app.get(
+    '/agents/:id/pnl',
+    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const perf = await calculatePnl(id, userId);
+      if (!perf)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      return perf;
+    }
+  );
 
-  app.put('/agents/:id', async (req, reply) => {
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
-    const id = (req.params as any).id;
-    const body = req.body as {
-      userId: string;
-      model: string;
+  app.put(
+    '/agents/:id',
+    { config: { rateLimit: RATE_LIMITS.TIGHT } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const body = req.body as {
+        userId: string;
+        model: string;
       status: AgentStatus;
       name: string;
       tokenA: string;
@@ -305,18 +307,18 @@ export default async function agentRoutes(app: FastifyInstance) {
       reviewInterval: string;
       agentInstructions: string;
     };
-    const existing = db
-      .prepare('SELECT user_id, status FROM agents WHERE id = ?')
-      .get(id) as { user_id: string; status: string } | undefined;
-    if (!existing)
-      return reply
-        .code(404)
-        .send(errorResponse(ERROR_MESSAGES.notFound));
-    if (existing.user_id !== userId || body.userId !== userId)
-      return reply
-        .code(403)
-        .send(errorResponse(ERROR_MESSAGES.forbidden));
-    if (body.status === AgentStatus.Active) {
+      const existing = db
+        .prepare('SELECT user_id, status FROM agents WHERE id = ?')
+        .get(id) as { user_id: string; status: string } | undefined;
+      if (!existing)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      if (existing.user_id !== userId || body.userId !== userId)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      if (body.status === AgentStatus.Active) {
       const userRow = db
         .prepare(
           'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
@@ -334,8 +336,8 @@ export default async function agentRoutes(app: FastifyInstance) {
         !userRow.binance_api_secret_enc
       )
         return reply.code(400).send(errorResponse('missing api keys'));
-    }
-    if (body.status === AgentStatus.Draft) {
+      }
+      if (body.status === AgentStatus.Draft) {
       const dupDraft = db
         .prepare(
           `SELECT id, name FROM agents
@@ -396,60 +398,68 @@ export default async function agentRoutes(app: FastifyInstance) {
         return reply.code(400).send(errorResponse(msg));
       }
     }
-    const status = body.status;
-    db.prepare(
-      `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ? WHERE id = ?`
-    ).run(
-      body.userId,
-      body.model,
-      status,
-      body.name,
-      body.tokenA,
-      body.tokenB,
-      body.targetAllocation,
-      body.minTokenAAllocation,
-      body.minTokenBAllocation,
-      body.risk,
-      body.reviewInterval,
-      body.agentInstructions,
-      id,
-    );
-    const row = getAgent(id)!;
-    return toApi(row);
-  });
+      const status = body.status;
+      db.prepare(
+        `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ? WHERE id = ?`
+      ).run(
+        body.userId,
+        body.model,
+        status,
+        body.name,
+        body.tokenA,
+        body.tokenB,
+        body.targetAllocation,
+        body.minTokenAAllocation,
+        body.minTokenBAllocation,
+        body.risk,
+        body.reviewInterval,
+        body.agentInstructions,
+        id,
+      );
+      const row = getAgent(id)!;
+      return toApi(row);
+    }
+  );
 
-  app.delete('/agents/:id', async (req, reply) => {
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
-    const id = (req.params as any).id;
-    const existing = db
-      .prepare('SELECT user_id FROM agents WHERE id = ?')
-      .get(id) as { user_id: string } | undefined;
-    if (!existing)
-      return reply
-        .code(404)
-        .send(errorResponse(ERROR_MESSAGES.notFound));
-    if (existing.user_id !== userId)
-      return reply
-        .code(403)
-        .send(errorResponse(ERROR_MESSAGES.forbidden));
-    db.prepare('DELETE FROM agents WHERE id = ?').run(id);
-    return { ok: true };
-  });
+  app.delete(
+    '/agents/:id',
+    { config: { rateLimit: RATE_LIMITS.TIGHT } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const existing = db
+        .prepare('SELECT user_id FROM agents WHERE id = ?')
+        .get(id) as { user_id: string } | undefined;
+      if (!existing)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      if (existing.user_id !== userId)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      db.prepare('DELETE FROM agents WHERE id = ?').run(id);
+      return { ok: true };
+    }
+  );
 
-  app.post('/agents/:id/start', async (req, reply) => {
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
-    const id = (req.params as any).id;
-    const existing = getAgent(id);
-    if (!existing)
-      return reply
-        .code(404)
-        .send(errorResponse(ERROR_MESSAGES.notFound));
-    if (existing.user_id !== userId)
-      return reply
-        .code(403)
-        .send(errorResponse(ERROR_MESSAGES.forbidden));
+  app.post(
+    '/agents/:id/start',
+    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const existing = getAgent(id);
+      if (!existing)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      if (existing.user_id !== userId)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
     const dupRows = db
       .prepare(
         `SELECT id, name, token_a, token_b FROM agents
@@ -478,7 +488,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
       return reply.code(400).send(errorResponse(msg));
     }
-    const userRow = db
+      const userRow = db
       .prepare(
         'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
       )
@@ -489,48 +499,53 @@ export default async function agentRoutes(app: FastifyInstance) {
           binance_api_secret_enc?: string;
         }
       | undefined;
-    if (
-      !userRow?.ai_api_key_enc ||
-      !userRow.binance_api_key_enc ||
-      !userRow.binance_api_secret_enc
-    )
-      return reply.code(400).send(errorResponse('missing api keys'));
-    let startBalance: number | null = null;
-    try {
-      startBalance = await fetchTotalBalanceUsd(userId);
-    } catch {
-      return reply
-        .code(500)
-        .send(errorResponse('failed to fetch balance'));
+      if (
+        !userRow?.ai_api_key_enc ||
+        !userRow.binance_api_key_enc ||
+        !userRow.binance_api_secret_enc
+      )
+        return reply.code(400).send(errorResponse('missing api keys'));
+      let startBalance: number | null = null;
+      try {
+        startBalance = await fetchTotalBalanceUsd(userId);
+      } catch {
+        return reply
+          .code(500)
+          .send(errorResponse('failed to fetch balance'));
+      }
+      if (startBalance === null)
+        return reply.code(500).send(errorResponse('failed to fetch balance'));
+      db.prepare(
+        'UPDATE agents SET status = ?, start_balance = ? WHERE id = ?',
+      ).run(AgentStatus.Active, startBalance, id);
+      await reviewPortfolio(req.log, id);
+      const row = getAgent(id)!;
+      return toApi(row);
     }
-    if (startBalance === null)
-      return reply.code(500).send(errorResponse('failed to fetch balance'));
-    db.prepare(
-      'UPDATE agents SET status = ?, start_balance = ? WHERE id = ?',
-    ).run(AgentStatus.Active, startBalance, id);
-    await reviewPortfolio(req.log, id);
-    const row = getAgent(id)!;
-    return toApi(row);
-  });
+  );
 
-  app.post('/agents/:id/stop', async (req, reply) => {
-    const userId = requireUserId(req, reply);
-    if (!userId) return;
-    const id = (req.params as any).id;
-    const existing = getAgent(id);
-    if (!existing)
-      return reply
-        .code(404)
-        .send(errorResponse(ERROR_MESSAGES.notFound));
-    if (existing.user_id !== userId)
-      return reply
-        .code(403)
-        .send(errorResponse(ERROR_MESSAGES.forbidden));
-    db.prepare('UPDATE agents SET status = ?, start_balance = NULL WHERE id = ?').run(
-      AgentStatus.Inactive,
-      id,
-    );
-    const row = getAgent(id)!;
-    return toApi(row);
-  });
+  app.post(
+    '/agents/:id/stop',
+    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
+    async (req, reply) => {
+      const userId = requireUserId(req, reply);
+      if (!userId) return;
+      const id = (req.params as any).id;
+      const existing = getAgent(id);
+      if (!existing)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      if (existing.user_id !== userId)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      db.prepare('UPDATE agents SET status = ?, start_balance = NULL WHERE id = ?').run(
+        AgentStatus.Inactive,
+        id,
+      );
+      const row = getAgent(id)!;
+      return toApi(row);
+    }
+  );
 }

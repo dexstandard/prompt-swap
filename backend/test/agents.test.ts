@@ -76,14 +76,6 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents',
-      headers: { 'x-user-id': 'user1' },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toHaveLength(1);
-
-    res = await app.inject({
-      method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10',
       headers: { 'x-user-id': 'user1' },
     });
@@ -93,19 +85,12 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents?status=active',
-      headers: { 'x-user-id': 'user1' },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toHaveLength(1);
-
-    res = await app.inject({
-      method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10&status=active',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
+    expect(res.json().items).toHaveLength(1);
 
     const update = { ...payload, model: 'o3', status: 'draft' };
     res = await app.inject({
@@ -119,19 +104,21 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents?status=active',
+      url: '/api/agents/paginated?page=1&pageSize=10&status=active',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toHaveLength(0);
+    expect(res.json()).toMatchObject({ total: 0, page: 1, pageSize: 10 });
+    expect(res.json().items).toHaveLength(0);
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents?status=draft',
+      url: '/api/agents/paginated?page=1&pageSize=10&status=draft',
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toHaveLength(1);
+    expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
+    expect(res.json().items).toHaveLength(1);
 
     res = await app.inject({
       method: 'DELETE',
