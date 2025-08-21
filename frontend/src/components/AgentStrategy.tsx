@@ -53,129 +53,138 @@ const reviewIntervalOptions = [
 ];
 
 export default function AgentStrategy({ data, onChange }: Props) {
+  const labelClass = 'w-40 font-semibold';
   return (
-    <dl className="grid grid-cols-[max-content,1fr] gap-x-2 gap-y-2">
-      <dt className="font-semibold flex items-center">Tokens:</dt>
-      <dd className="flex items-center gap-1">
-        <EditableText
-          value={data.tokenA}
-          onChange={(v) => onChange('tokenA', v)}
-          className="w-24"
-          textClassName="flex-1 px-0"
-          renderDisplay={(v) => <TokenDisplay token={v} />}
-          renderEditor={(local, setLocal, finish) => (
-            <div className="flex-1">
-              <TokenSelect
-                id="tokenA"
-                value={local}
-                onChange={(v) => {
-                  setLocal(v);
-                  finish();
-                }}
-                options={tokens.filter(
-                  (t) => t.value === data.tokenA || t.value !== data.tokenB
-                )}
-              />
-            </div>
-          )}
-        />
-        <span>/</span>
-        <EditableText
-          value={data.tokenB}
-          onChange={(v) => onChange('tokenB', v)}
-          className="w-24"
-          textClassName="flex-1 px-0"
-          renderDisplay={(v) => <TokenDisplay token={v} />}
-          renderEditor={(local, setLocal, finish) => (
-            <div className="flex-1">
-              <TokenSelect
-                id="tokenB"
-                value={local}
-                onChange={(v) => {
-                  setLocal(v);
-                  finish();
-                }}
-                options={tokens.filter(
-                  (t) => t.value === data.tokenB || t.value !== data.tokenA
-                )}
-              />
-            </div>
-          )}
-        />
-      </dd>
+    <dl className="space-y-2">
+      <div className="flex items-center gap-2">
+        <dt className={labelClass}>Tokens:</dt>
+        <dd className="flex items-center gap-1">
+          <EditableText
+            value={data.tokenA}
+            onChange={(v) => onChange('tokenA', v)}
+            className="min-w-[4rem]"
+            textClassName="px-0"
+            renderDisplay={(v) => <TokenDisplay token={v} />}
+            renderEditor={(local, setLocal, finish) => (
+              <div className="w-28">
+                <TokenSelect
+                  id="tokenA"
+                  value={local}
+                  onChange={(v) => {
+                    setLocal(v);
+                    finish();
+                  }}
+                  options={tokens.filter(
+                    (t) => t.value === data.tokenA || t.value !== data.tokenB
+                  )}
+                />
+              </div>
+            )}
+          />
+          <span>/</span>
+          <EditableText
+            value={data.tokenB}
+            onChange={(v) => onChange('tokenB', v)}
+            className="min-w-[4rem]"
+            textClassName="px-0"
+            renderDisplay={(v) => <TokenDisplay token={v} />}
+            renderEditor={(local, setLocal, finish) => (
+              <div className="w-28">
+                <TokenSelect
+                  id="tokenB"
+                  value={local}
+                  onChange={(v) => {
+                    setLocal(v);
+                    finish();
+                  }}
+                  options={tokens.filter(
+                    (t) => t.value === data.tokenB || t.value !== data.tokenA
+                  )}
+                />
+              </div>
+            )}
+          />
+        </dd>
+      </div>
 
-      <dt className="font-semibold flex items-center">Target Allocation:</dt>
-      <dd>
-        <EditableText
-          value={String(data.targetAllocation)}
-          onChange={(v) => onChange('targetAllocation', Number(v))}
-          textClassName="p-0"
-          renderDisplay={(v) => (
-            <span className="flex items-center gap-2">
-              <span className="w-24 whitespace-nowrap">
-                {v}% {data.tokenA.toUpperCase()}
+      <div className="flex items-center gap-2">
+        <dt className={labelClass}>Target Allocation:</dt>
+        <dd>
+          <EditableText
+            value={String(data.targetAllocation)}
+            onChange={(v) => onChange('targetAllocation', Number(v))}
+            textClassName="p-0"
+            renderDisplay={(v) => (
+              <span className="flex items-center gap-1 whitespace-nowrap">
+                <span>
+                  {v}% {data.tokenA.toUpperCase()}
+                </span>
+                <span>/</span>
+                <span>
+                  {100 - Number(v)}% {data.tokenB.toUpperCase()}
+                </span>
               </span>
-              <span>/</span>
-              <span className="w-24 whitespace-nowrap">
-                {100 - Number(v)}% {data.tokenB.toUpperCase()}
+            )}
+            renderEditor={(local, setLocal, finish) => (
+              <span className="flex items-center gap-2 w-64">
+                <span className="whitespace-nowrap">
+                  {local}% {data.tokenA.toUpperCase()}
+                </span>
+                <input
+                  type="range"
+                  min={data.minTokenAAllocation}
+                  max={100 - data.minTokenBAllocation}
+                  value={Number(local)}
+                  onChange={(e) => setLocal(e.target.value)}
+                  onMouseUp={finish}
+                  onBlur={finish}
+                  className="flex-1"
+                />
+                <span className="whitespace-nowrap">
+                  {100 - Number(local)}% {data.tokenB.toUpperCase()}
+                </span>
               </span>
-            </span>
-          )}
-          renderEditor={(local, setLocal, finish) => (
-            <span className="flex items-center gap-2">
-              <span className="w-24 whitespace-nowrap">
-                {local}% {data.tokenA.toUpperCase()}
-              </span>
-              <input
-                type="range"
-                min={data.minTokenAAllocation}
-                max={100 - data.minTokenBAllocation}
-                value={Number(local)}
-                onChange={(e) => setLocal(e.target.value)}
-                onMouseUp={finish}
-                onBlur={finish}
-                className="flex-1"
-              />
-              <span className="w-24 whitespace-nowrap">
-                {100 - Number(local)}% {data.tokenB.toUpperCase()}
-              </span>
-            </span>
-          )}
-        />
-      </dd>
+            )}
+          />
+        </dd>
+      </div>
 
-      <dt className="font-semibold flex items-center">
-        Min {data.tokenA.toUpperCase()} Allocation:
-      </dt>
-      <dd>
-        <EditableText
-          value={String(data.minTokenAAllocation)}
-          onChange={(v) => onChange('minTokenAAllocation', Number(v))}
-          renderDisplay={(v) => `${v}%`}
-        />
-      </dd>
+      <div className="flex items-center gap-2">
+        <dt className={labelClass}>Min {data.tokenA.toUpperCase()} Allocation:</dt>
+        <dd>
+          <EditableText
+            value={String(data.minTokenAAllocation)}
+            onChange={(v) => onChange('minTokenAAllocation', Number(v))}
+            className="w-16"
+            textClassName="px-0 text-right"
+            renderDisplay={(v) => `${v}%`}
+          />
+        </dd>
+      </div>
 
-      <dt className="font-semibold flex items-center">
-        Min {data.tokenB.toUpperCase()} Allocation:
-      </dt>
-      <dd>
-        <EditableText
-          value={String(data.minTokenBAllocation)}
-          onChange={(v) => onChange('minTokenBAllocation', Number(v))}
-          renderDisplay={(v) => `${v}%`}
-        />
-      </dd>
+      <div className="flex items-center gap-2">
+        <dt className={labelClass}>Min {data.tokenB.toUpperCase()} Allocation:</dt>
+        <dd>
+          <EditableText
+            value={String(data.minTokenBAllocation)}
+            onChange={(v) => onChange('minTokenBAllocation', Number(v))}
+            className="w-16"
+            textClassName="px-0 text-right"
+            renderDisplay={(v) => `${v}%`}
+          />
+        </dd>
+      </div>
 
-      <dt className="font-semibold flex items-center">Risk Tolerance:</dt>
-      <dd className="flex items-center gap-1">
-        <EditableText
-          value={data.risk}
-          onChange={(v) => onChange('risk', v)}
-          className="w-32 h-6"
-          textClassName="w-full px-0 flex items-center h-full"
-          renderDisplay={(v) => <RiskDisplay risk={v as any} />}
-          renderEditor={(local, setLocal, finish) => (
-            <div className="flex-1 h-full">
+      <div className="flex items-center gap-2">
+        <dt className={labelClass}>Risk Tolerance:</dt>
+        <dd>
+          <EditableText
+            value={data.risk}
+            onChange={(v) => onChange('risk', v)}
+            className="w-32 h-8"
+            textClassName="w-full px-0 flex items-center h-full"
+            renderDisplay={(v) => <RiskDisplay risk={v as any} />}
+            renderEditor={(local, setLocal, finish) => (
               <SelectInput
                 id="risk"
                 value={local}
@@ -184,23 +193,23 @@ export default function AgentStrategy({ data, onChange }: Props) {
                   finish();
                 }}
                 options={riskOptions}
-                className="h-full py-0"
+                className="h-full"
               />
-            </div>
-          )}
-        />
-      </dd>
+            )}
+          />
+        </dd>
+      </div>
 
-      <dt className="font-semibold flex items-center">Review Interval:</dt>
-      <dd className="flex items-center gap-1">
-        <EditableText
-          value={data.reviewInterval}
-          onChange={(v) => onChange('reviewInterval', v)}
-          className="w-32 h-6"
-          textClassName="w-full px-0 flex items-center h-full"
-          renderDisplay={(v) => reviewIntervalMap[v] ?? v}
-          renderEditor={(local, setLocal, finish) => (
-            <div className="flex-1 h-full">
+      <div className="flex items-center gap-2">
+        <dt className={labelClass}>Review Interval:</dt>
+        <dd>
+          <EditableText
+            value={data.reviewInterval}
+            onChange={(v) => onChange('reviewInterval', v)}
+            className="w-32 h-8"
+            textClassName="w-full px-0 flex items-center h-full"
+            renderDisplay={(v) => reviewIntervalMap[v] ?? v}
+            renderEditor={(local, setLocal, finish) => (
               <SelectInput
                 id="reviewInterval"
                 value={local}
@@ -209,13 +218,12 @@ export default function AgentStrategy({ data, onChange }: Props) {
                   finish();
                 }}
                 options={reviewIntervalOptions}
-                className="h-full py-0"
+                className="h-full"
               />
-            </div>
-          )}
-        />
-      </dd>
+            )}
+          />
+        </dd>
+      </div>
     </dl>
   );
 }
-
