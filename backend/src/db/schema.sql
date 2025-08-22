@@ -1,6 +1,8 @@
 CREATE TABLE IF NOT EXISTS users(
   id TEXT PRIMARY KEY,
   is_auto_enabled INTEGER,
+  role TEXT DEFAULT 'user',
+  is_enabled INTEGER DEFAULT 1,
   policy_json TEXT,
   session_key_expires_at INTEGER,
   ai_api_key_enc TEXT,

@@ -17,6 +17,8 @@ describe('login route', () => {
       payload: { token: 'test-token' },
     });
     expect(res.statusCode).toBe(200);
+    const body = res.json() as any;
+    expect(body.role).toBe('user');
     const row = db
       .prepare('SELECT id FROM users WHERE id = ?')
       .get('user123') as { id: string } | undefined;
@@ -48,6 +50,24 @@ describe('login route', () => {
       payload: { token: 't1', otp },
     });
     expect(res2.statusCode).toBe(200);
+    await app.close();
+  });
+
+  it('rejects disabled users', async () => {
+    const app = await buildServer();
+    vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
+      getPayload: () => ({ sub: 'user3', email: 'u3@example.com' }),
+    } as any);
+    db.prepare(
+      "INSERT INTO users (id, is_auto_enabled, role, is_enabled) VALUES (?, 0, 'user', 0)"
+    ).run('user3');
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/login',
+      payload: { token: 't' },
+    });
+    expect(res.statusCode).toBe(403);
     await app.close();
   });
 
