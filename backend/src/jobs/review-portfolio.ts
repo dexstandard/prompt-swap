@@ -70,6 +70,53 @@ export default async function reviewPortfolio(
         let marketData;
         try {
           marketData = await fetchPairData(row.token_a, row.token_b);
+          const [priceAData, priceBData] = await Promise.all([
+            row.token_a === 'USDT'
+              ? Promise.resolve({ currentPrice: 1 })
+              : fetchPairData(row.token_a, 'USDT'),
+            row.token_b === 'USDT'
+              ? Promise.resolve({ currentPrice: 1 })
+              : fetchPairData(row.token_b, 'USDT'),
+          ]);
+          const priceA = priceAData.currentPrice;
+          const priceB = priceBData.currentPrice;
+          const valueA = tokenABalance * priceA;
+          const valueB = tokenBBalance * priceB;
+          const totalValue = valueA + valueB;
+          const floors: Record<string, number> = {
+            [row.token_a]: row.min_a_allocation / 100,
+            [row.token_b]: row.min_b_allocation / 100,
+          };
+          const positions = [
+            {
+              sym: row.token_a,
+              qty: tokenABalance,
+              price_usdt: priceA,
+              value_usdt: valueA,
+            },
+            {
+              sym: row.token_b,
+              qty: tokenBBalance,
+              price_usdt: priceB,
+              value_usdt: valueB,
+            },
+          ];
+          const weights: Record<string, number> = {
+            [row.token_a]: totalValue ? valueA / totalValue : 0,
+            [row.token_b]: totalValue ? valueB / totalValue : 0,
+          };
+          prompt = {
+            instructions: row.agent_instructions,
+            config: {
+              policy: { floors },
+              portfolio: {
+                ts: new Date().toISOString(),
+                positions,
+                weights,
+              },
+            },
+            marketData,
+          };
         } catch (err) {
           const msg = 'failed to fetch market data';
           const createdAt = Date.now();
@@ -97,18 +144,6 @@ export default async function reviewPortfolio(
           childLog.error({ err }, 'agent run failed');
           return;
         }
-        prompt = {
-          instructions: row.agent_instructions,
-          tokenA: row.token_a,
-          tokenB: row.token_b,
-          tokenABalance,
-          tokenBBalance,
-          minTokenAAllocation: row.min_a_allocation,
-          minTokenBAllocation: row.min_b_allocation,
-          risk: row.risk,
-          reviewInterval: row.review_interval,
-          marketData,
-        };
         const prevRows = getRecentExecResults(row.id, 5);
         const previousResponses = prevRows.map((r) => {
           const str = JSON.stringify(r);

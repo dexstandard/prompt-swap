@@ -65,8 +65,14 @@ describe('reviewPortfolio', () => {
       { rebalance: true, newAllocation: 2, shortReport: 'short-2' },
       { rebalance: true, newAllocation: 1, shortReport: 'short-1' },
     ]);
-    expect(args[1].tokenABalance).toBe(1.5);
-    expect(args[1].tokenBBalance).toBe(2);
+    const cfg = args[1].config;
+    const btcPos = cfg.portfolio.positions.find((p: any) => p.sym === 'BTC');
+    const ethPos = cfg.portfolio.positions.find((p: any) => p.sym === 'ETH');
+    expect(btcPos.qty).toBe(1.5);
+    expect(ethPos.qty).toBe(2);
+    expect(cfg.policy.floors).toEqual({ BTC: 0.1, ETH: 0.2 });
+    expect(cfg.portfolio.weights.BTC).toBeCloseTo(150 / 350);
+    expect(cfg.portfolio.weights.ETH).toBeCloseTo(200 / 350);
     expect(args[1].marketData).toEqual({ currentPrice: 100 });
   });
 
@@ -86,8 +92,15 @@ describe('reviewPortfolio', () => {
     expect(rows).toHaveLength(1);
     expect(JSON.parse(rows[0].prompt!)).toMatchObject({
       instructions: 'inst',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
+      config: {
+        policy: { floors: { BTC: 0.1, ETH: 0.2 } },
+        portfolio: {
+          positions: [
+            expect.objectContaining({ sym: 'BTC', qty: 1.5 }),
+            expect.objectContaining({ sym: 'ETH', qty: 2 }),
+          ],
+        },
+      },
     });
     const respEntry = JSON.parse(rows[0].response!);
     expect(typeof respEntry).toBe('string');
