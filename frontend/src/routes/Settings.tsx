@@ -1,4 +1,4 @@
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import QRCode from 'react-qr-code';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';

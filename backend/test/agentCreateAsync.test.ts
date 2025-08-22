@@ -6,7 +6,7 @@ process.env.GOOGLE_CLIENT_ID = 'test-client';
 
 const { db, migrate } = await import('../src/db/index.js');
 
-const reviewPortfolioMock = vi.fn(() => new Promise(() => {}));
+const reviewPortfolioMock = vi.fn<(log: unknown, agentId?: string) => Promise<unknown>>(() => new Promise(() => {}));
 vi.mock('../src/jobs/review-portfolio.js', () => ({ default: reviewPortfolioMock }));
 
 import buildServer from '../src/server.js';
