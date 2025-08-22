@@ -48,3 +48,40 @@ export async function fetchTotalBalanceUsd(id: string) {
   }
   return total;
 }
+
+export async function fetchPairData(tokenA: string, tokenB: string) {
+  const symbol = `${tokenA}${tokenB}`.toUpperCase();
+  const [priceRes, depthRes, dayRes, weekRes, monthRes, yearRes] = await Promise.all([
+    fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`),
+    fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=5`),
+    fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`),
+    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=7`),
+    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=30`),
+    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=365`),
+  ]);
+  if (
+    !priceRes.ok ||
+    !depthRes.ok ||
+    !dayRes.ok ||
+    !weekRes.ok ||
+    !monthRes.ok ||
+    !yearRes.ok
+  )
+    throw new Error('failed to fetch market data');
+  const priceJson = (await priceRes.json()) as { price: string };
+  const depthJson = (await depthRes.json()) as {
+    bids: [string, string][];
+    asks: [string, string][];
+  };
+  return {
+    currentPrice: Number(priceJson.price),
+    orderBook: {
+      bids: depthJson.bids.map(([p, q]) => [Number(p), Number(q)]),
+      asks: depthJson.asks.map(([p, q]) => [Number(p), Number(q)]),
+    },
+    day: await dayRes.json(),
+    week: await weekRes.json(),
+    month: await monthRes.json(),
+    year: await yearRes.json(),
+  };
+}
