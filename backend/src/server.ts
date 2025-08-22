@@ -3,7 +3,6 @@ import rateLimit from '@fastify/rate-limit';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { Logger } from 'pino';
 import { RATE_LIMITS } from './rate-limit.js';
 
 export default async function buildServer(
@@ -28,6 +27,6 @@ export default async function buildServer(
     }
   }
 
-  (app.log as Logger).info('Server initialized');
+  app.log.info('Server initialized');
   return app;
 }

@@ -1,12 +1,24 @@
 import type { FastifyInstance } from 'fastify';
-import { db } from '../db/index.js';
 import { env } from '../util/env.js';
 import { encrypt, decrypt } from '../util/crypto.js';
 import { redactKey } from '../util/redact.js';
 import { createHmac } from 'node:crypto';
 import { RATE_LIMITS } from '../rate-limit.js';
+import {
+  getAiKeyRow,
+  setAiKey,
+  clearAiKey,
+  getBinanceKeyRow,
+  setBinanceKey,
+  clearBinanceKey,
+} from '../repos/api-keys.js';
 
-async function isValidOpenAIKey(key: string) {
+interface ValidationErr {
+  code: number;
+  body: unknown;
+}
+
+async function verifyOpenAIKey(key: string) {
   try {
     const res = await fetch('https://api.openai.com/v1/models', {
       headers: { Authorization: `Bearer ${key}` },
@@ -17,7 +29,7 @@ async function isValidOpenAIKey(key: string) {
   }
 }
 
-async function isValidBinanceKey(key: string, secret: string) {
+async function verifyBinanceKey(key: string, secret: string) {
   try {
     const timestamp = Date.now();
     const query = `timestamp=${timestamp}`;
@@ -36,6 +48,41 @@ async function isValidBinanceKey(key: string, secret: string) {
   }
 }
 
+function ensureUser(row: unknown): ValidationErr | null {
+  if (!row) return { code: 404, body: { error: 'user not found' } };
+  return null;
+}
+
+function ensureAiKeyAbsent(row: { ai_api_key_enc?: string } | undefined) {
+  if (row?.ai_api_key_enc) return { code: 400, body: { error: 'key exists' } };
+  return null;
+}
+
+function ensureAiKeyPresent(row: { ai_api_key_enc?: string } | undefined) {
+  if (!row?.ai_api_key_enc) return { code: 404, body: { error: 'not found' } };
+  return null;
+}
+
+function ensureBinanceKeyAbsent(
+  row:
+    | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
+    | undefined,
+) {
+  if (row?.binance_api_key_enc || row?.binance_api_secret_enc)
+    return { code: 400, body: { error: 'key exists' } };
+  return null;
+}
+
+function ensureBinanceKeyPresent(
+  row:
+    | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
+    | undefined,
+) {
+  if (!row?.binance_api_key_enc || !row?.binance_api_secret_enc)
+    return { code: 404, body: { error: 'not found' } };
+  return null;
+}
+
 export default async function apiKeyRoutes(app: FastifyInstance) {
   app.post(
     '/users/:id/ai-key',
@@ -43,17 +90,15 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       const { key } = req.body as { key: string };
-    const row = db
-      .prepare<[string], { ai_api_key_enc?: string }>(
-        'SELECT ai_api_key_enc FROM users WHERE id = ?'
-      )
-      .get(id);
-    if (!row) return reply.code(404).send({ error: 'user not found' });
-    if (row.ai_api_key_enc) return reply.code(400).send({ error: 'key exists' });
-    if (!(await isValidOpenAIKey(key)))
+    const row = getAiKeyRow(id);
+    let err = ensureUser(row);
+    if (err) return reply.code(err.code).send(err.body);
+    err = ensureAiKeyAbsent(row);
+    if (err) return reply.code(err.code).send(err.body);
+    if (!(await verifyOpenAIKey(key)))
       return reply.code(400).send({ error: 'verification failed' });
     const enc = encrypt(key, env.KEY_PASSWORD);
-    db.prepare('UPDATE users SET ai_api_key_enc = ? WHERE id = ?').run(enc, id);
+    setAiKey(id, enc);
       return { key: redactKey(key) };
     }
   );
@@ -63,12 +108,10 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const row = db
-        .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
-        .get(id) as { ai_api_key_enc?: string } | undefined;
-      if (!row || !row.ai_api_key_enc)
-        return reply.code(404).send({ error: 'not found' });
-      const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
+      const row = getAiKeyRow(id);
+      const err = ensureAiKeyPresent(row);
+      if (err) return reply.code(err.code).send(err.body);
+      const key = decrypt(row!.ai_api_key_enc!, env.KEY_PASSWORD);
       return { key: redactKey(key) };
     }
   );
@@ -79,15 +122,13 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       const { key } = req.body as { key: string };
-      const row = db
-        .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
-        .get(id) as { ai_api_key_enc?: string } | undefined;
-      if (!row || !row.ai_api_key_enc)
-        return reply.code(404).send({ error: 'not found' });
-      if (!(await isValidOpenAIKey(key)))
+      const row = getAiKeyRow(id);
+      const err = ensureAiKeyPresent(row);
+      if (err) return reply.code(err.code).send(err.body);
+      if (!(await verifyOpenAIKey(key)))
         return reply.code(400).send({ error: 'verification failed' });
       const enc = encrypt(key, env.KEY_PASSWORD);
-      db.prepare('UPDATE users SET ai_api_key_enc = ? WHERE id = ?').run(enc, id);
+      setAiKey(id, enc);
       return { key: redactKey(key) };
     }
   );
@@ -97,12 +138,10 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const row = db
-        .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
-        .get(id) as { ai_api_key_enc?: string } | undefined;
-      if (!row || !row.ai_api_key_enc)
-        return reply.code(404).send({ error: 'not found' });
-      db.prepare('UPDATE users SET ai_api_key_enc = NULL WHERE id = ?').run(id);
+      const row = getAiKeyRow(id);
+      const err = ensureAiKeyPresent(row);
+      if (err) return reply.code(err.code).send(err.body);
+      clearAiKey(id);
       return { ok: true };
     }
   );
@@ -113,22 +152,16 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       const { key, secret } = req.body as { key: string; secret: string };
-    const row = db
-      .prepare<
-        [string],
-        { binance_api_key_enc?: string; binance_api_secret_enc?: string }
-      >('SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?')
-      .get(id);
-    if (!row) return reply.code(404).send({ error: 'user not found' });
-    if (row.binance_api_key_enc || row.binance_api_secret_enc)
-      return reply.code(400).send({ error: 'key exists' });
-    if (!(await isValidBinanceKey(key, secret)))
+    const row = getBinanceKeyRow(id);
+    let err = ensureUser(row);
+    if (err) return reply.code(err.code).send(err.body);
+    err = ensureBinanceKeyAbsent(row);
+    if (err) return reply.code(err.code).send(err.body);
+    if (!(await verifyBinanceKey(key, secret)))
       return reply.code(400).send({ error: 'verification failed' });
     const encKey = encrypt(key, env.KEY_PASSWORD);
     const encSecret = encrypt(secret, env.KEY_PASSWORD);
-    db.prepare(
-      'UPDATE users SET binance_api_key_enc = ?, binance_api_secret_enc = ? WHERE id = ?'
-    ).run(encKey, encSecret, id);
+    setBinanceKey(id, encKey, encSecret);
       return { key: redactKey(key), secret: redactKey(secret) };
     }
   );
@@ -138,17 +171,11 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const row = db
-        .prepare(
-          'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
-        )
-        .get(id) as
-        | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
-        | undefined;
-      if (!row || !row.binance_api_key_enc || !row.binance_api_secret_enc)
-        return reply.code(404).send({ error: 'not found' });
-      const key = decrypt(row.binance_api_key_enc, env.KEY_PASSWORD);
-      const secret = decrypt(row.binance_api_secret_enc, env.KEY_PASSWORD);
+      const row = getBinanceKeyRow(id);
+      const err = ensureBinanceKeyPresent(row);
+      if (err) return reply.code(err.code).send(err.body);
+      const key = decrypt(row!.binance_api_key_enc!, env.KEY_PASSWORD);
+      const secret = decrypt(row!.binance_api_secret_enc!, env.KEY_PASSWORD);
       return { key: redactKey(key), secret: redactKey(secret) };
     }
   );
@@ -159,22 +186,14 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       const { key, secret } = req.body as { key: string; secret: string };
-      const row = db
-        .prepare(
-          'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
-        )
-        .get(id) as
-        | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
-        | undefined;
-      if (!row || !row.binance_api_key_enc || !row.binance_api_secret_enc)
-        return reply.code(404).send({ error: 'not found' });
-      if (!(await isValidBinanceKey(key, secret)))
+      const row = getBinanceKeyRow(id);
+      const err = ensureBinanceKeyPresent(row);
+      if (err) return reply.code(err.code).send(err.body);
+      if (!(await verifyBinanceKey(key, secret)))
         return reply.code(400).send({ error: 'verification failed' });
       const encKey = encrypt(key, env.KEY_PASSWORD);
       const encSecret = encrypt(secret, env.KEY_PASSWORD);
-      db.prepare(
-        'UPDATE users SET binance_api_key_enc = ?, binance_api_secret_enc = ? WHERE id = ?'
-      ).run(encKey, encSecret, id);
+      setBinanceKey(id, encKey, encSecret);
       return { key: redactKey(key), secret: redactKey(secret) };
     }
   );
@@ -184,18 +203,10 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const row = db
-        .prepare(
-          'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
-        )
-        .get(id) as
-        | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
-        | undefined;
-      if (!row || !row.binance_api_key_enc || !row.binance_api_secret_enc)
-        return reply.code(404).send({ error: 'not found' });
-      db.prepare(
-        'UPDATE users SET binance_api_key_enc = NULL, binance_api_secret_enc = NULL WHERE id = ?'
-      ).run(id);
+      const row = getBinanceKeyRow(id);
+      const err = ensureBinanceKeyPresent(row);
+      if (err) return reply.code(err.code).send(err.body);
+      clearBinanceKey(id);
       return { ok: true };
     }
   );
