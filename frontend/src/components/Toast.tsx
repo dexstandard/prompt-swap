@@ -20,7 +20,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {toast && (
         <div
-          className={`fixed top-4 left-1/2 -translate-x-1/2 text-white px-4 py-2 rounded shadow ${
+          className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 text-white px-4 py-2 rounded shadow ${
             toast.variant === 'error' ? 'bg-red-600' : 'bg-green-600'
           }`}
         >
