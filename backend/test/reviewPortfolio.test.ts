@@ -39,7 +39,11 @@ describe('reviewPortfolio', () => {
        VALUES (?, ?, 'gpt', 'active', 0, 'Agent', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run('a1', 'u1');
     for (let i = 0; i < 6; i++) {
-      db.prepare('INSERT INTO agent_exec_log (id, agent_id, log, created_at) VALUES (?, ?, ?, ?)').run(`id${i}`, 'a1', `resp-${i}`, i);
+      db
+        .prepare(
+          'INSERT INTO agent_exec_log (id, agent_id, response_json, created_at) VALUES (?, ?, ?, ?)',
+        )
+        .run(`id${i}`, 'a1', JSON.stringify(`resp-${i}`), i);
     }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolio(log, 'a1');
@@ -62,16 +66,16 @@ describe('reviewPortfolio', () => {
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolio(log, 'a4');
     const rows = db
-      .prepare('SELECT log FROM agent_exec_log WHERE agent_id = ?')
-      .all('a4') as { log: string }[];
+      .prepare('SELECT prompt_json, response_json FROM agent_exec_log WHERE agent_id = ?')
+      .all('a4') as { prompt_json: string | null; response_json: string | null }[];
     expect(rows).toHaveLength(1);
-    const entry = JSON.parse(rows[0].log);
-    expect(entry.prompt).toMatchObject({
+    expect(JSON.parse(rows[0].prompt_json!)).toMatchObject({
       instructions: 'inst',
       tokenA: 'BTC',
       tokenB: 'ETH',
     });
-    expect(typeof entry.response).toBe('string');
+    const respEntry = JSON.parse(rows[0].response_json!);
+    expect(typeof respEntry).toBe('string');
 
     const parsedRows = db
       .prepare(
@@ -104,10 +108,11 @@ describe('reviewPortfolio', () => {
     await reviewPortfolio(log, 'a2');
     expect(callAi).not.toHaveBeenCalled();
     const rows = db
-      .prepare('SELECT log FROM agent_exec_log WHERE agent_id = ?')
-      .all('a2') as { log: string }[];
+      .prepare('SELECT response_json FROM agent_exec_log WHERE agent_id = ?')
+      .all('a2') as { response_json: string | null }[];
     expect(rows).toHaveLength(1);
-    expect(rows[0].log).toContain('failed to fetch token balances');
+    const entry = JSON.parse(rows[0].response_json!);
+    expect(entry.error).toContain('failed to fetch token balances');
     const parsedRows = db
       .prepare(
         'SELECT log, error FROM agent_exec_result WHERE agent_id = ?',
@@ -135,10 +140,11 @@ describe('reviewPortfolio', () => {
     await reviewPortfolio(log, 'a3');
     expect(callAi).not.toHaveBeenCalled();
     const rows = db
-      .prepare('SELECT log FROM agent_exec_log WHERE agent_id = ?')
-      .all('a3') as { log: string }[];
+      .prepare('SELECT response_json FROM agent_exec_log WHERE agent_id = ?')
+      .all('a3') as { response_json: string | null }[];
     expect(rows).toHaveLength(1);
-    expect(rows[0].log).toContain('failed to fetch market data');
+    const entry2 = JSON.parse(rows[0].response_json!);
+    expect(entry2.error).toContain('failed to fetch market data');
     const parsedRows = db
       .prepare(
         'SELECT log, error FROM agent_exec_result WHERE agent_id = ?',

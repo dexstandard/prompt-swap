@@ -43,14 +43,13 @@ export default async function reviewPortfolio(
         if (tokenABalance === undefined || tokenBBalance === undefined) {
           const msg = 'failed to fetch token balances';
           const createdAt = Date.now();
-          const logObj = { error: msg };
           insertExecLog({
             id: execLogId,
             agentId: row.id,
-            log: JSON.stringify(logObj),
+            response: { error: msg },
             createdAt,
           });
-          const parsed = parseExecLog(logObj);
+          const parsed = parseExecLog({ error: msg });
           insertExecResult({
             id: execLogId,
             agentId: row.id,
@@ -74,14 +73,13 @@ export default async function reviewPortfolio(
         } catch (err) {
           const msg = 'failed to fetch market data';
           const createdAt = Date.now();
-          const logObj = { error: msg };
           insertExecLog({
             id: execLogId,
             agentId: row.id,
-            log: JSON.stringify(logObj),
+            response: { error: msg },
             createdAt,
           });
-          const parsed = parseExecLog(logObj);
+          const parsed = parseExecLog({ error: msg });
           insertExecResult({
             id: execLogId,
             agentId: row.id,
@@ -113,23 +111,26 @@ export default async function reviewPortfolio(
         };
         const prevRows = getRecentExecLogs(row.id, 5);
         const previousResponses = prevRows.map((r) => {
+          if (!r.response) return '';
           try {
-            const parsed = JSON.parse(r.log);
-            if (parsed && typeof parsed === 'object' && typeof parsed.response === 'string')
-              return parsed.response as string;
-          } catch {}
-          return r.log;
+            const parsed = JSON.parse(r.response);
+            return typeof parsed === 'string'
+              ? parsed
+              : JSON.stringify(parsed);
+          } catch {
+            return r.response as string;
+          }
         });
         const text = await callAi(row.model, prompt, key, previousResponses);
         const createdAt = Date.now();
-        const logObj = { prompt, response: text };
         insertExecLog({
           id: execLogId,
           agentId: row.id,
-          log: JSON.stringify(logObj),
+          prompt,
+          response: text,
           createdAt,
         });
-        const parsed = parseExecLog(logObj);
+        const parsed = parseExecLog(text);
         insertExecResult({
           id: execLogId,
           agentId: row.id,
@@ -147,16 +148,14 @@ export default async function reviewPortfolio(
         childLog.info('agent run complete');
       } catch (err) {
         const createdAt = Date.now();
-        const logObj = prompt
-          ? { prompt, error: String(err) }
-          : { error: String(err) };
         insertExecLog({
           id: execLogId,
           agentId: row.id,
-          log: JSON.stringify(logObj),
+          ...(prompt ? { prompt } : {}),
+          response: { error: String(err) },
           createdAt,
         });
-        const parsed = parseExecLog(logObj);
+        const parsed = parseExecLog({ error: String(err) });
         insertExecResult({
           id: execLogId,
           agentId: row.id,

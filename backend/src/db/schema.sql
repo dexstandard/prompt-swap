@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS agents(
 CREATE TABLE IF NOT EXISTS agent_exec_log(
   id TEXT PRIMARY KEY,
   agent_id TEXT,
-  log TEXT,
+  prompt_json TEXT,
+  response_json TEXT,
   created_at INTEGER
 );
 
