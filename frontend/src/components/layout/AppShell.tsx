@@ -38,7 +38,7 @@ export default function AppShell() {
             Settings
           </Link>
         </nav>
-        <main className="flex-1 p-3 bg-white overflow-y-auto">
+        <main className="flex-1 p-3 pt-0 bg-white overflow-y-auto">
           <Outlet />
         </main>
       </div>
