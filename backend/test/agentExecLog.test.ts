@@ -24,7 +24,7 @@ describe('agent exec log routes', () => {
 
     for (let i = 0; i < 3; i++) {
       db.prepare(
-        'INSERT INTO agent_exec_log (id, agent_id, response_json, created_at) VALUES (?, ?, ?, ?)',
+        'INSERT INTO agent_exec_log (id, agent_id, response, created_at) VALUES (?, ?, ?, ?)',
       ).run(`log${i}`, agentId, JSON.stringify(`log-${i}`), i);
       const parsed = parseExecLog(`log-${i}`);
       insertExecResult({
@@ -78,7 +78,7 @@ describe('agent exec log routes', () => {
     );
 
     db.prepare(
-      'INSERT INTO agent_exec_log (id, agent_id, response_json, created_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO agent_exec_log (id, agent_id, response, created_at) VALUES (?, ?, ?, ?)',
     ).run('log-new', agentId, aiLog, 0);
     const parsedAi = parseExecLog(aiLog);
     insertExecResult({
@@ -131,7 +131,7 @@ describe('agent exec log routes', () => {
     ).run(agentId, 'u5');
     const entry = JSON.stringify({ prompt: { instructions: 'inst' }, response: 'ok' });
     db.prepare(
-      'INSERT INTO agent_exec_log (id, agent_id, response_json, created_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO agent_exec_log (id, agent_id, response, created_at) VALUES (?, ?, ?, ?)',
     ).run('logp', agentId, entry, 0);
     const parsedP = parseExecLog(entry);
     insertExecResult({

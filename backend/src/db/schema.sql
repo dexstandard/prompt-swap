@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS agents(
 CREATE TABLE IF NOT EXISTS agent_exec_log(
   id TEXT PRIMARY KEY,
   agent_id TEXT,
-  prompt_json TEXT,
-  response_json TEXT,
+  prompt TEXT,
+  response TEXT,
   created_at INTEGER
 );
 
@@ -53,6 +53,9 @@ CREATE TABLE IF NOT EXISTS agent_exec_result(
   error TEXT,
   created_at INTEGER
 );
+
+CREATE INDEX IF NOT EXISTS idx_agent_exec_result_agent_id_created_at
+  ON agent_exec_result(agent_id, created_at);
 
 -- Indexes to optimize duplicate detection queries
 CREATE INDEX IF NOT EXISTS idx_agents_draft_all_fields

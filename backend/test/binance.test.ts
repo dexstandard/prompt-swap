@@ -6,7 +6,7 @@ describe('fetchPairData', () => {
     vi.restoreAllMocks();
   });
 
-  it('derives week and month from yearly klines', async () => {
+  it('fetches yearly klines and omits week/month slices', async () => {
     const yearData = Array.from({ length: 365 }, (_, i) => [i]);
     const fetchMock = vi
       .fn()
@@ -18,9 +18,9 @@ describe('fetchPairData', () => {
 
     const data = await fetchPairData('BTC', 'USDT');
     expect(fetchMock).toHaveBeenCalledTimes(4);
-    expect(data.week).toEqual(yearData.slice(-7));
-    expect(data.month).toEqual(yearData.slice(-30));
     expect(data.year).toEqual(yearData);
+    expect('week' in data).toBe(false);
+    expect('month' in data).toBe(false);
   });
 
   it('retries with reversed pair on invalid symbol', async () => {

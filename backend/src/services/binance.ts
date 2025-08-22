@@ -76,8 +76,6 @@ async function fetchSymbolData(symbol: string) {
     asks: [string, string][];
   };
   const yearJson = (await yearRes.json()) as unknown[];
-  const weekJson = yearJson.slice(-7);
-  const monthJson = yearJson.slice(-30);
   return {
     currentPrice: Number(priceJson.price),
     orderBook: {
@@ -85,8 +83,6 @@ async function fetchSymbolData(symbol: string) {
       asks: depthJson.asks.map(([p, q]) => [Number(p), Number(q)]),
     },
     day: await dayRes.json(),
-    week: weekJson,
-    month: monthJson,
     year: yearJson,
   };
 }
