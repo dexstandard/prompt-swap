@@ -26,6 +26,25 @@ export function insertExecResult(entry: ExecResultEntry): void {
   );
 }
 
+export function getRecentExecResults(agentId: string, limit: number) {
+  const rows = db
+    .prepare(
+      'SELECT rebalance, new_allocation, short_report, error FROM agent_exec_result WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?',
+    )
+    .all(agentId, limit) as {
+      rebalance: number | null;
+      new_allocation: number | null;
+      short_report: string | null;
+      error: string | null;
+    }[];
+  return rows.map((r) => ({
+    ...(r.rebalance !== null ? { rebalance: !!r.rebalance } : {}),
+    ...(r.new_allocation !== null ? { newAllocation: r.new_allocation } : {}),
+    ...(r.short_report !== null ? { shortReport: r.short_report } : {}),
+    ...(r.error !== null ? { error: JSON.parse(r.error) } : {}),
+  }));
+}
+
 export function getAgentExecResults(agentId: string, limit: number, offset: number) {
   const totalRow = db
     .prepare('SELECT COUNT(*) as count FROM agent_exec_result WHERE agent_id = ?')

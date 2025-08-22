@@ -3,8 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import { getActiveAgents } from '../repos/agents.js';
-import { insertExecLog, getRecentExecLogs } from '../repos/agent-exec-log.js';
-import { insertExecResult } from '../repos/agent-exec-result.js';
+import { insertExecLog } from '../repos/agent-exec-log.js';
+import { insertExecResult, getRecentExecResults } from '../repos/agent-exec-result.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
 import { callAi } from '../util/ai.js';
 import { fetchAccount, fetchPairData } from '../services/binance.js';
@@ -109,17 +109,10 @@ export default async function reviewPortfolio(
           reviewInterval: row.review_interval,
           marketData,
         };
-        const prevRows = getRecentExecLogs(row.id, 5);
+        const prevRows = getRecentExecResults(row.id, 5);
         const previousResponses = prevRows.map((r) => {
-          if (!r.response) return '';
-          try {
-            const parsed = JSON.parse(r.response);
-            return typeof parsed === 'string'
-              ? parsed
-              : JSON.stringify(parsed);
-          } catch {
-            return r.response as string;
-          }
+          const str = JSON.stringify(r);
+          return str === '{}' ? '' : str;
         });
         const text = await callAi(row.model, prompt, key, previousResponses);
         const createdAt = Date.now();
