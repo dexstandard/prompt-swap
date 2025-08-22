@@ -4,6 +4,8 @@ import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import { getActiveAgents } from '../repos/agents.js';
 import { insertExecLog, getRecentExecLogs } from '../repos/agent-exec-log.js';
+import { insertExecResult } from '../repos/agent-exec-result.js';
+import { parseExecLog } from '../util/parse-exec-log.js';
 import { callAi } from '../util/ai.js';
 import { fetchAccount, fetchPairData } from '../services/binance.js';
 
@@ -20,6 +22,7 @@ export default async function reviewPortfolio(
         agentId: row.id,
         execLogId,
       });
+      let prompt: Record<string, unknown> | undefined;
       try {
         const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
         let tokenABalance: number | undefined;
@@ -39,11 +42,27 @@ export default async function reviewPortfolio(
         }
         if (tokenABalance === undefined || tokenBBalance === undefined) {
           const msg = 'failed to fetch token balances';
+          const createdAt = Date.now();
           insertExecLog({
             id: execLogId,
             agentId: row.id,
-            log: JSON.stringify({ error: msg }),
-            createdAt: Date.now(),
+            response: { error: msg },
+            createdAt,
+          });
+          const parsed = parseExecLog({ error: msg });
+          insertExecResult({
+            id: execLogId,
+            agentId: row.id,
+            log: parsed.text,
+            ...(parsed.response
+              ? {
+                  rebalance: parsed.response.rebalance,
+                  newAllocation: parsed.response.newAllocation,
+                  shortReport: parsed.response.shortReport,
+                }
+              : {}),
+            ...(parsed.error ? { error: parsed.error } : {}),
+            createdAt,
           });
           childLog.error({ err: msg }, 'agent run failed');
           return;
@@ -53,16 +72,32 @@ export default async function reviewPortfolio(
           marketData = await fetchPairData(row.token_a, row.token_b);
         } catch (err) {
           const msg = 'failed to fetch market data';
+          const createdAt = Date.now();
           insertExecLog({
             id: execLogId,
             agentId: row.id,
-            log: JSON.stringify({ error: msg }),
-            createdAt: Date.now(),
+            response: { error: msg },
+            createdAt,
+          });
+          const parsed = parseExecLog({ error: msg });
+          insertExecResult({
+            id: execLogId,
+            agentId: row.id,
+            log: parsed.text,
+            ...(parsed.response
+              ? {
+                  rebalance: parsed.response.rebalance,
+                  newAllocation: parsed.response.newAllocation,
+                  shortReport: parsed.response.shortReport,
+                }
+              : {}),
+            ...(parsed.error ? { error: parsed.error } : {}),
+            createdAt,
           });
           childLog.error({ err }, 'agent run failed');
           return;
         }
-        const prompt = {
+        prompt = {
           instructions: row.agent_instructions,
           tokenA: row.token_a,
           tokenB: row.token_b,
@@ -75,21 +110,65 @@ export default async function reviewPortfolio(
           marketData,
         };
         const prevRows = getRecentExecLogs(row.id, 5);
-        const previousResponses = prevRows.map((r) => r.log);
+        const previousResponses = prevRows.map((r) => {
+          if (!r.response) return '';
+          try {
+            const parsed = JSON.parse(r.response);
+            return typeof parsed === 'string'
+              ? parsed
+              : JSON.stringify(parsed);
+          } catch {
+            return r.response as string;
+          }
+        });
         const text = await callAi(row.model, prompt, key, previousResponses);
+        const createdAt = Date.now();
         insertExecLog({
           id: execLogId,
           agentId: row.id,
-          log: text,
-          createdAt: Date.now(),
+          prompt,
+          response: text,
+          createdAt,
+        });
+        const parsed = parseExecLog(text);
+        insertExecResult({
+          id: execLogId,
+          agentId: row.id,
+          log: parsed.text,
+          ...(parsed.response
+            ? {
+                rebalance: parsed.response.rebalance,
+                newAllocation: parsed.response.newAllocation,
+                shortReport: parsed.response.shortReport,
+              }
+            : {}),
+          ...(parsed.error ? { error: parsed.error } : {}),
+          createdAt,
         });
         childLog.info('agent run complete');
       } catch (err) {
+        const createdAt = Date.now();
         insertExecLog({
           id: execLogId,
           agentId: row.id,
-          log: JSON.stringify({ error: String(err) }),
-          createdAt: Date.now(),
+          ...(prompt ? { prompt } : {}),
+          response: { error: String(err) },
+          createdAt,
+        });
+        const parsed = parseExecLog({ error: String(err) });
+        insertExecResult({
+          id: execLogId,
+          agentId: row.id,
+          log: parsed.text,
+          ...(parsed.response
+            ? {
+                rebalance: parsed.response.rebalance,
+                newAllocation: parsed.response.newAllocation,
+                shortReport: parsed.response.shortReport,
+              }
+            : {}),
+          ...(parsed.error ? { error: parsed.error } : {}),
+          createdAt,
         });
         childLog.error({ err }, 'agent run failed');
       }

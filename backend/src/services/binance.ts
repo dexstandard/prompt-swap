@@ -49,30 +49,33 @@ export async function fetchTotalBalanceUsd(id: string) {
   return total;
 }
 
-export async function fetchPairData(tokenA: string, tokenB: string) {
-  const symbol = `${tokenA}${tokenB}`.toUpperCase();
-  const [priceRes, depthRes, dayRes, weekRes, monthRes, yearRes] = await Promise.all([
+async function fetchSymbolData(symbol: string) {
+  const [priceRes, depthRes, dayRes, yearRes] = await Promise.all([
     fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`),
     fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=5`),
     fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`),
-    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=7`),
-    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=30`),
-    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=365`),
+    fetch(
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=365`,
+    ),
   ]);
-  if (
-    !priceRes.ok ||
-    !depthRes.ok ||
-    !dayRes.ok ||
-    !weekRes.ok ||
-    !monthRes.ok ||
-    !yearRes.ok
-  )
-    throw new Error('failed to fetch market data');
+  const responses = {
+    price: priceRes,
+    depth: depthRes,
+    day: dayRes,
+    year: yearRes,
+  } as const;
+  for (const [name, res] of Object.entries(responses)) {
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`failed to fetch ${name} data: ${res.status} ${body}`);
+    }
+  }
   const priceJson = (await priceRes.json()) as { price: string };
   const depthJson = (await depthRes.json()) as {
     bids: [string, string][];
     asks: [string, string][];
   };
+  const yearJson = (await yearRes.json()) as unknown[];
   return {
     currentPrice: Number(priceJson.price),
     orderBook: {
@@ -80,8 +83,26 @@ export async function fetchPairData(tokenA: string, tokenB: string) {
       asks: depthJson.asks.map(([p, q]) => [Number(p), Number(q)]),
     },
     day: await dayRes.json(),
-    week: await weekRes.json(),
-    month: await monthRes.json(),
-    year: await yearRes.json(),
+    year: yearJson,
   };
+}
+
+export async function fetchPairData(tokenA: string, tokenB: string) {
+  const symbols = [
+    `${tokenA}${tokenB}`.toUpperCase(),
+    `${tokenB}${tokenA}`.toUpperCase(),
+  ];
+  let lastErr: unknown;
+  for (const symbol of symbols) {
+    try {
+      return await fetchSymbolData(symbol);
+    } catch (err) {
+      lastErr = err;
+      if (err instanceof Error && /Invalid symbol/i.test(err.message)) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }

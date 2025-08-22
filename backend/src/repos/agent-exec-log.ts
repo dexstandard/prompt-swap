@@ -3,22 +3,30 @@ import { db } from '../db/index.js';
 export interface ExecLogEntry {
   id: string;
   agentId: string;
-  log: string;
+  prompt?: unknown;
+  response: unknown;
   createdAt: number;
 }
 
 export function insertExecLog(entry: ExecLogEntry): void {
   db
     .prepare(
-      'INSERT INTO agent_exec_log (id, agent_id, log, created_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO agent_exec_log (id, agent_id, prompt, response, created_at) VALUES (?, ?, ?, ?, ?)',
     )
-    .run(entry.id, entry.agentId, entry.log, entry.createdAt);
+    .run(
+      entry.id,
+      entry.agentId,
+      entry.prompt === undefined ? null : JSON.stringify(entry.prompt),
+      JSON.stringify(entry.response),
+      entry.createdAt,
+    );
 }
 
 export function getRecentExecLogs(agentId: string, limit: number) {
-  return db
-    .prepare<unknown[], { log: string }>(
-      'SELECT log FROM agent_exec_log WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?',
+  const rows = db
+    .prepare<unknown[], { response: string | null }>(
+      'SELECT response FROM agent_exec_log WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?',
     )
-    .all(agentId, limit) as { log: string }[];
+    .all(agentId, limit) as { response: string | null }[];
+  return rows.map((r) => ({ response: r.response }));
 }

@@ -1,5 +1,5 @@
 const developerInstructions =
-  "You assist a real trader in taking decisions on a given tokens configuration. The user's comment may be found in the trading instructions field. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not. Fit report comment in 255 characters. If you suggest rebalancing, provide the new allocation in percentage (0-100) for the first token in the pair. If you don't suggest rebalancing, set rebalance to false and provide a short report comment. If you encounter an error, return an object with an error message.";
+  "You assist a real trader in taking decisions on a given tokens configuration. Users may deposit or withdraw funds between runs; if the current balance doesn't match previous executions, treat the session as new. The user's comment may be found in the trading instructions field. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not. Fit report comment in 255 characters. If you suggest rebalancing, provide the new allocation in percentage (0-100) for the first token in the pair. If you don't suggest rebalancing, set rebalance to false and provide a short report comment. If you encounter an error, return an object with an error message.";
 
 export async function callAi(
   model: string,
