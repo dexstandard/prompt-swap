@@ -22,4 +22,32 @@ describe('fetchPairData', () => {
     expect(data.month).toEqual(yearData.slice(-30));
     expect(data.year).toEqual(yearData);
   });
+
+  it('retries with reversed pair on invalid symbol', async () => {
+    const errRes = {
+      ok: false,
+      text: async () => JSON.stringify({ code: -1121, msg: 'Invalid symbol.' }),
+    } as any;
+    const yearData = Array.from({ length: 365 }, (_, i) => [i]);
+    const fetchMock = vi
+      .fn()
+      // initial invalid pair (4 calls)
+      .mockResolvedValueOnce(errRes)
+      .mockResolvedValueOnce(errRes)
+      .mockResolvedValueOnce(errRes)
+      .mockResolvedValueOnce(errRes)
+      // reversed pair succeeds
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ price: '1' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ bids: [], asks: [] }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => yearData });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const data = await fetchPairData('USDT', 'BTC');
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(data.year).toEqual(yearData);
+  });
 });

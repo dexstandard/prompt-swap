@@ -49,13 +49,14 @@ export async function fetchTotalBalanceUsd(id: string) {
   return total;
 }
 
-export async function fetchPairData(tokenA: string, tokenB: string) {
-  const symbol = `${tokenA}${tokenB}`.toUpperCase();
+async function fetchSymbolData(symbol: string) {
   const [priceRes, depthRes, dayRes, yearRes] = await Promise.all([
     fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`),
     fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=5`),
     fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`),
-    fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=365`),
+    fetch(
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=365`,
+    ),
   ]);
   const responses = {
     price: priceRes,
@@ -88,4 +89,24 @@ export async function fetchPairData(tokenA: string, tokenB: string) {
     month: monthJson,
     year: yearJson,
   };
+}
+
+export async function fetchPairData(tokenA: string, tokenB: string) {
+  const symbols = [
+    `${tokenA}${tokenB}`.toUpperCase(),
+    `${tokenB}${tokenA}`.toUpperCase(),
+  ];
+  let lastErr: unknown;
+  for (const symbol of symbols) {
+    try {
+      return await fetchSymbolData(symbol);
+    } catch (err) {
+      lastErr = err;
+      if (err instanceof Error && /Invalid symbol/i.test(err.message)) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
