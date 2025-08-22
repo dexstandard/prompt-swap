@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
-import fs from 'node:fs';
-import path from 'node:path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { RATE_LIMITS } from './rate-limit.js';
 

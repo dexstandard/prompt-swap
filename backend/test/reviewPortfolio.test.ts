@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
+import type { Logger } from 'pino';
 import { db } from '../src/db/index.js';
 
 vi.mock('../src/util/ai.js', () => ({
@@ -18,7 +19,7 @@ vi.mock('../src/services/binance.js', () => ({
   }),
 }));
 
-let reviewPortfolio: (log: unknown, agentId: string) => Promise<unknown>;
+let reviewPortfolio: (log: Logger, agentId: string) => Promise<void>;
 let callAi: any;
 let fetchAccount: any;
 
@@ -38,7 +39,7 @@ describe('reviewPortfolio', () => {
     for (let i = 0; i < 6; i++) {
       db.prepare('INSERT INTO agent_exec_log (id, agent_id, log, created_at) VALUES (?, ?, ?, ?)').run(`id${i}`, 'a1', `resp-${i}`, i);
     }
-    const log: any = { child: () => log, info: () => {}, error: () => {} };
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as Logger;
     await reviewPortfolio(log, 'a1');
     expect(callAi).toHaveBeenCalledTimes(1);
     const args = (callAi as any).mock.calls[0];
@@ -57,7 +58,7 @@ describe('reviewPortfolio', () => {
       `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
        VALUES (?, ?, 'gpt', 'active', 0, 'Agent2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run('a2', 'u2');
-    const log: any = { child: () => log, info: () => {}, error: () => {} };
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as Logger;
     await reviewPortfolio(log, 'a2');
     expect(callAi).not.toHaveBeenCalled();
     const rows = db
