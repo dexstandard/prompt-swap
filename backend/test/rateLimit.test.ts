@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { RATE_LIMITS } from '../src/rate-limit.js';
+import buildServer from '../src/server.js';
 
 interface Endpoint {
   name: string;
@@ -39,24 +40,13 @@ const endpoints: Endpoint[] = [
 ];
 
 describe('rate limiting', () => {
-  beforeEach(() => {
-    process.env.DATABASE_URL = ':memory:';
-    process.env.KEY_PASSWORD = 'test-pass';
-    process.env.GOOGLE_CLIENT_ID = 'test-client';
-    vi.resetModules();
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.resetModules();
   });
 
   for (const ep of endpoints) {
     it(`returns 429 after exceeding limit on ${ep.name}`, async () => {
-      const { db, migrate } = await import('../src/db/index.js');
-      migrate();
       if (ep.setup) await ep.setup();
-      const { default: buildServer } = await import('../src/server.js');
       const app = await buildServer();
 
       const opts: any = { method: ep.method, url: ep.url };
@@ -73,7 +63,6 @@ describe('rate limiting', () => {
       expect(body.message).toContain('Too many requests');
 
       await app.close();
-      db.close();
     });
   }
 });

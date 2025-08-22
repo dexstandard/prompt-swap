@@ -1,10 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { db, migrate } = await import('../src/db/index.js');
+import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { db } from '../src/db/index.js';
 
 vi.mock('../src/util/ai.js', () => ({
   callAi: vi.fn().mockResolvedValue('ok'),
@@ -23,11 +18,15 @@ vi.mock('../src/services/binance.js', () => ({
   }),
 }));
 
-migrate();
+let reviewPortfolio: (log: unknown, agentId: string) => Promise<unknown>;
+let callAi: any;
+let fetchAccount: any;
 
-const reviewPortfolio = (await import('../src/jobs/review-portfolio.js')).default;
-const { callAi } = await import('../src/util/ai.js');
-const { fetchAccount } = await import('../src/services/binance.js');
+beforeAll(async () => {
+  reviewPortfolio = (await import('../src/jobs/review-portfolio.js')).default;
+  ({ callAi } = await import('../src/util/ai.js'));
+  ({ fetchAccount } = await import('../src/services/binance.js'));
+});
 
 describe('reviewPortfolio', () => {
   it('passes last five responses to callAi', async () => {

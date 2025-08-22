@@ -1,14 +1,9 @@
 import { describe, it, expect } from 'vitest';
-
-// Use in-memory database for testing
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { db } = await import('../src/db/index.js');
+import Database from 'better-sqlite3';
 
 describe('sqlite db', () => {
   it('inserts and selects rows', () => {
+    const db = new Database(':memory:');
     db.exec('CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)');
     db.prepare('INSERT INTO test (name) VALUES (?)').run('alice');
     const row = db.prepare('SELECT name FROM test WHERE id = ?').get(1);

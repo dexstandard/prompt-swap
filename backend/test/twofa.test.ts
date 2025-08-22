@@ -1,16 +1,10 @@
 import { describe, it, expect } from 'vitest';
-
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { db, migrate } = await import('../src/db/index.js');
-const { default: buildServer } = await import('../src/server.js');
-const { authenticator } = await import('otplib');
+import { db } from '../src/db/index.js';
+import buildServer from '../src/server.js';
+import { authenticator } from 'otplib';
 
 describe('2fa routes', () => {
   it('enables and disables 2fa', async () => {
-    migrate();
     db.prepare('INSERT INTO users (id, is_auto_enabled) VALUES (?,0)').run('user1');
     const app = await buildServer();
 
@@ -54,6 +48,5 @@ describe('2fa routes', () => {
     expect(statusRes2.json()).toEqual({ enabled: false });
 
     await app.close();
-    db.close();
   });
 });

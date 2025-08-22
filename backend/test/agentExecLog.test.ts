@@ -1,15 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { db, migrate } = await import('../src/db/index.js');
+import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
-
-migrate();
 
 function addUser(id: string) {
   db.prepare('INSERT INTO users (id) VALUES (?)').run(id);

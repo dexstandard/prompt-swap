@@ -25,7 +25,7 @@ import { fetchTotalBalanceUsd } from '../services/binance.js';
 import { calculatePnl } from '../services/pnl.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
-import { normalizeAllocations } from '../util/allocations.js';
+import { validateAllocations } from '../util/allocations.js';
 
 interface ValidationErr {
   code: number;
@@ -223,10 +223,18 @@ export default async function agentRoutes(app: FastifyInstance) {
       const userId = requireUserId(req, reply);
       if (!userId) return;
       const log = req.log.child({ userId });
-      const norm = normalizeAllocations(
-        body.minTokenAAllocation,
-        body.minTokenBAllocation,
-      );
+      let norm;
+      try {
+        norm = validateAllocations(
+          body.minTokenAAllocation,
+          body.minTokenBAllocation,
+        );
+      } catch {
+        log.error('invalid allocations');
+        return reply
+          .code(400)
+          .send(errorResponse('invalid minimum allocations'));
+      }
       body.minTokenAAllocation = norm.minTokenAAllocation;
       body.minTokenBAllocation = norm.minTokenBAllocation;
       const err = validateAgentInput(log, userId, body);
@@ -359,10 +367,18 @@ export default async function agentRoutes(app: FastifyInstance) {
           .code(403)
           .send(errorResponse(ERROR_MESSAGES.forbidden));
       }
-      const norm = normalizeAllocations(
-        body.minTokenAAllocation,
-        body.minTokenBAllocation,
-      );
+      let norm;
+      try {
+        norm = validateAllocations(
+          body.minTokenAAllocation,
+          body.minTokenBAllocation,
+        );
+      } catch {
+        log.error('invalid allocations');
+        return reply
+          .code(400)
+          .send(errorResponse('invalid minimum allocations'));
+      }
       body.minTokenAAllocation = norm.minTokenAAllocation;
       body.minTokenBAllocation = norm.minTokenBAllocation;
       const err = validateAgentInput(log, userId, body, id);
