@@ -41,15 +41,30 @@ describe('reviewPortfolio', () => {
     for (let i = 0; i < 6; i++) {
       db
         .prepare(
-          'INSERT INTO agent_exec_log (id, agent_id, response, created_at) VALUES (?, ?, ?, ?)',
+          'INSERT INTO agent_exec_result (id, agent_id, log, rebalance, new_allocation, short_report, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         )
-        .run(`id${i}`, 'a1', JSON.stringify(`resp-${i}`), i);
+        .run(
+          `id${i}`,
+          'a1',
+          'ignore',
+          1,
+          i,
+          `short-${i}`,
+          i,
+        );
     }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolio(log, 'a1');
     expect(callAi).toHaveBeenCalledTimes(1);
     const args = (callAi as any).mock.calls[0];
-    expect(args[3]).toEqual(['resp-5', 'resp-4', 'resp-3', 'resp-2', 'resp-1']);
+    const prev = args[3].map((s: string) => JSON.parse(s));
+    expect(prev).toEqual([
+      { rebalance: true, newAllocation: 5, shortReport: 'short-5' },
+      { rebalance: true, newAllocation: 4, shortReport: 'short-4' },
+      { rebalance: true, newAllocation: 3, shortReport: 'short-3' },
+      { rebalance: true, newAllocation: 2, shortReport: 'short-2' },
+      { rebalance: true, newAllocation: 1, shortReport: 'short-1' },
+    ]);
     expect(args[1].tokenABalance).toBe(1.5);
     expect(args[1].tokenBBalance).toBe(2);
     expect(args[1].marketData).toEqual({ currentPrice: 100 });
