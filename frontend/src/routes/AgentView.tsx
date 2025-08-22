@@ -16,6 +16,7 @@ import ExecLogItem, { type ExecLog } from '../components/ExecLogItem';
 import Modal from '../components/ui/Modal';
 import AgentInstructions from '../components/AgentInstructions';
 import { normalizeAllocations } from '../lib/allocations';
+import FormattedDate from '../components/ui/FormattedDate';
 
 interface Agent {
   id: string;
@@ -149,7 +150,7 @@ export default function AgentView() {
           <span>Agent:</span> <span>{data.name}</span>
         </h1>
         <p className="mt-2">
-          <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
+          <strong>Created:</strong> <FormattedDate date={data.createdAt} />
         </p>
         <p className="mt-2">
           <strong>Status:</strong> <AgentStatusLabel status={data.status}/>
@@ -257,7 +258,7 @@ export default function AgentView() {
                       {logData.items.map((log) => (
                           <tr key={log.id}>
                             <td className="align-top pr-2">
-                              {new Date(log.createdAt).toLocaleString()}
+                              <FormattedDate date={log.createdAt} />
                             </td>
                             <td>
                               <ExecLogItem log={log}/>
