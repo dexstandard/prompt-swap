@@ -16,11 +16,6 @@ export interface AgentRow {
   agent_instructions: string;
 }
 
-export interface ExecLogRow {
-  id: string;
-  log: string;
-  created_at: number;
-}
 
 export function toApi(row: AgentRow) {
   return {
@@ -181,21 +176,6 @@ export function insertAgent(data: {
   );
 }
 
-export function getAgentExecLog(
-  agentId: string,
-  limit: number,
-  offset: number,
-) {
-  const totalRow = db
-    .prepare('SELECT COUNT(*) as count FROM agent_exec_log WHERE agent_id = ?')
-    .get(agentId) as { count: number };
-  const rows = db
-    .prepare(
-      'SELECT id, log, created_at FROM agent_exec_log WHERE agent_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    )
-    .all(agentId, limit, offset) as ExecLogRow[];
-  return { rows, total: totalRow.count };
-}
 
 export function updateAgent(data: {
   id: string;

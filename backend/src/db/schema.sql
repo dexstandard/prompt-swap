@@ -42,6 +42,17 @@ CREATE TABLE IF NOT EXISTS agent_exec_log(
   created_at INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS agent_exec_result(
+  id TEXT PRIMARY KEY,
+  agent_id TEXT,
+  log TEXT,
+  rebalance INTEGER,
+  new_allocation REAL,
+  short_report TEXT,
+  error TEXT,
+  created_at INTEGER
+);
+
 -- Indexes to optimize duplicate detection queries
 CREATE INDEX IF NOT EXISTS idx_agents_draft_all_fields
   ON agents(
