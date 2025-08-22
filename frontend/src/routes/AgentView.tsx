@@ -33,7 +33,7 @@ interface Agent {
   agentInstructions: string;
 }
 
-export default function ViewAgent() {
+export default function AgentView() {
   const { id } = useParams();
   const { user } = useUser();
   const { data } = useQuery({
