@@ -12,14 +12,15 @@ async function main() {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const routesDir = path.join(__dirname, '../src/routes');
   const app = await buildServer(routesDir);
+  let log = app.log as Logger;
 
-  schedule(env.CRON, () => reviewPortfolio(app.log as unknown as Logger));
+  schedule(env.CRON, () => reviewPortfolio(log));
 
   try {
     await app.listen({ port: 3000 });
-    (app.log as unknown as Logger).info('server started');
+    log.info('server started');
   } catch (err) {
-    app.log.error(err);
+    log.error(err);
     process.exit(1);
   }
 }

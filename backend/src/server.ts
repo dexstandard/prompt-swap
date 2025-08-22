@@ -28,6 +28,6 @@ export default async function buildServer(
     }
   }
 
-  (app.log as unknown as Logger).info('Server initialized');
+  (app.log as Logger).info('Server initialized');
   return app;
 }
