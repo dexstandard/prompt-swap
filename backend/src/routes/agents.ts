@@ -25,6 +25,7 @@ import { fetchTotalBalanceUsd } from '../services/binance.js';
 import { calculatePnl } from '../services/pnl.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
+import { normalizeAllocations } from '../util/allocations.js';
 
 interface ValidationErr {
   code: number;
@@ -62,7 +63,6 @@ function validateAgentInput(
     name: string;
     tokenA: string;
     tokenB: string;
-    targetAllocation: number;
     minTokenAAllocation: number;
     minTokenBAllocation: number;
     risk: string;
@@ -88,7 +88,6 @@ function validateAgentInput(
         name: body.name,
         tokenA: body.tokenA,
         tokenB: body.tokenB,
-        targetAllocation: body.targetAllocation,
         minTokenAAllocation: body.minTokenAAllocation,
         minTokenBAllocation: body.minTokenBAllocation,
         risk: body.risk,
@@ -214,7 +213,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         name: string;
         tokenA: string;
         tokenB: string;
-        targetAllocation: number;
         minTokenAAllocation: number;
         minTokenBAllocation: number;
         risk: string;
@@ -225,6 +223,12 @@ export default async function agentRoutes(app: FastifyInstance) {
       const userId = requireUserId(req, reply);
       if (!userId) return;
       const log = req.log.child({ userId });
+      const norm = normalizeAllocations(
+        body.minTokenAAllocation,
+        body.minTokenBAllocation,
+      );
+      body.minTokenAAllocation = norm.minTokenAAllocation;
+      body.minTokenBAllocation = norm.minTokenBAllocation;
       const err = validateAgentInput(log, userId, body);
       if (err) return reply.code(err.code).send(err.body);
       let startBalance: number | null = null;
@@ -248,7 +252,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         name: body.name,
         tokenA: body.tokenA,
         tokenB: body.tokenB,
-        targetAllocation: body.targetAllocation,
         minTokenAAllocation: body.minTokenAAllocation,
         minTokenBAllocation: body.minTokenBAllocation,
         risk: body.risk,
@@ -344,7 +347,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         name: string;
         tokenA: string;
         tokenB: string;
-        targetAllocation: number;
         minTokenAAllocation: number;
         minTokenBAllocation: number;
         risk: string;
@@ -357,6 +359,12 @@ export default async function agentRoutes(app: FastifyInstance) {
           .code(403)
           .send(errorResponse(ERROR_MESSAGES.forbidden));
       }
+      const norm = normalizeAllocations(
+        body.minTokenAAllocation,
+        body.minTokenBAllocation,
+      );
+      body.minTokenAAllocation = norm.minTokenAAllocation;
+      body.minTokenBAllocation = norm.minTokenBAllocation;
       const err = validateAgentInput(log, userId, body, id);
       if (err) return reply.code(err.code).send(err.body);
       let startBalance: number | null = null;
@@ -376,7 +384,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         name: body.name,
         tokenA: body.tokenA,
         tokenB: body.tokenB,
-        targetAllocation: body.targetAllocation,
         minTokenAAllocation: body.minTokenAAllocation,
         minTokenBAllocation: body.minTokenBAllocation,
         risk: body.risk,

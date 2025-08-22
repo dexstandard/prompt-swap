@@ -3,15 +3,14 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 export function normalizeAllocations(
-  targetAllocation: number,
   minTokenAAllocation: number,
-  minTokenBAllocation: number
+  minTokenBAllocation: number,
 ) {
   let minA = clamp(minTokenAAllocation, 0, 100);
   let minB = clamp(minTokenBAllocation, 0, 100);
 
-  if (minA + minB > 100) {
-    const excess = minA + minB - 100;
+  if (minA + minB > 95) {
+    const excess = minA + minB - 95;
     if (minA >= minB) {
       minA -= excess;
     } else {
@@ -19,10 +18,7 @@ export function normalizeAllocations(
     }
   }
 
-  const target = clamp(targetAllocation, minA, 100 - minB);
-
   return {
-    targetAllocation: target,
     minTokenAAllocation: minA,
     minTokenBAllocation: minB,
   };

@@ -23,8 +23,8 @@ describe('agent exec log routes', () => {
 
     const agentId = 'a1';
     db.prepare(
-        `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-         VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'inst')`
+        `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+         VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run(agentId, 'u1');
 
     for (let i = 0; i < 3; i++) {
@@ -58,8 +58,8 @@ describe('agent exec log routes', () => {
 
     const agentId = 'a2';
     db.prepare(
-        `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-         VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'inst')`
+        `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+         VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run(agentId, 'u3');
 
     const aiLog = readFileSync(

@@ -33,8 +33,8 @@ describe('reviewPortfolio', () => {
   it('passes last five responses to callAi', async () => {
     db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u1', 'enc');
     db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'inst')`
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'Agent', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run('a1', 'u1');
     for (let i = 0; i < 6; i++) {
       db.prepare('INSERT INTO agent_exec_log (id, agent_id, log, created_at) VALUES (?, ?, ?, ?)').run(`id${i}`, 'a1', `resp-${i}`, i);
@@ -55,8 +55,8 @@ describe('reviewPortfolio', () => {
     });
     db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u2', 'enc');
     db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent2', 'BTC', 'ETH', 60, 10, 20, 'low', '1h', 'inst')`
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'Agent2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run('a2', 'u2');
     const log: any = { child: () => log, info: () => {}, error: () => {} };
     await reviewPortfolio(log, 'a2');

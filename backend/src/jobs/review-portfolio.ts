@@ -51,7 +51,6 @@ export default async function reviewPortfolio(
           tokenB: row.token_b,
           tokenABalance,
           tokenBBalance,
-          targetAllocation: row.target_allocation,
           minTokenAAllocation: row.min_a_allocation,
           minTokenBAllocation: row.min_b_allocation,
           risk: row.risk,

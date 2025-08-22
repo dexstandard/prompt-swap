@@ -51,7 +51,6 @@ describe('agent routes', () => {
       name: 'A1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -186,7 +185,6 @@ describe('agent routes', () => {
         name: 'A5',
         tokenA: 'BTC',
         tokenB: 'ETH',
-        targetAllocation: 60,
         minTokenAAllocation: 10,
         minTokenBAllocation: 20,
         risk: 'low',
@@ -222,7 +220,6 @@ describe('agent routes', () => {
       name: 'Draft',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -310,7 +307,6 @@ describe('agent routes', () => {
       name: 'A',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -328,7 +324,7 @@ describe('agent routes', () => {
     expect(resCreate.statusCode).toBe(200);
     const id = resCreate.json().id as string;
 
-    const updatePayload = { ...createPayload, targetAllocation: 70 };
+    const updatePayload = { ...createPayload, minTokenAAllocation: 15 };
     const resUpdate = await app.inject({
       method: 'PUT',
       url: `/api/agents/${id}`,
@@ -356,7 +352,6 @@ describe('agent routes', () => {
       name: 'Draft1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 50,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -438,7 +433,6 @@ describe('agent routes', () => {
       name: 'A1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -490,7 +484,6 @@ describe('agent routes', () => {
       name: 'Draft',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 50,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -538,7 +531,6 @@ describe('agent routes', () => {
       name: 'Draft1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 50,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',

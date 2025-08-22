@@ -46,7 +46,6 @@ describe('agent creation', () => {
       name: 'Draft',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
