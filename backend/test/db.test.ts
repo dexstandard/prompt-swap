@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 describe('sqlite db', () => {
   it('inserts and selects rows', async () => {
-    const Database = (await import('better-sqlite3')).default;
+    const Database = ((await import('better-sqlite3')) as any).default;
     const db = new Database(':memory:');
     db.exec('CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)');
     db.prepare('INSERT INTO test (name) VALUES (?)').run('alice');

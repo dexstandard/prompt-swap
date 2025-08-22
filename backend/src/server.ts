@@ -2,10 +2,13 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
+import type { Logger } from 'pino';
 import { RATE_LIMITS } from './rate-limit.js';
 
-export default async function buildServer(): Promise<FastifyInstance> {
+export default async function buildServer(
+  routesDir: string = path.join(process.cwd(), 'src/routes'),
+): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
 
   await app.register(rateLimit, {
@@ -18,9 +21,6 @@ export default async function buildServer(): Promise<FastifyInstance> {
     }),
   });
 
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const routesDir = path.join(__dirname, 'routes');
-
   for (const file of fs.readdirSync(routesDir)) {
     if (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) {
       const route = await import(pathToFileURL(path.join(routesDir, file)).href);
@@ -28,6 +28,6 @@ export default async function buildServer(): Promise<FastifyInstance> {
     }
   }
 
-  app.log.info('Server initialized');
+  (app.log as unknown as Logger).info('Server initialized');
   return app;
 }
