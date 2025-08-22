@@ -7,7 +7,6 @@ import FormField from './forms/FormField';
 interface StrategyData {
   tokenA: string;
   tokenB: string;
-  targetAllocation: number;
   minTokenAAllocation: number;
   minTokenBAllocation: number;
   risk: string;
@@ -47,7 +46,6 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
   const {
     tokenA,
     tokenB,
-    targetAllocation,
     minTokenAAllocation,
     minTokenBAllocation,
     risk,
@@ -76,33 +74,13 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
           />
         </FormField>
       </div>
-      <FormField label="Target Allocation" htmlFor="targetAllocation">
-        <div className="flex items-center gap-2">
-          <span className="w-24 text-right">
-            {targetAllocation}% {tokenA.toUpperCase()}
-          </span>
-          <input
-            id="targetAllocation"
-            type="range"
-            min={minTokenAAllocation}
-            max={100 - minTokenBAllocation}
-            value={targetAllocation}
-            onChange={(e) => onChange('targetAllocation', Number(e.target.value))}
-            className="flex-1"
-            disabled={disabled}
-          />
-          <span className="w-24">
-            {100 - targetAllocation}% {tokenB.toUpperCase()}
-          </span>
-        </div>
-      </FormField>
       <div className="grid grid-cols-2 gap-4">
         <FormField label={`Min ${tokenA.toUpperCase()} allocation`} htmlFor="minTokenAAllocation">
           <TextInput
             id="minTokenAAllocation"
             type="number"
             min={0}
-            max={100}
+            max={95}
             value={minTokenAAllocation}
             onChange={(e) => onChange('minTokenAAllocation', Number(e.target.value))}
             disabled={disabled}
@@ -113,7 +91,7 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
             id="minTokenBAllocation"
             type="number"
             min={0}
-            max={100}
+            max={95}
             value={minTokenBAllocation}
             onChange={(e) => onChange('minTokenBAllocation', Number(e.target.value))}
             disabled={disabled}

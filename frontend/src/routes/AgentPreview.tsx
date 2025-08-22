@@ -19,7 +19,6 @@ interface AgentPreviewDetails {
   name: string;
   tokenA: string;
   tokenB: string;
-  targetAllocation: number;
   minTokenAAllocation: number;
   minTokenBAllocation: number;
   risk: string;
@@ -131,7 +130,6 @@ export default function AgentPreview({ draft }: Props) {
               if (!d) return d;
               const updated = { ...d, [key]: value } as AgentPreviewDetails;
               const normalized = normalizeAllocations(
-                updated.targetAllocation,
                 updated.minTokenAAllocation,
                 updated.minTokenBAllocation,
               );
@@ -203,7 +201,6 @@ export default function AgentPreview({ draft }: Props) {
                     name: agentData.name,
                     tokenA: agentData.tokenA,
                     tokenB: agentData.tokenB,
-                    targetAllocation: agentData.targetAllocation,
                     minTokenAAllocation: agentData.minTokenAAllocation,
                     minTokenBAllocation: agentData.minTokenBAllocation,
                     risk: agentData.risk,
@@ -218,7 +215,6 @@ export default function AgentPreview({ draft }: Props) {
                     name: agentData.name,
                     tokenA: agentData.tokenA,
                     tokenB: agentData.tokenB,
-                    targetAllocation: agentData.targetAllocation,
                     minTokenAAllocation: agentData.minTokenAAllocation,
                     minTokenBAllocation: agentData.minTokenBAllocation,
                     risk: agentData.risk,
@@ -265,7 +261,6 @@ export default function AgentPreview({ draft }: Props) {
                     name: agentData.name,
                     tokenA: agentData.tokenA,
                     tokenB: agentData.tokenB,
-                    targetAllocation: agentData.targetAllocation,
                     minTokenAAllocation: agentData.minTokenAAllocation,
                     minTokenBAllocation: agentData.minTokenBAllocation,
                     risk: agentData.risk,

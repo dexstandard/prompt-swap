@@ -16,25 +16,28 @@ const schema = z
     .object({
         tokenA: z.string().min(1, 'Token A is required'),
         tokenB: z.string().min(1, 'Token B is required'),
-        targetAllocation: z
-            .number()
-            .min(0, 'Must be at least 0')
-            .max(100, 'Must be 100 or less'),
         minTokenAAllocation: z
             .number()
             .min(0, 'Must be at least 0')
-            .max(100, 'Must be 100 or less'),
+            .max(95, 'Must be 95 or less'),
         minTokenBAllocation: z
             .number()
             .min(0, 'Must be at least 0')
-            .max(100, 'Must be 100 or less'),
+            .max(95, 'Must be 95 or less'),
         risk: z.enum(['low', 'medium', 'high']),
         reviewInterval: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
     })
     .refine((data) => data.tokenA !== data.tokenB, {
         message: 'Tokens must be different',
         path: ['tokenB'],
-    });
+    })
+    .refine(
+        (data) => data.minTokenAAllocation + data.minTokenBAllocation <= 95,
+        {
+            message: 'Min allocations must leave at least 5% unallocated',
+            path: ['minTokenBAllocation'],
+        }
+    );
 
 type FormValues = z.infer<typeof schema>;
 
@@ -67,7 +70,6 @@ const DEFAULT_AGENT_INSTRUCTIONS =
 const defaultValues: FormValues = {
     tokenA: 'USDT',
     tokenB: 'SOL',
-    targetAllocation: 20,
     minTokenAAllocation: 0,
     minTokenBAllocation: 30,
     risk: 'low',
@@ -81,7 +83,6 @@ export default function CreateAgentForm({
 }) {
     const {user} = useUser();
     const {
-        register,
         handleSubmit,
         watch,
         setValue,
@@ -94,7 +95,6 @@ export default function CreateAgentForm({
 
     const tokenA = watch('tokenA');
     const tokenB = watch('tokenB');
-    const targetAllocation = watch('targetAllocation');
     const minTokenAAllocation = watch('minTokenAAllocation');
     const minTokenBAllocation = watch('minTokenBAllocation');
 
@@ -107,50 +107,36 @@ export default function CreateAgentForm({
     }, [tokenA, tokenB]);
 
     useEffect(() => {
-        const currentTarget = Number.isFinite(targetAllocation) ? targetAllocation : 0;
         const currentMinA = Number.isFinite(minTokenAAllocation)
             ? minTokenAAllocation
             : 0;
         const currentMinB = Number.isFinite(minTokenBAllocation)
             ? minTokenBAllocation
             : 0;
-        const normalized = normalizeAllocations(
-            currentTarget,
-            currentMinA,
-            currentMinB
-        );
+        const normalized = normalizeAllocations(currentMinA, currentMinB);
         if (
-            normalized.targetAllocation !== currentTarget ||
             normalized.minTokenAAllocation !== currentMinA ||
             normalized.minTokenBAllocation !== currentMinB
         ) {
-            setValue('targetAllocation', normalized.targetAllocation);
             setValue('minTokenAAllocation', normalized.minTokenAAllocation);
             setValue('minTokenBAllocation', normalized.minTokenBAllocation);
         }
-    }, [
-        targetAllocation,
-        minTokenAAllocation,
-        minTokenBAllocation,
-        setValue,
-    ]);
+    }, [minTokenAAllocation, minTokenBAllocation, setValue]);
 
     const navigate = useNavigate();
 
     const onSubmit = handleSubmit(async (values) => {
         if (!user) return;
-        const {targetAllocation} = normalizeAllocations(
-            values.targetAllocation,
+        const normalized = normalizeAllocations(
             values.minTokenAAllocation,
             values.minTokenBAllocation
         );
         const previewData = {
-            name: `${values.tokenA.toUpperCase()} ${targetAllocation} / ${values.tokenB.toUpperCase()} ${100 - targetAllocation}`,
+            name: `${values.tokenA.toUpperCase()} / ${values.tokenB.toUpperCase()}`,
             tokenA: values.tokenA.toUpperCase(),
             tokenB: values.tokenB.toUpperCase(),
-            targetAllocation,
-            minTokenAAllocation: values.minTokenAAllocation,
-            minTokenBAllocation: values.minTokenBAllocation,
+            minTokenAAllocation: normalized.minTokenAAllocation,
+            minTokenBAllocation: normalized.minTokenBAllocation,
             risk: values.risk,
             reviewInterval: values.reviewInterval,
             agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
@@ -199,25 +185,6 @@ export default function CreateAgentForm({
                         />
                     </FormField>
                 </div>
-                <FormField label="Target Allocation" htmlFor="targetAllocation">
-                    <div className="flex items-center gap-2">
-          <span className="w-24 text-right">
-            {targetAllocation}% {tokenA.toUpperCase()}
-          </span>
-                        <input
-                            id="targetAllocation"
-                            type="range"
-                            min={0}
-                            max={100}
-                            {...register('targetAllocation', {valueAsNumber: true})}
-                            value={targetAllocation}
-                            className="flex-1"
-                        />
-                        <span className="w-24">
-            {100 - targetAllocation}% {tokenB.toUpperCase()}
-          </span>
-                    </div>
-                </FormField>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
                         label={`Min ${tokenA.toUpperCase()} allocation`}
@@ -231,7 +198,7 @@ export default function CreateAgentForm({
                                     id="minTokenAAllocation"
                                     type="number"
                                     min={0}
-                                    max={100}
+                                    max={95}
                                     {...field}
                                     onChange={(e) =>
                                         field.onChange(
@@ -256,7 +223,7 @@ export default function CreateAgentForm({
                                     id="minTokenBAllocation"
                                     type="number"
                                     min={0}
-                                    max={100}
+                                    max={95}
                                     {...field}
                                     onChange={(e) =>
                                         field.onChange(

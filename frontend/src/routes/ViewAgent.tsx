@@ -26,7 +26,6 @@ interface Agent {
   name: string;
   tokenA: string;
   tokenB: string;
-  targetAllocation: number;
   minTokenAAllocation: number;
   minTokenBAllocation: number;
   risk: string;
@@ -83,7 +82,6 @@ export default function ViewAgent() {
   const [updateData, setUpdateData] = useState({
     tokenA: '',
     tokenB: '',
-    targetAllocation: 0,
     minTokenAAllocation: 0,
     minTokenBAllocation: 0,
     risk: '',
@@ -139,7 +137,6 @@ export default function ViewAgent() {
   const strategyData = {
     tokenA: data.tokenA,
     tokenB: data.tokenB,
-    targetAllocation: data.targetAllocation,
     minTokenAAllocation: data.minTokenAAllocation,
     minTokenBAllocation: data.minTokenBAllocation,
     risk: data.risk,
@@ -207,15 +204,14 @@ export default function ViewAgent() {
       {isActive ? (
         <div className="mt-4 flex gap-2">
           <Button onClick={() => {
-            setUpdateData({
-              tokenA: data.tokenA,
-              tokenB: data.tokenB,
-              targetAllocation: data.targetAllocation,
-              minTokenAAllocation: data.minTokenAAllocation,
-              minTokenBAllocation: data.minTokenBAllocation,
-              risk: data.risk,
-              reviewInterval: data.reviewInterval,
-              agentInstructions: data.agentInstructions,
+          setUpdateData({
+            tokenA: data.tokenA,
+            tokenB: data.tokenB,
+            minTokenAAllocation: data.minTokenAAllocation,
+            minTokenBAllocation: data.minTokenBAllocation,
+            risk: data.risk,
+            reviewInterval: data.reviewInterval,
+            agentInstructions: data.agentInstructions,
             });
             setShowUpdate(true);
           }}>
@@ -297,7 +293,6 @@ export default function ViewAgent() {
               setUpdateData((d) => {
                 const updated = { ...d, [key]: value };
                 const normalized = normalizeAllocations(
-                  updated.targetAllocation,
                   updated.minTokenAAllocation,
                   updated.minTokenBAllocation,
                 );
