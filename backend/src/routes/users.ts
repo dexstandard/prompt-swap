@@ -1,0 +1,49 @@
+import type { FastifyInstance } from 'fastify';
+import { requireAdmin } from '../util/auth.js';
+import { listUsers, setUserEnabled, getUser } from '../repos/users.js';
+import { RATE_LIMITS } from '../rate-limit.js';
+import { errorResponse } from '../util/errorMessages.js';
+
+export default async function usersRoutes(app: FastifyInstance) {
+  app.get(
+    '/users',
+    { config: { rateLimit: RATE_LIMITS.TIGHT } },
+    (req, reply) => {
+      const adminId = requireAdmin(req, reply);
+      if (!adminId) return;
+      return listUsers().map((u) => ({
+        id: u.id,
+        role: u.role,
+        isEnabled: !!u.is_enabled,
+      }));
+    },
+  );
+
+  app.post(
+    '/users/:id/enable',
+    { config: { rateLimit: RATE_LIMITS.TIGHT } },
+    (req, reply) => {
+      const adminId = requireAdmin(req, reply);
+      if (!adminId) return;
+      const { id } = req.params as { id: string };
+      const row = getUser(id);
+      if (!row) return reply.code(404).send(errorResponse('user not found'));
+      setUserEnabled(id, true);
+      return { ok: true };
+    },
+  );
+
+  app.post(
+    '/users/:id/disable',
+    { config: { rateLimit: RATE_LIMITS.TIGHT } },
+    (req, reply) => {
+      const adminId = requireAdmin(req, reply);
+      if (!adminId) return;
+      const { id } = req.params as { id: string };
+      const row = getUser(id);
+      if (!row) return reply.code(404).send(errorResponse('user not found'));
+      setUserEnabled(id, false);
+      return { ok: true };
+    },
+  );
+}

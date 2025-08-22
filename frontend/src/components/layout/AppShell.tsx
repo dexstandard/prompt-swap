@@ -2,7 +2,8 @@ import { Link, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from '../../lib/axios';
 import GoogleLoginButton from '../GoogleLoginButton';
-import { Bot, Key, Settings as SettingsIcon } from 'lucide-react';
+import { Bot, Key, Settings as SettingsIcon, Users as UsersIcon } from 'lucide-react';
+import { useUser } from '../../lib/useUser';
 
 function ApiStatus() {
   const { isSuccess } = useQuery({
@@ -14,6 +15,7 @@ function ApiStatus() {
 }
 
 export default function AppShell() {
+  const { user } = useUser();
   return (
     <div className="h-screen flex flex-col">
       <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between z-10">
@@ -37,6 +39,15 @@ export default function AppShell() {
             <SettingsIcon className="w-4 h-4" />
             Settings
           </Link>
+          {user?.role === 'admin' && (
+            <Link
+              to="/users"
+              className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900"
+            >
+              <UsersIcon className="w-4 h-4" />
+              Users
+            </Link>
+          )}
         </nav>
         <main className="flex-1 p-3 pt-0 bg-white overflow-y-auto">
           <Outlet />

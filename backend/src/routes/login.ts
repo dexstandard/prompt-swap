@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authenticator } from 'otplib';
 import { env } from '../util/env.js';
 import { RATE_LIMITS } from '../rate-limit.js';
-import { getTotpRow, insertUser } from '../repos/users.js';
+import { getUser, insertUser } from '../repos/users.js';
 
 interface ValidationErr {
   code: number;
@@ -33,13 +33,17 @@ export default async function loginRoutes(app: FastifyInstance) {
       if (!payload?.sub)
         return reply.code(400).send({ error: 'invalid token' });
       const id = payload.sub;
-      const row = getTotpRow(id);
-      if (!row) insertUser(id);
-      else {
-        const err = validateOtp(row, body.otp);
-        if (err) return reply.code(err.code).send(err.body);
+      const row = getUser(id);
+      if (!row) {
+        insertUser(id);
+        return { id, email: payload.email, role: 'user' };
       }
-      return { id, email: payload.email };
+      if (!row.is_enabled) {
+        return reply.code(403).send({ error: 'user disabled' });
+      }
+      const err = validateOtp(row, body.otp);
+      if (err) return reply.code(err.code).send(err.body);
+      return { id, email: payload.email, role: row.role };
     }
   );
 }

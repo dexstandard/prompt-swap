@@ -6,6 +6,7 @@ export type User = {
   openaiKey?: string;
   binanceKey?: string;
   binanceSecret?: string;
+  role?: 'user' | 'admin';
 } | null;
 
 export const UserContext = createContext<{ user: User; setUser: (u: User) => void }>({

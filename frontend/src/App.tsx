@@ -7,6 +7,7 @@ import AgentView from './routes/AgentView';
 import Settings from './routes/Settings';
 import Terms from './routes/Terms';
 import Privacy from './routes/Privacy';
+import Users from './routes/Users';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/keys" element={<Keys />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/users" element={<Users />} />
         <Route path="/agent-preview" element={<AgentPreview />} />
         <Route path="/agents/:id" element={<AgentView />} />
         <Route path="/terms" element={<Terms />} />
