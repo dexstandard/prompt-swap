@@ -17,16 +17,18 @@ vi.mock('../src/services/binance.js', () => ({
       { asset: 'ETH', free: '2', locked: '0' },
     ],
   }),
+  fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
 }));
 
 let reviewPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let callAi: any;
 let fetchAccount: any;
+let fetchPairData: any;
 
 beforeAll(async () => {
   reviewPortfolio = (await import('../src/jobs/review-portfolio.js')).default;
   ({ callAi } = await import('../src/util/ai.js'));
-  ({ fetchAccount } = await import('../src/services/binance.js'));
+  ({ fetchAccount, fetchPairData } = await import('../src/services/binance.js'));
 });
 
 describe('reviewPortfolio', () => {
@@ -46,6 +48,7 @@ describe('reviewPortfolio', () => {
     expect(args[3]).toEqual(['resp-5', 'resp-4', 'resp-3', 'resp-2', 'resp-1']);
     expect(args[1].tokenABalance).toBe(1.5);
     expect(args[1].tokenBBalance).toBe(2);
+    expect(args[1].marketData).toEqual({ currentPrice: 100 });
   });
 
   it('logs error when token balances missing and skips callAi', async () => {
@@ -66,5 +69,29 @@ describe('reviewPortfolio', () => {
       .all('a2') as { log: string }[];
     expect(rows).toHaveLength(1);
     expect(rows[0].log).toContain('failed to fetch token balances');
+  });
+
+  it('logs error when market data fetch fails and skips callAi', async () => {
+    vi.mocked(callAi).mockClear();
+    vi.mocked(fetchAccount).mockResolvedValueOnce({
+      balances: [
+        { asset: 'BTC', free: '1', locked: '0' },
+        { asset: 'ETH', free: '2', locked: '0' },
+      ],
+    });
+    vi.mocked(fetchPairData).mockRejectedValueOnce(new Error('fail'));
+    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u3', 'enc');
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'Agent3', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
+    ).run('a3', 'u3');
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewPortfolio(log, 'a3');
+    expect(callAi).not.toHaveBeenCalled();
+    const rows = db
+      .prepare('SELECT log FROM agent_exec_log WHERE agent_id = ?')
+      .all('a3') as { log: string }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].log).toContain('failed to fetch market data');
   });
 });
