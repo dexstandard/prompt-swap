@@ -1,18 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+import { db } from '../src/db/index.js';
 
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { db, migrate } = await import('../src/db/index.js');
-
-const reviewPortfolioMock = vi.fn(() => new Promise(() => {}));
+const reviewPortfolioMock = vi.fn<(log: unknown, agentId?: string) => Promise<unknown>>(() => new Promise(() => {}));
 vi.mock('../src/jobs/review-portfolio.js', () => ({ default: reviewPortfolioMock }));
 
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
-
-migrate();
 
 function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
@@ -46,7 +39,6 @@ describe('agent creation', () => {
       name: 'Draft',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',

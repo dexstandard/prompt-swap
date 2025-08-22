@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { default: buildServer } = await import('../src/server.js');
+import buildServer from '../src/server.js';
 
 describe('health route', () => {
   it('returns ok', async () => {

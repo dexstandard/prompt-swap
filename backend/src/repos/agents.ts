@@ -9,7 +9,6 @@ export interface AgentRow {
   name: string;
   token_a: string;
   token_b: string;
-  target_allocation: number;
   min_a_allocation: number;
   min_b_allocation: number;
   risk: string;
@@ -33,7 +32,6 @@ export function toApi(row: AgentRow) {
     name: row.name,
     tokenA: row.token_a,
     tokenB: row.token_b,
-    targetAllocation: row.target_allocation,
     minTokenAAllocation: row.min_a_allocation,
     minTokenBAllocation: row.min_b_allocation,
     risk: row.risk,
@@ -44,7 +42,7 @@ export function toApi(row: AgentRow) {
 
 const baseSelect =
   'SELECT id, user_id, model, status, created_at, name, token_a, token_b, ' +
-  'target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, ' +
+  'min_a_allocation, min_b_allocation, risk, review_interval, ' +
   'agent_instructions FROM agents';
 
 export function getAgent(id: string) {
@@ -81,7 +79,6 @@ export function findIdenticalDraftAgent(
     name: string;
     tokenA: string;
     tokenB: string;
-    targetAllocation: number;
     minTokenAAllocation: number;
     minTokenBAllocation: number;
     risk: string;
@@ -92,7 +89,7 @@ export function findIdenticalDraftAgent(
 ) {
   const query = `SELECT id, name FROM agents
      WHERE user_id = ? AND status = 'draft'${excludeId ? ' AND id != ?' : ''} AND model = ? AND name = ?
-       AND token_a = ? AND token_b = ? AND target_allocation = ?
+       AND token_a = ? AND token_b = ?
        AND min_a_allocation = ? AND min_b_allocation = ?
        AND risk = ? AND review_interval = ? AND agent_instructions = ?`;
   const params: unknown[] = [
@@ -102,7 +99,6 @@ export function findIdenticalDraftAgent(
     data.name,
     data.tokenA,
     data.tokenB,
-    data.targetAllocation,
     data.minTokenAAllocation,
     data.minTokenBAllocation,
     data.risk,
@@ -158,7 +154,6 @@ export function insertAgent(data: {
   name: string;
   tokenA: string;
   tokenB: string;
-  targetAllocation: number;
   minTokenAAllocation: number;
   minTokenBAllocation: number;
   risk: string;
@@ -166,8 +161,8 @@ export function insertAgent(data: {
   agentInstructions: string;
 }) {
   db.prepare(
-    `INSERT INTO agents (id, user_id, model, status, created_at, start_balance, name, token_a, token_b, target_allocation, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO agents (id, user_id, model, status, created_at, start_balance, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     data.id,
     data.userId,
@@ -178,7 +173,6 @@ export function insertAgent(data: {
     data.name,
     data.tokenA,
     data.tokenB,
-    data.targetAllocation,
     data.minTokenAAllocation,
     data.minTokenBAllocation,
     data.risk,
@@ -211,7 +205,6 @@ export function updateAgent(data: {
   name: string;
   tokenA: string;
   tokenB: string;
-  targetAllocation: number;
   minTokenAAllocation: number;
   minTokenBAllocation: number;
   risk: string;
@@ -220,7 +213,7 @@ export function updateAgent(data: {
   startBalance: number | null;
 }) {
   db.prepare(
-    `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, target_allocation = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ? WHERE id = ?`,
+    `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ? WHERE id = ?`,
   ).run(
     data.userId,
     data.model,
@@ -228,7 +221,6 @@ export function updateAgent(data: {
     data.name,
     data.tokenA,
     data.tokenB,
-    data.targetAllocation,
     data.minTokenAAllocation,
     data.minTokenBAllocation,
     data.risk,
@@ -261,7 +253,6 @@ export interface ActiveAgentRow {
   model: string;
   token_a: string;
   token_b: string;
-  target_allocation: number;
   min_a_allocation: number;
   min_b_allocation: number;
   risk: string;
@@ -272,7 +263,7 @@ export interface ActiveAgentRow {
 
 export function getActiveAgents(agentId?: string): ActiveAgentRow[] {
   const sql = `SELECT a.id, a.user_id, a.model,
-                      a.token_a, a.token_b, a.target_allocation,
+                      a.token_a, a.token_b,
                       a.min_a_allocation, a.min_b_allocation,
                       a.risk, a.review_interval, a.agent_instructions,
                       u.ai_api_key_enc

@@ -1,17 +1,11 @@
-import { describe, it, expect, vi, afterAll } from 'vitest';
-
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { db, migrate } = await import('../src/db/index.js');
-const { OAuth2Client } = await import('google-auth-library');
-const { authenticator } = await import('otplib');
-const { default: buildServer } = await import('../src/server.js');
+import { describe, it, expect, vi } from 'vitest';
+import { db } from '../src/db/index.js';
+import { OAuth2Client } from 'google-auth-library';
+import { authenticator } from 'otplib';
+import buildServer from '../src/server.js';
 
 describe('login route', () => {
   it('creates user on first login', async () => {
-    migrate();
     const app = await buildServer();
     vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
       getPayload: () => ({ sub: 'user123', email: 'user@example.com' }),
@@ -31,7 +25,6 @@ describe('login route', () => {
   });
 
   it('requires otp when 2fa enabled', async () => {
-    migrate();
     const app = await buildServer();
     vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
       getPayload: () => ({ sub: 'user2', email: 'user2@example.com' }),
@@ -58,7 +51,5 @@ describe('login route', () => {
     await app.close();
   });
 
-  afterAll(() => {
-    db.close();
-  });
+  // db closed in test setup
 });

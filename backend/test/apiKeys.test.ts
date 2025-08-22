@@ -1,13 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { db, migrate } = await import('../src/db/index.js');
+import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
-
-migrate();
 
 describe('AI API key routes', () => {
   it('performs CRUD operations', async () => {
@@ -31,7 +24,7 @@ describe('AI API key routes', () => {
     expect(res.json()).toMatchObject({ error: 'verification failed' });
     let row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
-      .get('user1');
+      .get('user1') as any;
     expect(row.ai_api_key_enc).toBeNull();
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
@@ -44,7 +37,7 @@ describe('AI API key routes', () => {
     expect(res.json()).toMatchObject({ key: 'aike...7890' });
     row = db
       .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
-      .get('user1');
+      .get('user1') as any;
     expect(row.ai_api_key_enc).not.toBe(key1);
 
     res = await app.inject({ method: 'GET', url: '/api/users/user1/ai-key' });
@@ -115,7 +108,7 @@ describe('Binance API key routes', () => {
       .prepare(
         'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
       )
-      .get('user2');
+      .get('user2') as any;
     expect(row.binance_api_key_enc).toBeNull();
     expect(row.binance_api_secret_enc).toBeNull();
 
@@ -134,7 +127,7 @@ describe('Binance API key routes', () => {
       .prepare(
         'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
       )
-      .get('user2');
+      .get('user2') as any;
     expect(row.binance_api_key_enc).not.toBe(key1);
     expect(row.binance_api_secret_enc).not.toBe(secret1);
 

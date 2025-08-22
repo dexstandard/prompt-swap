@@ -91,7 +91,7 @@ export function parseExecLog(log: unknown): ParsedExecLog {
           }
         } catch {
           const rebalanceMatch = textField.match(/"rebalance"\s*:\s*(true|false)/i);
-          const reportMatch = textField.match(/"shortReport"\s*:\s*"([^"]*)"/is);
+          const reportMatch = textField.match(/"shortReport"\s*:\s*"([\s\S]*?)"/i);
           if (rebalanceMatch && reportMatch) {
             response = {
               rebalance: rebalanceMatch[1].toLowerCase() === 'true',

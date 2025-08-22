@@ -1,15 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-
-process.env.DATABASE_URL = ':memory:';
-process.env.KEY_PASSWORD = 'test-pass';
-process.env.GOOGLE_CLIENT_ID = 'test-client';
-
-const { db, migrate } = await import('../src/db/index.js');
+import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
-const { getActiveAgents } = await import('../src/repos/agents.js');
-
-migrate();
+import { getActiveAgents } from '../src/repos/agents.js';
 
 function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
@@ -51,7 +44,6 @@ describe('agent routes', () => {
       name: 'A1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -186,7 +178,6 @@ describe('agent routes', () => {
         name: 'A5',
         tokenA: 'BTC',
         tokenB: 'ETH',
-        targetAllocation: 60,
         minTokenAAllocation: 10,
         minTokenBAllocation: 20,
         risk: 'low',
@@ -222,7 +213,6 @@ describe('agent routes', () => {
       name: 'Draft',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -310,7 +300,6 @@ describe('agent routes', () => {
       name: 'A',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -328,7 +317,7 @@ describe('agent routes', () => {
     expect(resCreate.statusCode).toBe(200);
     const id = resCreate.json().id as string;
 
-    const updatePayload = { ...createPayload, targetAllocation: 70 };
+    const updatePayload = { ...createPayload, minTokenAAllocation: 15 };
     const resUpdate = await app.inject({
       method: 'PUT',
       url: `/api/agents/${id}`,
@@ -356,7 +345,6 @@ describe('agent routes', () => {
       name: 'Draft1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 50,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -438,7 +426,6 @@ describe('agent routes', () => {
       name: 'A1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 60,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -490,7 +477,6 @@ describe('agent routes', () => {
       name: 'Draft',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 50,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -538,7 +524,6 @@ describe('agent routes', () => {
       name: 'Draft1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      targetAllocation: 50,
       minTokenAAllocation: 10,
       minTokenBAllocation: 20,
       risk: 'low',
@@ -573,6 +558,33 @@ describe('agent routes', () => {
     expect(resUpd.json().error).toContain('Draft1');
     expect(resUpd.json().error).toContain(draft1);
 
+    await app.close();
+  });
+
+  it('rejects allocations exceeding 95%', async () => {
+    const app = await buildServer();
+    addUserNoKeys('allocUser');
+    const payload = {
+      userId: 'allocUser',
+      model: 'm',
+      name: 'Bad',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      minTokenAAllocation: 60,
+      minTokenBAllocation: 40,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'p',
+      status: 'draft',
+    };
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'allocUser' },
+      payload,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain('minimum allocations');
     await app.close();
   });
 });

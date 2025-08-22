@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS agents(
   name TEXT,
   token_a TEXT,
   token_b TEXT,
-  target_allocation INTEGER,
   min_a_allocation INTEGER,
   min_b_allocation INTEGER,
   risk TEXT,
@@ -47,7 +46,7 @@ CREATE TABLE IF NOT EXISTS agent_exec_log(
 CREATE INDEX IF NOT EXISTS idx_agents_draft_all_fields
   ON agents(
     user_id, model, name, token_a, token_b,
-    target_allocation, min_a_allocation, min_b_allocation,
+    min_a_allocation, min_b_allocation,
     risk, review_interval, agent_instructions
   )
   WHERE status = 'draft';

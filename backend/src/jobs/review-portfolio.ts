@@ -1,4 +1,4 @@
-import type { FastifyBaseLogger } from 'fastify';
+import type { Logger } from 'pino';
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/index.js';
 import { env } from '../util/env.js';
@@ -8,7 +8,7 @@ import { callAi } from '../util/ai.js';
 import { fetchAccount } from '../services/binance.js';
 
 export default async function reviewPortfolio(
-  log: FastifyBaseLogger,
+  log: Logger,
   agentId?: string,
 ): Promise<void> {
   const rows = getActiveAgents(agentId);
@@ -51,7 +51,6 @@ export default async function reviewPortfolio(
           tokenB: row.token_b,
           tokenABalance,
           tokenBBalance,
-          targetAllocation: row.target_allocation,
           minTokenAAllocation: row.min_a_allocation,
           minTokenBAllocation: row.min_b_allocation,
           risk: row.risk,

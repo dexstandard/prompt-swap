@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { Logger } from 'pino';
 import { randomUUID } from 'node:crypto';
 import {
   getAgent,
@@ -25,6 +26,7 @@ import { fetchTotalBalanceUsd } from '../services/binance.js';
 import { calculatePnl } from '../services/pnl.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
+import { validateAllocations } from '../util/allocations.js';
 
 interface ValidationErr {
   code: number;
@@ -32,7 +34,7 @@ interface ValidationErr {
 }
 
 function validateTokenConflicts(
-  log: any,
+  log: Logger,
   userId: string,
   tokenA: string,
   tokenB: string,
@@ -54,7 +56,7 @@ function validateTokenConflicts(
 }
 
 function validateAgentInput(
-  log: any,
+  log: Logger,
   userId: string,
   body: {
     userId: string;
@@ -62,7 +64,6 @@ function validateAgentInput(
     name: string;
     tokenA: string;
     tokenB: string;
-    targetAllocation: number;
     minTokenAAllocation: number;
     minTokenBAllocation: number;
     risk: string;
@@ -88,7 +89,6 @@ function validateAgentInput(
         name: body.name,
         tokenA: body.tokenA,
         tokenB: body.tokenB,
-        targetAllocation: body.targetAllocation,
         minTokenAAllocation: body.minTokenAAllocation,
         minTokenBAllocation: body.minTokenBAllocation,
         risk: body.risk,
@@ -119,7 +119,7 @@ function validateAgentInput(
   return null;
 }
 
-function ensureApiKeys(log: any, userId: string): ValidationErr | null {
+function ensureApiKeys(log: Logger, userId: string): ValidationErr | null {
   const userRow = getUserApiKeys(userId);
   if (
     !userRow?.ai_api_key_enc ||
@@ -133,7 +133,7 @@ function ensureApiKeys(log: any, userId: string): ValidationErr | null {
 }
 
 async function getStartBalance(
-  log: any,
+  log: Logger,
   userId: string,
 ): Promise<number | ValidationErr> {
   try {
@@ -152,11 +152,11 @@ async function getStartBalance(
 function getAgentForRequest(
   req: FastifyRequest,
   reply: FastifyReply,
-): { userId: string; id: string; log: any; agent: any } | undefined {
+): { userId: string; id: string; log: Logger; agent: any } | undefined {
   const userId = requireUserId(req, reply);
   if (!userId) return;
   const id = (req.params as any).id;
-  const log = req.log.child({ userId, agentId: id });
+  const log = req.log.child({ userId, agentId: id }) as unknown as Logger;
   const agent = getAgent(id);
   if (!agent) {
     log.error('agent not found');
@@ -184,7 +184,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const userId = requireUserId(req, reply);
       if (!userId) return;
-      const log = req.log.child({ userId });
+      const log = req.log.child({ userId }) as unknown as Logger;
       const { page = '1', pageSize = '10', status } = req.query as {
         page?: string;
         pageSize?: string;
@@ -214,7 +214,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         name: string;
         tokenA: string;
         tokenB: string;
-        targetAllocation: number;
         minTokenAAllocation: number;
         minTokenBAllocation: number;
         risk: string;
@@ -224,7 +223,21 @@ export default async function agentRoutes(app: FastifyInstance) {
       };
       const userId = requireUserId(req, reply);
       if (!userId) return;
-      const log = req.log.child({ userId });
+      const log = req.log.child({ userId }) as unknown as Logger;
+      let norm;
+      try {
+        norm = validateAllocations(
+          body.minTokenAAllocation,
+          body.minTokenBAllocation,
+        );
+      } catch {
+        log.error('invalid allocations');
+        return reply
+          .code(400)
+          .send(errorResponse('invalid minimum allocations'));
+      }
+      body.minTokenAAllocation = norm.minTokenAAllocation;
+      body.minTokenBAllocation = norm.minTokenBAllocation;
       const err = validateAgentInput(log, userId, body);
       if (err) return reply.code(err.code).send(err.body);
       let startBalance: number | null = null;
@@ -248,7 +261,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         name: body.name,
         tokenA: body.tokenA,
         tokenB: body.tokenB,
-        targetAllocation: body.targetAllocation,
         minTokenAAllocation: body.minTokenAAllocation,
         minTokenBAllocation: body.minTokenBAllocation,
         risk: body.risk,
@@ -257,7 +269,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       });
       const row = getAgent(id)!;
       if (body.status === AgentStatus.Active)
-        reviewPortfolio(req.log, id).catch((err) =>
+        reviewPortfolio(req.log as unknown as Logger, id).catch((err) =>
           log.error({ err, agentId: id }, 'initial review failed'),
         );
       log.info({ agentId: id }, 'created agent');
@@ -344,7 +356,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         name: string;
         tokenA: string;
         tokenB: string;
-        targetAllocation: number;
         minTokenAAllocation: number;
         minTokenBAllocation: number;
         risk: string;
@@ -357,6 +368,20 @@ export default async function agentRoutes(app: FastifyInstance) {
           .code(403)
           .send(errorResponse(ERROR_MESSAGES.forbidden));
       }
+      let norm;
+      try {
+        norm = validateAllocations(
+          body.minTokenAAllocation,
+          body.minTokenBAllocation,
+        );
+      } catch {
+        log.error('invalid allocations');
+        return reply
+          .code(400)
+          .send(errorResponse('invalid minimum allocations'));
+      }
+      body.minTokenAAllocation = norm.minTokenAAllocation;
+      body.minTokenBAllocation = norm.minTokenBAllocation;
       const err = validateAgentInput(log, userId, body, id);
       if (err) return reply.code(err.code).send(err.body);
       let startBalance: number | null = null;
@@ -376,7 +401,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         name: body.name,
         tokenA: body.tokenA,
         tokenB: body.tokenB,
-        targetAllocation: body.targetAllocation,
         minTokenAAllocation: body.minTokenAAllocation,
         minTokenBAllocation: body.minTokenBAllocation,
         risk: body.risk,
@@ -385,7 +409,8 @@ export default async function agentRoutes(app: FastifyInstance) {
         startBalance,
       });
       const row = getAgent(id)!;
-      if (status === AgentStatus.Active) await reviewPortfolio(req.log, id);
+      if (status === AgentStatus.Active)
+        await reviewPortfolio(req.log as unknown as Logger, id);
       log.info('updated agent');
       return toApi(row);
     }
@@ -424,7 +449,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       const bal = await getStartBalance(log, userId);
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
       repoStartAgent(id, bal);
-      reviewPortfolio(req.log, id).catch((err) =>
+      reviewPortfolio(req.log as unknown as Logger, id).catch((err) =>
         log.error({ err }, 'initial review failed')
       );
       const row = getAgent(id)!;

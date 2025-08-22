@@ -1,20 +1,26 @@
-import cron from 'node-cron';
+import { schedule } from 'node-cron';
 import buildServer from '../src/server.js';
 import { env } from '../src/util/env.js';
 import { migrate } from '../src/db/index.js';
 import reviewPortfolio from '../src/jobs/review-portfolio.js';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { Logger } from 'pino';
 
 async function main() {
   migrate();
-  const app = await buildServer();
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const routesDir = path.join(__dirname, '../src/routes');
+  const app = await buildServer(routesDir);
+  let log = app.log as Logger;
 
-  cron.schedule(env.CRON, () => reviewPortfolio(app.log));
+  schedule(env.CRON, () => reviewPortfolio(log));
 
   try {
     await app.listen({ port: 3000 });
-    app.log.info('server started');
+    log.info('server started');
   } catch (err) {
-    app.log.error(err);
+    log.error(err);
     process.exit(1);
   }
 }

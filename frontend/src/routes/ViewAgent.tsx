@@ -26,7 +26,6 @@ interface Agent {
   name: string;
   tokenA: string;
   tokenB: string;
-  targetAllocation: number;
   minTokenAAllocation: number;
   minTokenBAllocation: number;
   risk: string;
@@ -83,7 +82,6 @@ export default function ViewAgent() {
   const [updateData, setUpdateData] = useState({
     tokenA: '',
     tokenB: '',
-    targetAllocation: 0,
     minTokenAAllocation: 0,
     minTokenBAllocation: 0,
     risk: '',
@@ -139,7 +137,6 @@ export default function ViewAgent() {
   const strategyData = {
     tokenA: data.tokenA,
     tokenB: data.tokenB,
-    targetAllocation: data.targetAllocation,
     minTokenAAllocation: data.minTokenAAllocation,
     minTokenBAllocation: data.minTokenBAllocation,
     risk: data.risk,
@@ -147,185 +144,188 @@ export default function ViewAgent() {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
-        <span>Agent:</span> <span>{data.name}</span>
-      </h1>
-      <p className="flex items-center gap-1">
-        <strong>Tokens:</strong>
-        <TokenDisplay token={data.tokenA} />
-        <span>/</span>
-        <TokenDisplay token={data.tokenB} />
-      </p>
-      <div className="mt-2">
-        <div
-          className="flex items-center gap-1 cursor-pointer"
-          onClick={() => setShowStrategy((s) => !s)}
-        >
-          <h2 className="text-l font-bold">Strategy</h2>
-          {showStrategy ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
-        </div>
-        {showStrategy && (
-          <div className="mt-2 max-w-2xl">
-            <StrategyForm data={strategyData} onChange={() => {}} disabled />
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+          <span>Agent:</span> <span>{data.name}</span>
+        </h1>
+        <p className="mt-2">
+          <strong>Created:</strong> {new Date(data.createdAt).toLocaleString()}
+        </p>
+        <p className="mt-2">
+          <strong>Status:</strong> <AgentStatusLabel status={data.status}/>
+        </p>
+        <p className="flex items-center gap-1 mt-2">
+          <strong>Tokens:</strong>
+          <TokenDisplay token={data.tokenA}/>
+          <span>/</span>
+          <TokenDisplay token={data.tokenB}/>
+        </p>
+        <div className="mt-2">
+          <div
+              className="flex items-center gap-1 cursor-pointer"
+              onClick={() => setShowStrategy((s) => !s)}
+          >
+            <h2 className="text-l font-bold">Strategy</h2>
+            {showStrategy ? (
+                <ChevronDown className="w-4 h-4"/>
+            ) : (
+                <ChevronRight className="w-4 h-4"/>
+            )}
           </div>
-        )}
-      </div>
-      <div className="mt-2">
-        <div className="flex items-center gap-1">
-          <h2 className="text-l font-bold">Trading Instructions</h2>
-          {showPrompt ? (
-            <EyeOff
-              className="w-4 h-4 cursor-pointer"
-              onClick={() => setShowPrompt(false)}
-            />
-          ) : (
-            <Eye
-              className="w-4 h-4 cursor-pointer"
-              onClick={() => setShowPrompt(true)}
-            />
+          {showStrategy && (
+              <div className="mt-2 max-w-2xl">
+                <StrategyForm data={strategyData} onChange={() => {
+                }} disabled/>
+              </div>
           )}
         </div>
-        {showPrompt && (
-          <pre className="whitespace-pre-wrap mt-2">
+        <div className="mt-2">
+          <div className="flex items-center gap-1">
+            <h2 className="text-l font-bold">Trading Instructions</h2>
+            {showPrompt ? (
+                <EyeOff
+                    className="w-4 h-4 cursor-pointer"
+                    onClick={() => setShowPrompt(false)}
+                />
+            ) : (
+                <Eye
+                    className="w-4 h-4 cursor-pointer"
+                    onClick={() => setShowPrompt(true)}
+                />
+            )}
+          </div>
+          {showPrompt && (
+              <pre className="whitespace-pre-wrap mt-2">
             {data.agentInstructions}
           </pre>
-        )}
-      </div>
-      <p className="mt-2">
-        <strong>Status:</strong> <AgentStatusLabel status={data.status} />
-        <strong className="ml-2">Created:</strong> {new Date(data.createdAt).toLocaleString()}
-      </p>
-      <p className="mt-2">
-        <strong>Balance (USD):</strong>{' '}
-        <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB} />
-      </p>
-      {isActive ? (
-        <div className="mt-4 flex gap-2">
-          <Button onClick={() => {
-            setUpdateData({
-              tokenA: data.tokenA,
-              tokenB: data.tokenB,
-              targetAllocation: data.targetAllocation,
-              minTokenAAllocation: data.minTokenAAllocation,
-              minTokenBAllocation: data.minTokenBAllocation,
-              risk: data.risk,
-              reviewInterval: data.reviewInterval,
-              agentInstructions: data.agentInstructions,
-            });
-            setShowUpdate(true);
-          }}>
-            Update Agent
-          </Button>
-          <Button
-            disabled={stopMut.isPending}
-            loading={stopMut.isPending}
-            onClick={() => stopMut.mutate()}
-          >
-            Stop Agent
-          </Button>
-        </div>
-      ) : (
-        <Button
-          className="mt-4"
-          disabled={startMut.isPending}
-          loading={startMut.isPending}
-          onClick={() => startMut.mutate()}
-        >
-          Start Agent
-        </Button>
-      )}
-      {logData && (
-        <div className="mt-6">
-          <h2 className="text-xl font-bold mb-2">Execution Log</h2>
-          {logData.items.length === 0 ? (
-            <p>No logs yet.</p>
-          ) : (
-            <>
-              <table className="w-full mb-2">
-                <thead>
-                  <tr>
-                    <th className="text-left">Time</th>
-                    <th className="text-left">Log</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logData.items.map((log) => (
-                    <tr key={log.id}>
-                      <td className="align-top pr-2">
-                        {new Date(log.createdAt).toLocaleString()}
-                      </td>
-                      <td>
-                        <ExecLogItem log={log} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="flex items-center gap-2">
-                <Button
-                  disabled={logPage === 1}
-                  onClick={() => setLogPage((p) => Math.max(p - 1, 1))}
-                >
-                  Prev
-                </Button>
-                <span>
-                  Page {logData.page} of{' '}
-                  {Math.ceil(logData.total / logData.pageSize)}
-                </span>
-                <Button
-                  disabled={logData.page * logData.pageSize >= logData.total}
-                  onClick={() => setLogPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </>
           )}
         </div>
-      )}
-      <Modal open={showUpdate} onClose={() => setShowUpdate(false)}>
-        <h2 className="text-xl font-bold mb-2">Update Agent</h2>
-        <div className="max-w-2xl">
-          <StrategyForm
-            data={updateData}
-            onChange={(key, value) =>
-              setUpdateData((d) => {
-                const updated = { ...d, [key]: value };
-                const normalized = normalizeAllocations(
-                  updated.targetAllocation,
-                  updated.minTokenAAllocation,
-                  updated.minTokenBAllocation,
-                );
-                return { ...updated, ...normalized };
-              })
-            }
+        <p className="mt-2">
+          <strong>Balance (USD):</strong>{' '}
+          <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB}/>
+        </p>
+        {isActive ? (
+            <div className="mt-4 flex gap-2">
+              <Button onClick={() => {
+                setUpdateData({
+                  tokenA: data.tokenA,
+                  tokenB: data.tokenB,
+
+                  minTokenAAllocation: data.minTokenAAllocation,
+                  minTokenBAllocation: data.minTokenBAllocation,
+                  risk: data.risk,
+                  reviewInterval: data.reviewInterval,
+                  agentInstructions: data.agentInstructions,
+                });
+                setShowUpdate(true);
+              }}>
+                Update Agent
+              </Button>
+              <Button
+                  disabled={stopMut.isPending}
+                  loading={stopMut.isPending}
+                  onClick={() => stopMut.mutate()}
+              >
+                Stop Agent
+              </Button>
+            </div>
+        ) : (
+            <Button
+                className="mt-4"
+                disabled={startMut.isPending}
+                loading={startMut.isPending}
+                onClick={() => startMut.mutate()}
+            >
+              Start Agent
+            </Button>
+        )}
+        {logData && (
+            <div className="mt-6">
+              <h2 className="text-xl font-bold mb-2">Execution Log</h2>
+              {logData.items.length === 0 ? (
+                  <p>No logs yet.</p>
+              ) : (
+                  <>
+                    <table className="w-full mb-2">
+                      <thead>
+                      <tr>
+                        <th className="text-left">Time</th>
+                        <th className="text-left">Log</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                      {logData.items.map((log) => (
+                          <tr key={log.id}>
+                            <td className="align-top pr-2">
+                              {new Date(log.createdAt).toLocaleString()}
+                            </td>
+                            <td>
+                              <ExecLogItem log={log}/>
+                            </td>
+                          </tr>
+                      ))}
+                      </tbody>
+                    </table>
+                    <div className="flex items-center gap-2">
+                      <Button
+                          disabled={logPage === 1}
+                          onClick={() => setLogPage((p) => Math.max(p - 1, 1))}
+                      >
+                        Prev
+                      </Button>
+                      <span>
+                  Page {logData.page} of{' '}
+                        {Math.ceil(logData.total / logData.pageSize)}
+                </span>
+                      <Button
+                          disabled={logData.page * logData.pageSize >= logData.total}
+                          onClick={() => setLogPage((p) => p + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </>
+              )}
+            </div>
+        )}
+        <Modal open={showUpdate} onClose={() => setShowUpdate(false)}>
+          <h2 className="text-xl font-bold mb-2">Update Agent</h2>
+          <div className="max-w-2xl">
+            <StrategyForm
+                data={updateData}
+                onChange={(key, value) =>
+                    setUpdateData((d) => {
+                      const updated = {...d, [key]: value};
+                      const normalized = normalizeAllocations(
+
+                          updated.minTokenAAllocation,
+                          updated.minTokenBAllocation,
+                      );
+                      return {...updated, ...normalized};
+                    })
+                }
+            />
+          </div>
+          <AgentInstructions
+              value={updateData.agentInstructions}
+              onChange={(v) =>
+                  setUpdateData((d) => ({...d, agentInstructions: v}))
+              }
           />
-        </div>
-        <AgentInstructions
-          value={updateData.agentInstructions}
-          onChange={(v) =>
-            setUpdateData((d) => ({ ...d, agentInstructions: v }))
-          }
-        />
-        <div className="mt-4 flex justify-end gap-2">
-          <Button onClick={() => setShowUpdate(false)}>Cancel</Button>
-          <Button
-            disabled={updateMut.isPending}
-            loading={updateMut.isPending}
-            onClick={() => {
-              if (window.confirm('Update running agent?')) updateMut.mutate();
-            }}
-          >
-            Confirm
-          </Button>
-        </div>
-      </Modal>
-    </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button onClick={() => setShowUpdate(false)}>Cancel</Button>
+            <Button
+                disabled={updateMut.isPending}
+                loading={updateMut.isPending}
+                onClick={() => {
+                  if (window.confirm('Update running agent?')) updateMut.mutate();
+                }}
+            >
+              Confirm
+            </Button>
+          </div>
+        </Modal>
+      </div>
   );
 }
 
