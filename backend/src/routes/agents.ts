@@ -269,7 +269,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       });
       const row = getAgent(id)!;
       if (body.status === AgentStatus.Active)
-        reviewPortfolio(req.log as unknown as Logger, id).catch((err) =>
+        reviewPortfolio(req.log, id).catch((err) =>
           log.error({ err, agentId: id }, 'initial review failed'),
         );
       log.info({ agentId: id }, 'created agent');
@@ -410,7 +410,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       });
       const row = getAgent(id)!;
       if (status === AgentStatus.Active)
-        await reviewPortfolio(req.log as unknown as Logger, id);
+        await reviewPortfolio(req.log, id);
       log.info('updated agent');
       return toApi(row);
     }
@@ -449,7 +449,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       const bal = await getStartBalance(log, userId);
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
       repoStartAgent(id, bal);
-      reviewPortfolio(req.log as unknown as Logger, id).catch((err) =>
+      reviewPortfolio(req.log, id).catch((err) =>
         log.error({ err }, 'initial review failed')
       );
       const row = getAgent(id)!;
