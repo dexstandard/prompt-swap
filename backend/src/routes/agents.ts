@@ -9,12 +9,12 @@ import {
   findActiveTokenConflicts,
   getUserApiKeys,
   insertAgent,
-  getAgentExecLog,
   updateAgent,
   deleteAgent as repoDeleteAgent,
   startAgent as repoStartAgent,
   stopAgent as repoStopAgent,
 } from '../repos/agents.js';
+import { getAgentExecResults } from '../repos/agent-exec-result.js';
 import {
   errorResponse,
   lengthMessage,
@@ -25,7 +25,6 @@ import { requireUserId } from '../util/auth.js';
 import { fetchTotalBalanceUsd } from '../services/binance.js';
 import { calculatePnl } from '../services/pnl.js';
 import { RATE_LIMITS } from '../rate-limit.js';
-import { parseExecLog } from '../util/parse-exec-log.js';
 import { validateAllocations } from '../util/allocations.js';
 
 interface ValidationErr {
@@ -291,16 +290,25 @@ export default async function agentRoutes(app: FastifyInstance) {
       const p = Math.max(parseInt(page, 10), 1);
       const ps = Math.max(parseInt(pageSize, 10), 1);
       const offset = (p - 1) * ps;
-      const { rows, total } = getAgentExecLog(id, ps, offset);
+      const { rows, total } = getAgentExecResults(id, ps, offset);
       log.info('fetched exec log');
       return {
         items: rows.map((r) => {
-          const parsed = parseExecLog(r.log);
+          const resp =
+            r.rebalance === null
+              ? undefined
+              : {
+                  rebalance: !!r.rebalance,
+                  ...(r.new_allocation !== null
+                    ? { newAllocation: r.new_allocation }
+                    : {}),
+                  shortReport: r.short_report ?? '',
+                };
           return {
             id: r.id,
-            log: parsed.text,
-            response: parsed.response,
-            error: parsed.error,
+            log: r.log,
+            ...(resp ? { response: resp } : {}),
+            ...(r.error ? { error: JSON.parse(r.error) } : {}),
             createdAt: r.created_at,
           };
         }),

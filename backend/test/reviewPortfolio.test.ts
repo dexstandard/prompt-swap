@@ -51,6 +51,45 @@ describe('reviewPortfolio', () => {
     expect(args[1].marketData).toEqual({ currentPrice: 100 });
   });
 
+  it('saves prompt and response to exec log', async () => {
+    vi.mocked(callAi).mockClear();
+    vi.mocked(callAi).mockResolvedValueOnce('ok');
+    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u4', 'enc');
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'Agent4', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
+    ).run('a4', 'u4');
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewPortfolio(log, 'a4');
+    const rows = db
+      .prepare('SELECT log FROM agent_exec_log WHERE agent_id = ?')
+      .all('a4') as { log: string }[];
+    expect(rows).toHaveLength(1);
+    const entry = JSON.parse(rows[0].log);
+    expect(entry.prompt).toMatchObject({
+      instructions: 'inst',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+    });
+    expect(typeof entry.response).toBe('string');
+
+    const parsedRows = db
+      .prepare(
+        'SELECT log, rebalance, new_allocation, short_report, error FROM agent_exec_result WHERE agent_id = ?',
+      )
+      .all('a4') as {
+        log: string;
+        rebalance: number | null;
+        new_allocation: number | null;
+        short_report: string | null;
+        error: string | null;
+      }[];
+    expect(parsedRows).toHaveLength(1);
+    expect(parsedRows[0].log).toBe('ok');
+    expect(parsedRows[0].rebalance).toBeNull();
+    expect(parsedRows[0].error).toBeNull();
+  });
+
   it('logs error when token balances missing and skips callAi', async () => {
     vi.mocked(callAi).mockClear();
     vi.mocked(fetchAccount).mockResolvedValueOnce({
@@ -69,6 +108,13 @@ describe('reviewPortfolio', () => {
       .all('a2') as { log: string }[];
     expect(rows).toHaveLength(1);
     expect(rows[0].log).toContain('failed to fetch token balances');
+    const parsedRows = db
+      .prepare(
+        'SELECT log, error FROM agent_exec_result WHERE agent_id = ?',
+      )
+      .all('a2') as { log: string; error: string | null }[];
+    expect(parsedRows).toHaveLength(1);
+    expect(parsedRows[0].error).toContain('failed to fetch token balances');
   });
 
   it('logs error when market data fetch fails and skips callAi', async () => {
@@ -93,5 +139,12 @@ describe('reviewPortfolio', () => {
       .all('a3') as { log: string }[];
     expect(rows).toHaveLength(1);
     expect(rows[0].log).toContain('failed to fetch market data');
+    const parsedRows = db
+      .prepare(
+        'SELECT log, error FROM agent_exec_result WHERE agent_id = ?',
+      )
+      .all('a3') as { log: string; error: string | null }[];
+    expect(parsedRows).toHaveLength(1);
+    expect(parsedRows[0].error).toContain('failed to fetch market data');
   });
 });

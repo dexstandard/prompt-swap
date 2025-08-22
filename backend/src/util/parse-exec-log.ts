@@ -27,6 +27,16 @@ export function parseExecLog(log: unknown): ParsedExecLog {
   }
 
   if (parsed && typeof parsed === 'object') {
+    if ('prompt' in parsed) {
+      if ('response' in parsed)
+        return parseExecLog((parsed as any).response);
+      if ('error' in parsed)
+        return {
+          text: '',
+          response: undefined,
+          error: { message: String((parsed as any).error) },
+        };
+    }
     // *** FIX: only treat as error if value is truthy, not when it's null ***
     if ('error' in parsed && parsed.error) {
       error = parsed.error as Record<string, unknown>;
