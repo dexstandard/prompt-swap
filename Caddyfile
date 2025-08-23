@@ -6,19 +6,20 @@
         reverse_proxy backend:3000
     }
 
-    handle {
-        root * /usr/share/caddy
-        try_files {path} /index.html
-        file_server
+    root * /usr/share/caddy
+    file_server
+
+    # SPA fallback: only if file doesn’t exist and isn’t /api
+    @notStatic {
+        not path /api*
+        not file
+    }
+    handle @notStatic {
+        rewrite * /index.html
     }
 
     log {
         output stdout
         format console
-    }
-
-    header {
-        X-Content-Type-Options nosniff
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
     }
 }
