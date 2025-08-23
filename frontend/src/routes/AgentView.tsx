@@ -78,8 +78,8 @@ export default function AgentView() {
     },
   });
   const reviewMut = useMutation({
-    mutationFn: async () => {
-      await api.post(`/agents/${id}/review`);
+    mutationFn: async (agentId: string) => {
+      await api.post(`/agents/${agentId}/review`);
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['agent-log', id] }),
@@ -283,7 +283,7 @@ export default function AgentView() {
               <Button
                   disabled={reviewMut.isPending}
                   loading={reviewMut.isPending}
-                  onClick={() => reviewMut.mutate()}
+                  onClick={() => id && reviewMut.mutate(id)}
               >
                 Run Review
               </Button>
