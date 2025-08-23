@@ -242,7 +242,12 @@ export default async function agentRoutes(app: FastifyInstance) {
       if (conflict) return reply.code(conflict.code).send(conflict.body);
       const keyErr = ensureApiKeys(log, userId);
       if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
-      const bal = await getStartBalance(log, userId);
+      const bal = await getStartBalance(
+        log,
+        userId,
+        existing.token_a,
+        existing.token_b,
+      );
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
       repoStartAgent(id, bal);
       reviewPortfolio(req.log, id).catch((err) =>

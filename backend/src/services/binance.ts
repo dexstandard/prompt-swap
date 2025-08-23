@@ -49,6 +49,29 @@ export async function fetchTotalBalanceUsd(id: string) {
   return total;
 }
 
+export async function fetchTokensBalanceUsd(id: string, tokens: string[]) {
+  const account = await fetchAccount(id);
+  if (!account) return null;
+  const wanted = new Set(tokens.map((t) => t.toUpperCase()));
+  let total = 0;
+  for (const b of account.balances) {
+    if (!wanted.has(b.asset.toUpperCase())) continue;
+    const amount = Number(b.free) + Number(b.locked);
+    if (!amount) continue;
+    if (b.asset === 'USDT') {
+      total += amount;
+      continue;
+    }
+    const priceRes = await fetch(
+      `https://api.binance.com/api/v3/ticker/price?symbol=${b.asset}USDT`,
+    );
+    if (!priceRes.ok) continue;
+    const priceJson = (await priceRes.json()) as { price: string };
+    total += amount * Number(priceJson.price);
+  }
+  return total;
+}
+
 async function fetchSymbolData(symbol: string) {
   const [priceRes, depthRes, dayRes, yearRes] = await Promise.all([
     fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`),

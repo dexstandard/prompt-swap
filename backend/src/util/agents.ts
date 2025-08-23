@@ -9,7 +9,7 @@ import {
   lengthMessage,
   ERROR_MESSAGES,
 } from './errorMessages.js';
-import { fetchTotalBalanceUsd } from '../services/binance.js';
+import { fetchTokensBalanceUsd } from '../services/binance.js';
 import { validateAllocations } from './allocations.js';
 
 export enum AgentStatus {
@@ -130,9 +130,11 @@ export function ensureApiKeys(
 export async function getStartBalance(
   log: Logger,
   userId: string,
+  tokenA: string,
+  tokenB: string,
 ): Promise<number | ValidationErr> {
   try {
-    const startBalance = await fetchTotalBalanceUsd(userId);
+    const startBalance = await fetchTokensBalanceUsd(userId, [tokenA, tokenB]);
     if (startBalance === null) {
       log.error('failed to fetch balance');
       return { code: 500, body: errorResponse('failed to fetch balance') };
@@ -171,7 +173,7 @@ export async function prepareAgentForUpsert(
   if (body.status === AgentStatus.Active) {
     const keyErr = ensureApiKeys(log, body.userId);
     if (keyErr) return keyErr;
-    const bal = await getStartBalance(log, userId);
+    const bal = await getStartBalance(log, userId, body.tokenA, body.tokenB);
     if (typeof bal === 'number') startBalance = bal;
     else return bal;
   }
