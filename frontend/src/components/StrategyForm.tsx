@@ -1,8 +1,8 @@
-import RiskDisplay from './RiskDisplay';
 import TokenSelect from './forms/TokenSelect';
 import TextInput from './forms/TextInput';
 import SelectInput from './forms/SelectInput';
 import FormField from './forms/FormField';
+import { tokens, riskOptions, reviewIntervalOptions } from '../lib/constants';
 
 interface StrategyData {
   tokenA: string;
@@ -19,28 +19,6 @@ interface Props {
   disabled?: boolean;
 }
 
-const tokens = [
-  { value: 'BTC' },
-  { value: 'ETH' },
-  { value: 'SOL' },
-  { value: 'USDT' },
-];
-
-const riskOptions = [
-  { value: 'low', label: <RiskDisplay risk="low" /> },
-  { value: 'medium', label: <RiskDisplay risk="medium" /> },
-  { value: 'high', label: <RiskDisplay risk="high" /> },
-];
-
-const reviewIntervalOptions = [
-  { value: '1h', label: '1 Hour' },
-  { value: '3h', label: '3 Hours' },
-  { value: '5h', label: '5 Hours' },
-  { value: '12h', label: '12 Hours' },
-  { value: '24h', label: '1 Day' },
-  { value: '3d', label: '3 Days' },
-  { value: '1w', label: '1 Week' },
-];
 
 export default function StrategyForm({ data, onChange, disabled = false }: Props) {
   const {
