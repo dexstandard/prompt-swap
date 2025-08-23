@@ -89,5 +89,6 @@ jobs:
             export DOMAIN="${DOMAIN}"
             export VITE_GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
             docker compose up -d --build
-            curl -f http://localhost/api/health
+            # Wait for backend health endpoint via Caddy
+            timeout 60s bash -c 'until curl -fsS -H "Host: ${DOMAIN}" http://localhost/api/health; do sleep 3; done'
             docker compose ps
