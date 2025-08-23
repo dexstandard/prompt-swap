@@ -18,9 +18,14 @@ import {
   fetchPairData,
   fetchMarketTimeseries,
 } from '../services/binance.js';
-import { fetchTokenIndicators } from '../services/indicators.js';
+import {
+  fetchTokenIndicators,
+  type TokenIndicators,
+} from '../services/indicators.js';
 import { isStablecoin } from '../util/tokens.js';
 import type { RebalancePrompt } from '../util/ai.js';
+
+type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
 
 export default async function reviewPortfolio(
   log: FastifyBaseLogger,
@@ -90,55 +95,21 @@ async function buildPrompt(
   execLogId: string,
 ): Promise<RebalancePrompt | undefined> {
   try {
-    const pairData = await fetchPairData(row.token_a, row.token_b);
-    const [priceAData, priceBData, indA, indB, tsA, tsB] =
-      await Promise.all([
-        row.token_a === 'USDT'
-          ? Promise.resolve({ currentPrice: 1 })
-          : fetchPairData(row.token_a, 'USDT'),
-        row.token_b === 'USDT'
-          ? Promise.resolve({ currentPrice: 1 })
-          : fetchPairData(row.token_b, 'USDT'),
-        isStablecoin(row.token_a)
-          ? Promise.resolve(undefined)
-          : fetchTokenIndicators(row.token_a),
-        isStablecoin(row.token_b)
-          ? Promise.resolve(undefined)
-          : fetchTokenIndicators(row.token_b),
-        isStablecoin(row.token_a)
-          ? Promise.resolve(undefined)
-          : fetchMarketTimeseries(`${row.token_a}USDT`),
-        isStablecoin(row.token_b)
-          ? Promise.resolve(undefined)
-          : fetchMarketTimeseries(`${row.token_b}USDT`),
-      ]);
-    const priceA = priceAData.currentPrice;
-    const priceB = priceBData.currentPrice;
-    const valueA = balances.tokenABalance * priceA;
-    const valueB = balances.tokenBBalance * priceB;
-    const totalValue = valueA + valueB;
-    const floors: Record<string, number> = {
-      [row.token_a]: row.min_a_allocation / 100,
-      [row.token_b]: row.min_b_allocation / 100,
-    };
-    const positions = [
-      {
-        sym: row.token_a,
-        qty: balances.tokenABalance,
-        price_usdt: priceA,
-        value_usdt: valueA,
-      },
-      {
-        sym: row.token_b,
-        qty: balances.tokenBBalance,
-        price_usdt: priceB,
-        value_usdt: valueB,
-      },
-    ];
-    const weights: Record<string, number> = {
-      [row.token_a]: totalValue ? valueA / totalValue : 0,
-      [row.token_b]: totalValue ? valueB / totalValue : 0,
-    };
+    const {
+      pairData,
+      priceA,
+      priceB,
+      indA,
+      indB,
+      tsA,
+      tsB,
+    } = await fetchPromptData(row);
+    const { floors, positions, weights } = computePortfolioValues(
+      row,
+      balances,
+      priceA,
+      priceB,
+    );
     return {
       instructions: row.agent_instructions,
       config: {
@@ -146,28 +117,10 @@ async function buildPrompt(
         portfolio: {
           ts: new Date().toISOString(),
           positions,
-        weights,
+          weights,
+        },
       },
-    },
-      marketData: {
-        currentPrice: pairData.currentPrice,
-        ...(indA || indB
-          ? {
-              indicators: {
-                ...(indA ? { [row.token_a]: indA } : {}),
-                ...(indB ? { [row.token_b]: indB } : {}),
-              },
-            }
-          : {}),
-        ...(tsA || tsB
-          ? {
-              market_timeseries: {
-                ...(tsA ? { [`${row.token_a}USDT`]: tsA } : {}),
-                ...(tsB ? { [`${row.token_b}USDT`]: tsB } : {}),
-              },
-            }
-          : {}),
-      },
+      marketData: assembleMarketData(row, pairData, indA, indB, tsA, tsB),
     };
   } catch (err) {
     const msg = 'failed to fetch market data';
@@ -175,6 +128,112 @@ async function buildPrompt(
     log.error({ err }, 'agent run failed');
     return undefined;
   }
+}
+
+async function fetchPromptData(
+  row: ActiveAgentRow,
+): Promise<{
+  pairData: { currentPrice: number };
+  priceA: number;
+  priceB: number;
+  indA?: TokenIndicators;
+  indB?: TokenIndicators;
+  tsA?: MarketTimeseries;
+  tsB?: MarketTimeseries;
+}> {
+  const pairData = await fetchPairData(row.token_a, row.token_b);
+  const [priceAData, priceBData, indA, indB, tsA, tsB] = await Promise.all([
+    row.token_a === 'USDT'
+      ? Promise.resolve({ currentPrice: 1 })
+      : fetchPairData(row.token_a, 'USDT'),
+    row.token_b === 'USDT'
+      ? Promise.resolve({ currentPrice: 1 })
+      : fetchPairData(row.token_b, 'USDT'),
+    isStablecoin(row.token_a)
+      ? Promise.resolve(undefined)
+      : fetchTokenIndicators(row.token_a),
+    isStablecoin(row.token_b)
+      ? Promise.resolve(undefined)
+      : fetchTokenIndicators(row.token_b),
+    isStablecoin(row.token_a)
+      ? Promise.resolve(undefined)
+      : fetchMarketTimeseries(`${row.token_a}USDT`),
+    isStablecoin(row.token_b)
+      ? Promise.resolve(undefined)
+      : fetchMarketTimeseries(`${row.token_b}USDT`),
+  ]);
+  return {
+    pairData,
+    priceA: priceAData.currentPrice,
+    priceB: priceBData.currentPrice,
+    indA,
+    indB,
+    tsA,
+    tsB,
+  };
+}
+
+function computePortfolioValues(
+  row: ActiveAgentRow,
+  balances: { tokenABalance: number; tokenBBalance: number },
+  priceA: number,
+  priceB: number,
+) {
+  const valueA = balances.tokenABalance * priceA;
+  const valueB = balances.tokenBBalance * priceB;
+  const totalValue = valueA + valueB;
+  const floors: Record<string, number> = {
+    [row.token_a]: row.min_a_allocation / 100,
+    [row.token_b]: row.min_b_allocation / 100,
+  };
+  const positions = [
+    {
+      sym: row.token_a,
+      qty: balances.tokenABalance,
+      price_usdt: priceA,
+      value_usdt: valueA,
+    },
+    {
+      sym: row.token_b,
+      qty: balances.tokenBBalance,
+      price_usdt: priceB,
+      value_usdt: valueB,
+    },
+  ];
+  const weights: Record<string, number> = {
+    [row.token_a]: totalValue ? valueA / totalValue : 0,
+    [row.token_b]: totalValue ? valueB / totalValue : 0,
+  };
+  return { floors, positions, weights };
+}
+
+function assembleMarketData(
+  row: ActiveAgentRow,
+  pairData: { currentPrice: number },
+  indA?: TokenIndicators,
+  indB?: TokenIndicators,
+  tsA?: MarketTimeseries,
+  tsB?: MarketTimeseries,
+) {
+  return {
+    currentPrice: pairData.currentPrice,
+    ...(indA || indB
+      ? {
+          indicators: {
+            ...(indA ? { [row.token_a]: indA } : {}),
+            ...(indB ? { [row.token_b]: indB } : {}),
+          },
+        }
+      : {}),
+    ...(tsA || tsB
+      ? {
+          market_timeseries: {
+            ...(tsA ? { [`${row.token_a}USDT`]: tsA } : {}),
+            ...(tsB ? { [`${row.token_b}USDT`]: tsB } : {}),
+          },
+        }
+      : {}),
+  };
 }
 
 async function executeAgent(

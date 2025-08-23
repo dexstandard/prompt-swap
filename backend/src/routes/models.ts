@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
-import { requireUserId } from '../util/auth.js';
+import { requireUserIdMatch } from '../util/auth.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import { getAiKeyRow } from '../repos/api-keys.js';
@@ -29,12 +29,7 @@ export default async function modelsRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-    if (userId !== id)
-      return reply
-        .code(403)
-        .send(errorResponse(ERROR_MESSAGES.forbidden));
+      if (!requireUserIdMatch(req, reply, id)) return;
     const row = getAiKeyRow(id);
     if (!row?.ai_api_key_enc)
       return reply

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { fetchAccount, fetchTotalBalanceUsd } from '../services/binance.js';
-import { requireUserId } from '../util/auth.js';
+import { requireUserIdMatch } from '../util/auth.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 
@@ -10,10 +10,7 @@ export default async function binanceBalanceRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-    if (userId !== id)
-      return reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
+      if (!requireUserIdMatch(req, reply, id)) return;
     let total;
     try {
       total = await fetchTotalBalanceUsd(id);
@@ -33,10 +30,7 @@ export default async function binanceBalanceRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
       const { id, token } = req.params as any;
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      if (userId !== id)
-        return reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
+      if (!requireUserIdMatch(req, reply, id)) return;
       let account;
       try {
         account = await fetchAccount(id);

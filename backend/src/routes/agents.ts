@@ -5,9 +5,6 @@ import {
   getAgent,
   getAgentsPaginated,
   toApi,
-  findIdenticalDraftAgent,
-  findActiveTokenConflicts,
-  getUserApiKeys,
   insertAgent,
   updateAgent,
   deleteAgent as repoDeleteAgent,
@@ -15,137 +12,19 @@ import {
   stopAgent as repoStopAgent,
 } from '../repos/agents.js';
 import { getAgentExecResults } from '../repos/agent-exec-result.js';
-import {
-  errorResponse,
-  lengthMessage,
-  ERROR_MESSAGES,
-} from '../util/errorMessages.js';
+import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 import reviewPortfolio from '../jobs/review-portfolio.js';
 import { requireUserId } from '../util/auth.js';
-import { fetchTotalBalanceUsd } from '../services/binance.js';
 import { RATE_LIMITS } from '../rate-limit.js';
-import { validateAllocations } from '../util/allocations.js';
+import {
+  AgentStatus,
+  type AgentInput,
+  prepareAgentForUpsert,
+  validateTokenConflicts,
+  ensureApiKeys,
+  getStartBalance,
+} from '../util/agents.js';
 
-interface ValidationErr {
-  code: number;
-  body: unknown;
-}
-
-function validateTokenConflicts(
-  log: Logger,
-  userId: string,
-  tokenA: string,
-  tokenB: string,
-  id?: string,
-): ValidationErr | null {
-  const dupRows = findActiveTokenConflicts(userId, tokenA, tokenB, id);
-  if (!dupRows.length) return null;
-  const conflicts: { token: string; id: string; name: string }[] = [];
-  for (const row of dupRows) {
-    if (row.token_a === tokenA || row.token_b === tokenA)
-      conflicts.push({ token: tokenA, id: row.id, name: row.name });
-    if (row.token_a === tokenB || row.token_b === tokenB)
-      conflicts.push({ token: tokenB, id: row.id, name: row.name });
-  }
-  const parts = conflicts.map((c) => `${c.token} used by ${c.name} (${c.id})`);
-  const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
-  log.error('token conflict');
-  return { code: 400, body: errorResponse(msg) };
-}
-
-function validateAgentInput(
-  log: Logger,
-  userId: string,
-  body: {
-    userId: string;
-    model: string;
-    name: string;
-    tokenA: string;
-    tokenB: string;
-    minTokenAAllocation: number;
-    minTokenBAllocation: number;
-    risk: string;
-    reviewInterval: string;
-    agentInstructions: string;
-    status: AgentStatus;
-  },
-  id?: string,
-): ValidationErr | null {
-  if (body.userId !== userId) {
-    log.error('user mismatch');
-    return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
-  }
-  if (body.model.length > 50) {
-    log.error('model too long');
-    return { code: 400, body: errorResponse(lengthMessage('model', 50)) };
-  }
-  if (body.status === AgentStatus.Draft) {
-    const dupDraft = findIdenticalDraftAgent(
-      {
-        userId: body.userId,
-        model: body.model,
-        name: body.name,
-        tokenA: body.tokenA,
-        tokenB: body.tokenB,
-        minTokenAAllocation: body.minTokenAAllocation,
-        minTokenBAllocation: body.minTokenBAllocation,
-        risk: body.risk,
-        reviewInterval: body.reviewInterval,
-        agentInstructions: body.agentInstructions,
-      },
-      id,
-    );
-    if (dupDraft) {
-      log.error({ agentId: dupDraft.id }, 'identical draft exists');
-      return {
-        code: 400,
-        body: errorResponse(
-          `identical draft already exists: ${dupDraft.name} (${dupDraft.id})`,
-        ),
-      };
-    }
-  } else {
-    const conflict = validateTokenConflicts(
-      log,
-      body.userId,
-      body.tokenA,
-      body.tokenB,
-      id,
-    );
-    if (conflict) return conflict;
-  }
-  return null;
-}
-
-function ensureApiKeys(log: Logger, userId: string): ValidationErr | null {
-  const userRow = getUserApiKeys(userId);
-  if (
-    !userRow?.ai_api_key_enc ||
-    !userRow.binance_api_key_enc ||
-    !userRow.binance_api_secret_enc
-  ) {
-    log.error('missing api keys');
-    return { code: 400, body: errorResponse('missing api keys') };
-  }
-  return null;
-}
-
-async function getStartBalance(
-  log: Logger,
-  userId: string,
-): Promise<number | ValidationErr> {
-  try {
-    const startBalance = await fetchTotalBalanceUsd(userId);
-    if (startBalance === null) {
-      log.error('failed to fetch balance');
-      return { code: 500, body: errorResponse('failed to fetch balance') };
-    }
-    return startBalance;
-  } catch {
-    log.error('failed to fetch balance');
-    return { code: 500, body: errorResponse('failed to fetch balance') };
-  }
-}
 
 function getAgentForRequest(
   req: FastifyRequest,
@@ -169,11 +48,6 @@ function getAgentForRequest(
   return { userId, id, log, agent };
 }
 
-export enum AgentStatus {
-  Active = 'active',
-  Inactive = 'inactive',
-  Draft = 'draft',
-}
 
 export default async function agentRoutes(app: FastifyInstance) {
   app.get(
@@ -202,78 +76,45 @@ export default async function agentRoutes(app: FastifyInstance) {
     }
   );
 
-  app.post(
-    '/agents',
-    { config: { rateLimit: RATE_LIMITS.TIGHT } },
-    async (req, reply) => {
-      const body = req.body as {
-        userId: string;
-        model: string;
-        name: string;
-        tokenA: string;
-        tokenB: string;
-        minTokenAAllocation: number;
-        minTokenBAllocation: number;
-        risk: string;
-        reviewInterval: string;
-        agentInstructions: string;
-        status: AgentStatus;
-      };
-      const userId = requireUserId(req, reply);
-      if (!userId) return;
-      const log = req.log.child({ userId }) as unknown as Logger;
-      let norm;
-      try {
-        norm = validateAllocations(
-          body.minTokenAAllocation,
-          body.minTokenBAllocation,
-        );
-      } catch {
-        log.error('invalid allocations');
-        return reply
-          .code(400)
-          .send(errorResponse('invalid minimum allocations'));
+    app.post(
+      '/agents',
+      { config: { rateLimit: RATE_LIMITS.TIGHT } },
+      async (req, reply) => {
+        const body = req.body as AgentInput;
+        const userId = requireUserId(req, reply);
+        if (!userId) return;
+        const log = req.log.child({ userId }) as unknown as Logger;
+        const res = await prepareAgentForUpsert(log, userId, body);
+        if ('code' in res) return reply.code(res.code).send(res.body);
+        const { body: validated, startBalance } = res;
+        const id = randomUUID();
+        const status = validated.status;
+        const createdAt = Date.now();
+        insertAgent({
+          id,
+          userId: validated.userId,
+          model: validated.model,
+          status,
+          createdAt,
+          startBalance,
+          name: validated.name,
+          tokenA: validated.tokenA,
+          tokenB: validated.tokenB,
+          minTokenAAllocation: validated.minTokenAAllocation,
+          minTokenBAllocation: validated.minTokenBAllocation,
+          risk: validated.risk,
+          reviewInterval: validated.reviewInterval,
+          agentInstructions: validated.agentInstructions,
+        });
+        const row = getAgent(id)!;
+        if (status === AgentStatus.Active)
+          reviewPortfolio(req.log, id).catch((err) =>
+            log.error({ err, agentId: id }, 'initial review failed'),
+          );
+        log.info({ agentId: id }, 'created agent');
+        return toApi(row);
       }
-      body.minTokenAAllocation = norm.minTokenAAllocation;
-      body.minTokenBAllocation = norm.minTokenBAllocation;
-      const err = validateAgentInput(log, userId, body);
-      if (err) return reply.code(err.code).send(err.body);
-      let startBalance: number | null = null;
-      if (body.status === AgentStatus.Active) {
-        const keyErr = ensureApiKeys(log, body.userId);
-        if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
-        const bal = await getStartBalance(log, userId);
-        if (typeof bal === 'number') startBalance = bal;
-        else return reply.code(bal.code).send(bal.body);
-      }
-      const id = randomUUID();
-      const status = body.status;
-      const createdAt = Date.now();
-      insertAgent({
-        id,
-        userId: body.userId,
-        model: body.model,
-        status,
-        createdAt,
-        startBalance,
-        name: body.name,
-        tokenA: body.tokenA,
-        tokenB: body.tokenB,
-        minTokenAAllocation: body.minTokenAAllocation,
-        minTokenBAllocation: body.minTokenBAllocation,
-        risk: body.risk,
-        reviewInterval: body.reviewInterval,
-        agentInstructions: body.agentInstructions,
-      });
-      const row = getAgent(id)!;
-      if (body.status === AgentStatus.Active)
-        reviewPortfolio(req.log, id).catch((err) =>
-          log.error({ err, agentId: id }, 'initial review failed'),
-        );
-      log.info({ agentId: id }, 'created agent');
-      return toApi(row);
-    }
-  );
+    );
 
   app.get(
     '/agents/:id/exec-log',
@@ -330,79 +171,46 @@ export default async function agentRoutes(app: FastifyInstance) {
     }
   );
 
-  app.put(
-    '/agents/:id',
-    { config: { rateLimit: RATE_LIMITS.TIGHT } },
-    async (req, reply) => {
-      const ctx = getAgentForRequest(req, reply);
-      if (!ctx) return;
-      const { userId, id, log } = ctx;
-      const body = req.body as {
-        userId: string;
-        model: string;
-        status: AgentStatus;
-        name: string;
-        tokenA: string;
-        tokenB: string;
-        minTokenAAllocation: number;
-        minTokenBAllocation: number;
-        risk: string;
-        reviewInterval: string;
-        agentInstructions: string;
-      };
-      if (body.userId !== userId) {
-        log.error('forbidden');
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
+    app.put(
+      '/agents/:id',
+      { config: { rateLimit: RATE_LIMITS.TIGHT } },
+      async (req, reply) => {
+        const ctx = getAgentForRequest(req, reply);
+        if (!ctx) return;
+        const { userId, id, log } = ctx;
+        const body = req.body as AgentInput;
+        if (body.userId !== userId) {
+          log.error('forbidden');
+          return reply
+            .code(403)
+            .send(errorResponse(ERROR_MESSAGES.forbidden));
+        }
+        const res = await prepareAgentForUpsert(log, userId, body, id);
+        if ('code' in res) return reply.code(res.code).send(res.body);
+        const { body: validated, startBalance } = res;
+        const status = validated.status;
+        updateAgent({
+          id,
+          userId: validated.userId,
+          model: validated.model,
+          status,
+          name: validated.name,
+          tokenA: validated.tokenA,
+          tokenB: validated.tokenB,
+          minTokenAAllocation: validated.minTokenAAllocation,
+          minTokenBAllocation: validated.minTokenBAllocation,
+          risk: validated.risk,
+          reviewInterval: validated.reviewInterval,
+          agentInstructions: validated.agentInstructions,
+          startBalance,
+        });
+        const row = getAgent(id)!;
+        if (status === AgentStatus.Active)
+          await reviewPortfolio(req.log, id);
+        log.info('updated agent');
+        return toApi(row);
       }
-      let norm;
-      try {
-        norm = validateAllocations(
-          body.minTokenAAllocation,
-          body.minTokenBAllocation,
-        );
-      } catch {
-        log.error('invalid allocations');
-        return reply
-          .code(400)
-          .send(errorResponse('invalid minimum allocations'));
-      }
-      body.minTokenAAllocation = norm.minTokenAAllocation;
-      body.minTokenBAllocation = norm.minTokenBAllocation;
-      const err = validateAgentInput(log, userId, body, id);
-      if (err) return reply.code(err.code).send(err.body);
-      let startBalance: number | null = null;
-      if (body.status === AgentStatus.Active) {
-        const keyErr = ensureApiKeys(log, userId);
-        if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
-        const bal = await getStartBalance(log, userId);
-        if (typeof bal === 'number') startBalance = bal;
-        else return reply.code(bal.code).send(bal.body);
-      }
-      const status = body.status;
-      updateAgent({
-        id,
-        userId: body.userId,
-        model: body.model,
-        status,
-        name: body.name,
-        tokenA: body.tokenA,
-        tokenB: body.tokenB,
-        minTokenAAllocation: body.minTokenAAllocation,
-        minTokenBAllocation: body.minTokenBAllocation,
-        risk: body.risk,
-        reviewInterval: body.reviewInterval,
-        agentInstructions: body.agentInstructions,
-        startBalance,
-      });
-      const row = getAgent(id)!;
-      if (status === AgentStatus.Active)
-        await reviewPortfolio(req.log, id);
-      log.info('updated agent');
-      return toApi(row);
-    }
-  );
+    );
 
   app.delete(
     '/agents/:id',

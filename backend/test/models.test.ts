@@ -89,4 +89,15 @@ describe('model routes', () => {
     await app.close();
     (globalThis as any).fetch = originalFetch;
   });
+
+  it("forbids accessing another user's models", async () => {
+    const app = await buildServer();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/users/other/models',
+      headers: { 'x-user-id': 'user1' },
+    });
+    expect(res.statusCode).toBe(403);
+    await app.close();
+  });
 });
