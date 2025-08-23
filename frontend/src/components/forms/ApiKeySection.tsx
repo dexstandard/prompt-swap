@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
@@ -36,10 +36,11 @@ export default function ApiKeySection({
   getBalancePath,
 }: ApiKeySectionProps) {
   const { user } = useUser();
-  const defaultValues = Object.fromEntries(fields.map((f) => [f.name, ''])) as Record<
-    string,
-    string
-  >;
+  const defaultValues = useMemo(
+    () =>
+      Object.fromEntries(fields.map((f) => [f.name, ''])) as Record<string, string>,
+    [fields],
+  );
   const form = useForm<Record<string, string>>({
     defaultValues,
     mode: 'onChange',
@@ -61,7 +62,7 @@ export default function ApiKeySection({
 
   useEffect(() => {
     form.reset(query.data ?? defaultValues);
-  }, [query.data, form, defaultValues]);
+  }, [query.data, defaultValues, form]);
 
   const [editing, setEditing] = useState(false);
   useEffect(() => {
