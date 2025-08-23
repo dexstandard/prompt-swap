@@ -6,11 +6,13 @@ function addUser(id: string) {
   db.prepare('INSERT INTO users (id) VALUES (?)').run(id);
 }
 
-const reviewAgentMock = vi.fn<(
+const reviewAgentPortfolioMock = vi.fn<(
   log: unknown,
   agentId: string,
 ) => Promise<unknown>>(() => Promise.resolve());
-vi.mock('../src/jobs/review-portfolio.js', () => ({ reviewAgent: reviewAgentMock }));
+vi.mock('../src/jobs/review-portfolio.js', () => ({
+  reviewAgentPortfolio: reviewAgentPortfolioMock,
+}));
 
 describe('manual review endpoint', () => {
   it('triggers portfolio review', async () => {
@@ -29,8 +31,8 @@ describe('manual review endpoint', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ok: true });
-    expect(reviewAgentMock).toHaveBeenCalledTimes(1);
-    expect(reviewAgentMock.mock.calls[0][1]).toBe(agentId);
+    expect(reviewAgentPortfolioMock).toHaveBeenCalledTimes(1);
+    expect(reviewAgentPortfolioMock.mock.calls[0][1]).toBe(agentId);
     await app.close();
   });
 
@@ -42,7 +44,7 @@ describe('manual review endpoint', () => {
       `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
        VALUES (?, ?, 'gpt', 'active', 0, 'A2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run(agentId, 'u2');
-    reviewAgentMock.mockRejectedValueOnce(
+    reviewAgentPortfolioMock.mockRejectedValueOnce(
       new Error('Agent is already reviewing portfolio'),
     );
     const res = await app.inject({

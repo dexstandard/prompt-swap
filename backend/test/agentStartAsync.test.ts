@@ -1,10 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { db } from '../src/db/index.js';
 
-const reviewAgentMock = vi.fn<(log: unknown, agentId: string) => Promise<unknown>>(
-  () => new Promise(() => {}),
-);
-vi.mock('../src/jobs/review-portfolio.js', () => ({ reviewAgent: reviewAgentMock }));
+const reviewAgentPortfolioMock = vi.fn<
+  (log: unknown, agentId: string) => Promise<unknown>
+>(() => new Promise(() => {}));
+vi.mock('../src/jobs/review-portfolio.js', () => ({
+  reviewAgentPortfolio: reviewAgentPortfolioMock,
+}));
 
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
@@ -76,8 +78,8 @@ describe('agent start', () => {
     ]);
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'active' });
-    expect(reviewAgentMock).toHaveBeenCalledTimes(1);
-    expect(reviewAgentMock.mock.calls[0][1]).toBe(id);
+    expect(reviewAgentPortfolioMock).toHaveBeenCalledTimes(1);
+    expect(reviewAgentPortfolioMock.mock.calls[0][1]).toBe(id);
 
     (globalThis as any).fetch = originalFetch;
     await app.close();

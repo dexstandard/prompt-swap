@@ -5,7 +5,7 @@ import { encrypt } from '../src/util/crypto.js';
 import { getActiveAgents } from '../src/repos/agents.js';
 
 vi.mock('../src/jobs/review-portfolio.js', () => ({
-  reviewAgent: vi.fn(() => Promise.resolve()),
+  reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
 }));
 
 function addUser(id: string) {

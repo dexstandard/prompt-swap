@@ -42,7 +42,7 @@ vi.mock('../src/services/indicators.js', () => ({
   fetchTokenIndicators: vi.fn().mockResolvedValue(sampleIndicators),
 }));
 
-let reviewAgent: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
+let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let reviewPortfolios: (
   log: FastifyBaseLogger,
   interval: string,
@@ -54,7 +54,7 @@ let fetchMarketTimeseries: any;
 let fetchTokenIndicators: any;
 
 beforeAll(async () => {
-  ({ reviewAgent, default: reviewPortfolios } = await import(
+  ({ reviewAgentPortfolio, default: reviewPortfolios } = await import(
     '../src/jobs/review-portfolio.js'
   ));
   ({ callRebalancingAgent } = await import('../src/util/ai.js'));
@@ -87,7 +87,7 @@ describe('reviewPortfolio', () => {
         );
     }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgent(log, 'a1');
+    await reviewAgentPortfolio(log, 'a1');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
     const args = (callRebalancingAgent as any).mock.calls[0];
     const prev = args[1].previous_responses.map((s: string) => JSON.parse(s));
@@ -127,7 +127,7 @@ describe('reviewPortfolio', () => {
        VALUES (?, ?, 'gpt', 'active', 0, 'Agent4', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run('a4', 'u4');
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgent(log, 'a4');
+    await reviewAgentPortfolio(log, 'a4');
     const rows = db
       .prepare('SELECT prompt, response FROM agent_exec_log WHERE agent_id = ?')
       .all('a4') as { prompt: string | null; response: string | null }[];
@@ -180,7 +180,7 @@ describe('reviewPortfolio', () => {
        VALUES (?, ?, 'gpt', 'active', 0, 'Agent5', 'USDT', 'ETH', 10, 20, 'low', '1h', 'inst')`,
     ).run('a5', 'u5');
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgent(log, 'a5');
+    await reviewAgentPortfolio(log, 'a5');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
     const args = (callRebalancingAgent as any).mock.calls[0];
     expect(args[1].marketData).toEqual({
@@ -205,7 +205,7 @@ describe('reviewPortfolio', () => {
        VALUES (?, ?, 'gpt', 'active', 0, 'Agent2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run('a2', 'u2');
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgent(log, 'a2');
+    await reviewAgentPortfolio(log, 'a2');
     expect(callRebalancingAgent).not.toHaveBeenCalled();
     const rows = db
       .prepare('SELECT response FROM agent_exec_log WHERE agent_id = ?')
@@ -237,7 +237,7 @@ describe('reviewPortfolio', () => {
        VALUES (?, ?, 'gpt', 'active', 0, 'Agent3', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run('a3', 'u3');
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgent(log, 'a3');
+    await reviewAgentPortfolio(log, 'a3');
     expect(callRebalancingAgent).not.toHaveBeenCalled();
     const rows = db
       .prepare('SELECT response FROM agent_exec_log WHERE agent_id = ?')
@@ -320,9 +320,9 @@ describe('reviewPortfolio', () => {
        VALUES (?, ?, 'gpt', 'active', 0, 'Agent8', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
     ).run('a8', 'u7');
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    const p1 = reviewAgent(log, 'a8');
+    const p1 = reviewAgentPortfolio(log, 'a8');
     await new Promise((r) => setImmediate(r));
-    await expect(reviewAgent(log, 'a8')).rejects.toThrow(
+    await expect(reviewAgentPortfolio(log, 'a8')).rejects.toThrow(
       'Agent is already reviewing portfolio',
     );
     resolveFn('ok');

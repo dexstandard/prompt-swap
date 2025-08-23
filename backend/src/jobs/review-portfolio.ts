@@ -38,7 +38,7 @@ type PromptCache = {
   timeseries: Map<string, MarketTimeseries>;
 };
 
-export async function reviewAgent(
+export async function reviewAgentPortfolio(
   log: FastifyBaseLogger,
   agentId: string,
 ): Promise<void> {
