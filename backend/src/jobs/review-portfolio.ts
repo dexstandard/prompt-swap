@@ -43,7 +43,9 @@ export async function reviewAgent(
   agentId: string,
 ): Promise<void> {
   const agents = getActiveAgents({ agentId });
-  await runAgents(log, agents, agentId);
+  const { toRun, skipped } = filterRunningAgents(agents);
+  if (skipped.length) throw new Error('Agent is already reviewing portfolio');
+  await runAgents(log, toRun);
 }
 
 export default async function reviewPortfolios(
@@ -51,25 +53,22 @@ export default async function reviewPortfolios(
   interval: string,
 ): Promise<void> {
   const agents = getActiveAgents({ interval });
-  await runAgents(log, agents);
+  const { toRun } = filterRunningAgents(agents);
+  if (!toRun.length) return;
+  await runAgents(log, toRun);
 }
 
 async function runAgents(
   log: FastifyBaseLogger,
   agents: ActiveAgentRow[],
-  agentId?: string,
 ) {
-  const { toRun, skipped } = filterRunningAgents(agents);
-  if (agentId && skipped.length) throw new Error('Agent is already reviewing portfolio');
-  if (!toRun.length) return;
-
   const cache: PromptCache = {
     pairData: new Map(),
     indicators: new Map(),
     timeseries: new Map(),
   };
 
-  const prepared = await prepareAgents(toRun, log, cache);
+  const prepared = await prepareAgents(agents, log, cache);
 
   await Promise.all(
     prepared.map(({ row, prompt, key, log: lg, execLogId }) =>
