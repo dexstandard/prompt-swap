@@ -243,14 +243,26 @@ export interface ActiveAgentRow {
   ai_api_key_enc: string;
 }
 
-export function getActiveAgents(agentId?: string): ActiveAgentRow[] {
-  const sql = `SELECT a.id, a.user_id, a.model,
+export function getActiveAgents(options?: {
+  agentId?: string;
+  interval?: string;
+}): ActiveAgentRow[] {
+  let sql = `SELECT a.id, a.user_id, a.model,
                       a.token_a, a.token_b,
                       a.min_a_allocation, a.min_b_allocation,
                       a.risk, a.review_interval, a.agent_instructions,
                       u.ai_api_key_enc
                  FROM agents a
                  JOIN users u ON u.id = a.user_id
-                WHERE a.status = 'active' ${agentId ? 'AND a.id = ?' : ''}`;
-  return db.prepare(sql).all(agentId ? [agentId] : []) as ActiveAgentRow[];
+                WHERE a.status = 'active'`;
+  const params: unknown[] = [];
+  if (options?.agentId) {
+    sql += ' AND a.id = ?';
+    params.push(options.agentId);
+  }
+  if (options?.interval) {
+    sql += ' AND a.review_interval = ?';
+    params.push(options.interval);
+  }
+  return db.prepare(sql).all(...params) as ActiveAgentRow[];
 }

@@ -38,11 +38,27 @@ type PromptCache = {
   timeseries: Map<string, MarketTimeseries>;
 };
 
-export default async function reviewPortfolio(
+export async function reviewAgent(
   log: FastifyBaseLogger,
-  agentId?: string,
+  agentId: string,
 ): Promise<void> {
-  const agents = getActiveAgents(agentId);
+  const agents = getActiveAgents({ agentId });
+  await runAgents(log, agents, agentId);
+}
+
+export default async function reviewPortfolios(
+  log: FastifyBaseLogger,
+  interval: string,
+): Promise<void> {
+  const agents = getActiveAgents({ interval });
+  await runAgents(log, agents);
+}
+
+async function runAgents(
+  log: FastifyBaseLogger,
+  agents: ActiveAgentRow[],
+  agentId?: string,
+) {
   const { toRun, skipped } = filterRunningAgents(agents);
   if (agentId && skipped.length) throw new Error('Agent is already reviewing portfolio');
   if (!toRun.length) return;
