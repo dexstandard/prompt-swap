@@ -102,6 +102,12 @@ export default function AgentView() {
       : pnl >= 0.03
       ? 'text-green-600'
       : 'text-gray-600';
+  const pnlTooltip =
+    pnl === null || balLoading
+      ? undefined
+      : `PnL = $${balance!.toFixed(2)} - $${data!.startBalanceUsd!.toFixed(2)} = ${
+          pnl > 0 ? '+' : pnl < 0 ? '-' : ''
+        }$${Math.abs(pnl).toFixed(2)}`;
 
   const [showStrategy, setShowStrategy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -231,7 +237,9 @@ export default function AgentView() {
           <strong>Balance (USD):</strong> {balanceText}
           <span className="ml-4">
             <strong>PnL (USD):</strong>{' '}
-            <span className={pnlClass}>{pnlText}</span>
+            <span className={pnlClass} title={pnlTooltip}>
+              {pnlText}
+            </span>
           </span>
         </p>
         {isActive ? (
