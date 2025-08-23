@@ -4,6 +4,7 @@ Backend code lives in `/backend`; the React app lives in `/frontend`.
 
 ## Testing
 - Run backend tests with `npm test` from the repository root.
+- Run `npm run build` to ensure the TypeScript compiler passes with no errors.
 - Frontend currently has no automated tests.
 
 ## Development
@@ -16,4 +17,5 @@ Backend code lives in `/backend`; the React app lives in `/frontend`.
 - New backend API endpoints should use the `RATE_LIMITS` presets for rate limiting.
 - Backend logs should be structured and include `userId`, `agentId`, and `execLogId` when available.
 - Break down complex functions into reusable utilities and check for existing helpers before adding new ones (see the agent service's repository and validation utilities as an example).
+- Avoid huge functions—top-level functions should be small, self-explanatory, and readable in plain English.
 
