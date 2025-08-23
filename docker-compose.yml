@@ -7,6 +7,8 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=/data/data.db
+      - KEY_PASSWORD=${KEY_PASSWORD}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     expose:
       - "3000"
     volumes:
@@ -19,6 +21,7 @@ services:
       dockerfile: Dockerfile.caddy
       args:
         FRONTEND_BUILD_DIR: dist
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
     environment:
       - DOMAIN=${DOMAIN}
     ports:

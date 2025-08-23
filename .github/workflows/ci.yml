@@ -47,9 +47,11 @@ jobs:
           DO_SSH_PRIVATE_KEY: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           DO_SSH_PASSPHRASE: ${{ secrets.DO_SSH_PASSPHRASE }}
           DOMAIN: ${{ secrets.DOMAIN }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
           set -euo pipefail
-          for s in DO_SSH_HOST DO_SSH_USER DO_SSH_PRIVATE_KEY DO_SSH_PASSPHRASE DOMAIN; do
+          for s in DO_SSH_HOST DO_SSH_USER DO_SSH_PRIVATE_KEY DO_SSH_PASSPHRASE DOMAIN KEY_PASSWORD GOOGLE_CLIENT_ID; do
             v="${!s}"
             if [ -z "$v" ]; then
               echo "Missing secret: $s"
@@ -77,5 +79,8 @@ jobs:
           script: |
             set -euo pipefail
             cd ~/prompt-swap
+            export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
+            export GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+            export VITE_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
             DOMAIN=${{ secrets.DOMAIN }} docker compose up -d --build
             docker compose ps
