@@ -39,3 +39,7 @@ For automated deployments, configure GitHub repository secrets:
  - `DO_SSH_USER`: SSH username.
  - `DO_SSH_PRIVATE_KEY`: private key for SSH access.
  - `DOMAIN`: domain name for TLS certificates.
+ - `KEY_PASSWORD`: password for encrypting sensitive keys.
+ - `GOOGLE_CLIENT_ID`: OAuth client ID used by both backend and frontend.
+
+The CI workflow injects these secrets as environment variables when running `docker compose` during deployment.
