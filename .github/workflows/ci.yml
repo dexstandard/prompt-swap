@@ -71,16 +71,24 @@ jobs:
 
       - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.1.0
+        env:
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          DOMAIN: ${{ secrets.DOMAIN }}
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
+          envs: KEY_PASSWORD,GOOGLE_CLIENT_ID,DOMAIN
           script: |
             set -euo pipefail
             cd ~/prompt-swap
-            export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
-            export GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
-            export VITE_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
-            DOMAIN=${{ secrets.DOMAIN }} docker compose up -d --build
+            export KEY_PASSWORD="${KEY_PASSWORD}"
+            export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
+            export DOMAIN="${DOMAIN}"
+            export VITE_GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
+            docker compose up -d --build
+            # Wait for backend health endpoint via Caddy
+            timeout 60s bash -c 'until curl -fsS -H "Host: ${DOMAIN}" http://localhost/api/health; do sleep 3; done'
             docker compose ps
