@@ -60,7 +60,7 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
-    expect(res.json()).toMatchObject({ id, ...payload });
+      expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     res = await app.inject({
@@ -69,7 +69,7 @@ describe('agent routes', () => {
       headers: { 'x-user-id': 'user1' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...payload });
+      expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
 
     res = await app.inject({
       method: 'GET',
@@ -138,67 +138,6 @@ describe('agent routes', () => {
       payload: { ...payload, userId: 'user3', name: 'A2' },
     });
     expect(res.statusCode).toBe(403);
-
-    await app.close();
-    (globalThis as any).fetch = originalFetch;
-  });
-
-  it('returns current pnl for agent', async () => {
-    const app = await buildServer();
-    addUser('user5');
-
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          balances: [{ asset: 'USDT', free: '100', locked: '0' }],
-        }),
-      } as any)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ balances: [] }),
-      } as any)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          balances: [{ asset: 'USDT', free: '150', locked: '0' }],
-        }),
-      } as any);
-    const originalFetch = globalThis.fetch;
-    (globalThis as any).fetch = fetchMock;
-
-    const resCreate = await app.inject({
-      method: 'POST',
-      url: '/api/agents',
-      headers: { 'x-user-id': 'user5' },
-      payload: {
-        userId: 'user5',
-        model: 'm1',
-        name: 'A5',
-        tokenA: 'BTC',
-        tokenB: 'ETH',
-        minTokenAAllocation: 10,
-        minTokenBAllocation: 20,
-        risk: 'low',
-        reviewInterval: '1h',
-        agentInstructions: 'prompt',
-        status: 'active',
-      },
-    });
-    const id = resCreate.json().id as string;
-
-    const resPnl = await app.inject({
-      method: 'GET',
-      url: `/api/agents/${id}/pnl`,
-      headers: { 'x-user-id': 'user5' },
-    });
-    expect(resPnl.statusCode).toBe(200);
-    expect(resPnl.json()).toEqual({
-      startBalanceUsd: 100,
-      currentBalanceUsd: 150,
-      pnlUsd: 50,
-    });
 
     await app.close();
     (globalThis as any).fetch = originalFetch;

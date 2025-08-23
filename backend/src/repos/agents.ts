@@ -6,6 +6,7 @@ export interface AgentRow {
   model: string;
   status: string;
   created_at: number;
+  start_balance: number | null;
   name: string;
   token_a: string;
   token_b: string;
@@ -24,6 +25,7 @@ export function toApi(row: AgentRow) {
     model: row.model,
     status: row.status,
     createdAt: row.created_at,
+    startBalanceUsd: row.start_balance ?? null,
     name: row.name,
     tokenA: row.token_a,
     tokenB: row.token_b,
@@ -36,7 +38,7 @@ export function toApi(row: AgentRow) {
 }
 
 const baseSelect =
-  'SELECT id, user_id, model, status, created_at, name, token_a, token_b, ' +
+  'SELECT id, user_id, model, status, created_at, start_balance, name, token_a, token_b, ' +
   'min_a_allocation, min_b_allocation, risk, review_interval, ' +
   'agent_instructions FROM agents';
 

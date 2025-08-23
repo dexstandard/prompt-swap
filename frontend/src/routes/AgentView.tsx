@@ -6,7 +6,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
-import AgentBalance from '../components/AgentBalance';
+import { useAgentBalanceUsd } from '../components/AgentBalance';
 import Button from '../components/ui/Button';
 import { useToast } from '../components/Toast';
 import AgentPreview from './AgentPreview';
@@ -32,6 +32,7 @@ interface Agent {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  startBalanceUsd: number | null;
 }
 
 export default function AgentView() {
@@ -76,6 +77,37 @@ export default function AgentView() {
       }
     },
   });
+
+  const { balance, isLoading: balLoading } = useAgentBalanceUsd(
+    data?.tokenA,
+    data?.tokenB,
+  );
+  const balanceText =
+    balance === null ? '-' : balLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
+  const pnl =
+    balance !== null && data?.startBalanceUsd != null
+      ? balance - data.startBalanceUsd
+      : null;
+  const pnlText =
+    pnl === null
+      ? '-'
+      : balLoading
+      ? 'Loading...'
+      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}`;
+  const pnlClass =
+    pnl === null || balLoading
+      ? ''
+      : pnl <= -0.03
+      ? 'text-red-600'
+      : pnl >= 0.03
+      ? 'text-green-600'
+      : 'text-gray-600';
+  const pnlTooltip =
+    pnl === null || balLoading
+      ? undefined
+      : `PnL = $${balance!.toFixed(2)} - $${data!.startBalanceUsd!.toFixed(2)} = ${
+          pnl > 0 ? '+' : pnl < 0 ? '-' : ''
+        }$${Math.abs(pnl).toFixed(2)}`;
 
   const [showStrategy, setShowStrategy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -202,8 +234,13 @@ export default function AgentView() {
           )}
         </div>
         <p className="mt-2">
-          <strong>Balance (USD):</strong>{' '}
-          <AgentBalance tokenA={data.tokenA} tokenB={data.tokenB}/>
+          <strong>Balance (USD):</strong> {balanceText}
+          <span className="ml-4">
+            <strong>PnL (USD):</strong>{' '}
+            <span className={pnlClass} title={pnlTooltip}>
+              {pnlText}
+            </span>
+          </span>
         </p>
         {isActive ? (
             <div className="mt-4 flex gap-2">

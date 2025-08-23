@@ -7,7 +7,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
-import AgentBalance from '../components/AgentBalance';
+import { useAgentBalanceUsd } from '../components/AgentBalance';
 import Button from '../components/ui/Button';
 import CreateAgentForm from '../components/forms/CreateAgentForm';
 import PriceChart from '../components/forms/PriceChart';
@@ -21,6 +21,86 @@ interface Agent {
   status: 'active' | 'inactive' | 'draft';
   tokenA?: string;
   tokenB?: string;
+  startBalanceUsd?: number | null;
+}
+
+function AgentRow({
+  agent,
+  onDelete,
+}: {
+  agent: Agent;
+  onDelete: (id: string) => void;
+}) {
+  const { balance, isLoading } = useAgentBalanceUsd(
+    agent.tokenA,
+    agent.tokenB,
+  );
+  const balanceText =
+    balance === null ? '-' : isLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
+  const pnl =
+    balance !== null && agent.startBalanceUsd != null
+      ? balance - agent.startBalanceUsd
+      : null;
+  const pnlText =
+    pnl === null
+      ? '-'
+      : isLoading
+      ? 'Loading...'
+      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}`;
+  const pnlClass =
+    pnl === null || isLoading
+      ? ''
+      : pnl <= -0.03
+      ? 'text-red-600'
+      : pnl >= 0.03
+      ? 'text-green-600'
+      : 'text-gray-600';
+  const pnlTooltip =
+    pnl === null || isLoading
+      ? undefined
+      : `PnL = $${balance!.toFixed(2)} - $${agent.startBalanceUsd!.toFixed(2)} = ${
+          pnl > 0 ? '+' : pnl < 0 ? '-' : ''
+        }$${Math.abs(pnl).toFixed(2)}`;
+  return (
+    <tr key={agent.id}>
+      <td>
+        {agent.tokenA && agent.tokenB ? (
+          <span className="inline-flex items-center gap-1">
+            <TokenDisplay token={agent.tokenA} /> /
+            <TokenDisplay token={agent.tokenB} />
+          </span>
+        ) : (
+          '-'
+        )}
+      </td>
+      <td>{balanceText}</td>
+      <td className={pnlClass} title={pnlTooltip}>
+        {pnlText}
+      </td>
+      <td>{agent.model || '-'}</td>
+      <td>
+        <AgentStatusLabel status={agent.status} />
+      </td>
+      <td>
+        <div className="flex items-center gap-2">
+          <Link
+            className="text-blue-600 underline inline-flex"
+            to={`/agents/${agent.id}`}
+            aria-label="View agent"
+          >
+            <Eye className="w-4 h-4" />
+          </Link>
+          <button
+            className="text-red-600"
+            onClick={() => onDelete(agent.id)}
+            aria-label="Delete agent"
+          >
+            <Trash className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
 }
 
 export default function Dashboard() {
@@ -113,6 +193,7 @@ export default function Dashboard() {
                   <tr>
                     <th className="text-left">Tokens</th>
                     <th className="text-left">Balance (USD)</th>
+                    <th className="text-left">PnL (USD)</th>
                     <th className="text-left">Model</th>
                     <th className="text-left">Status</th>
                     <th></th>
@@ -120,50 +201,11 @@ export default function Dashboard() {
                 </thead>
                 <tbody>
                   {items.map((agent) => (
-                    <tr key={agent.id}>
-                      <td>
-                        {agent.tokenA && agent.tokenB ? (
-                          <span className="inline-flex items-center gap-1">
-                            <TokenDisplay token={agent.tokenA} /> /
-                            <TokenDisplay token={agent.tokenB} />
-                          </span>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td>
-                        {agent.tokenA && agent.tokenB ? (
-                          <AgentBalance
-                            tokenA={agent.tokenA}
-                            tokenB={agent.tokenB}
-                          />
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td>{agent.model || '-'}</td>
-                      <td>
-                        <AgentStatusLabel status={agent.status} />
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <Link
-                            className="text-blue-600 underline inline-flex"
-                            to={`/agents/${agent.id}`}
-                            aria-label="View agent"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                          <button
-                            className="text-red-600"
-                            onClick={() => handleDelete(agent.id)}
-                            aria-label="Delete agent"
-                          >
-                            <Trash className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <AgentRow
+                      key={agent.id}
+                      agent={agent}
+                      onDelete={handleDelete}
+                    />
                   ))}
                 </tbody>
               </table>

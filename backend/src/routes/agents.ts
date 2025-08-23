@@ -23,7 +23,6 @@ import {
 import reviewPortfolio from '../jobs/review-portfolio.js';
 import { requireUserId } from '../util/auth.js';
 import { fetchTotalBalanceUsd } from '../services/binance.js';
-import { calculatePnl } from '../services/pnl.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import { validateAllocations } from '../util/allocations.js';
 
@@ -328,25 +327,6 @@ export default async function agentRoutes(app: FastifyInstance) {
       const { log, agent: row } = ctx;
       log.info('fetched agent');
       return toApi(row);
-    }
-  );
-
-  app.get(
-    '/agents/:id/pnl',
-    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
-    async (req, reply) => {
-      const ctx = getAgentForRequest(req, reply);
-      if (!ctx) return;
-      const { userId, id, log } = ctx;
-      const perf = await calculatePnl(id, userId);
-      if (!perf) {
-        log.error('pnl not found');
-        return reply
-          .code(404)
-          .send(errorResponse(ERROR_MESSAGES.notFound));
-      }
-      log.info('fetched pnl');
-      return perf;
     }
   );
 
