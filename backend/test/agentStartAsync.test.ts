@@ -41,10 +41,25 @@ describe('agent start', () => {
     });
     const id = resCreate.json().id as string;
 
-    const fetchMock = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ balances: [{ asset: 'USDT', free: '100', locked: '0' }] }),
-    } as any);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          balances: [
+            { asset: 'BTC', free: '1', locked: '0' },
+            { asset: 'ETH', free: '1', locked: '0' },
+          ],
+        }),
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ price: '60' }),
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ price: '40' }),
+      } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
