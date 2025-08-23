@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { decrypt } from '../util/crypto.js';
+import { encrypt, decrypt } from '../util/crypto.js';
 import { env } from '../util/env.js';
 
 export interface UserRow {
@@ -56,6 +56,35 @@ export function listUsers() {
 export function setUserEnabled(id: string, enabled: boolean) {
   db.prepare('UPDATE users SET is_enabled = ? WHERE id = ?').run(
     enabled ? 1 : 0,
+    id,
+  );
+}
+
+export function getUserTotpStatus(id: string) {
+  const row = db
+    .prepare('SELECT is_totp_enabled FROM users WHERE id = ?')
+    .get(id) as { is_totp_enabled?: number } | undefined;
+  return !!row?.is_totp_enabled;
+}
+
+export function setUserTotpSecret(id: string, secret: string) {
+  const enc = encrypt(secret, env.KEY_PASSWORD);
+  db.prepare('UPDATE users SET totp_secret_enc = ?, is_totp_enabled = 1 WHERE id = ?').run(
+    enc,
+    id,
+  );
+}
+
+export function getUserTotpSecret(id: string) {
+  const row = db
+    .prepare('SELECT totp_secret_enc FROM users WHERE id = ?')
+    .get(id) as { totp_secret_enc?: string } | undefined;
+  if (!row?.totp_secret_enc) return undefined;
+  return decrypt(row.totp_secret_enc, env.KEY_PASSWORD);
+}
+
+export function clearUserTotp(id: string) {
+  db.prepare('UPDATE users SET totp_secret_enc = NULL, is_totp_enabled = 0 WHERE id = ?').run(
     id,
   );
 }
