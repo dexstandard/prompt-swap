@@ -36,11 +36,55 @@ export default function AppShell() {
       </header>
       <div className="flex flex-1 pt-16 pb-8 overflow-hidden">
         <nav
-          className={`${navCollapsed ? 'w-20' : 'w-40'} bg-gray-100 p-4 overflow-y-auto transition-all duration-300`}
+          className={`${navCollapsed ? 'w-20' : 'w-32'} bg-gray-100 p-4 transition-all duration-300 flex flex-col`}
         >
+          <div
+            className={`flex flex-col flex-1 overflow-y-auto ${
+              navCollapsed ? 'gap-3' : 'gap-2'
+            }`}
+          >
+            <Link
+              to="/"
+              className={`flex items-center text-gray-700 hover:text-gray-900 ${
+                navCollapsed ? 'justify-center' : 'gap-2'
+              }`}
+            >
+              <Bot className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
+              {!navCollapsed && 'Agents'}
+            </Link>
+            <Link
+              to="/keys"
+              className={`flex items-center text-gray-700 hover:text-gray-900 ${
+                navCollapsed ? 'justify-center' : 'gap-2'
+              }`}
+            >
+              <Key className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
+              {!navCollapsed && 'Keys'}
+            </Link>
+            <Link
+              to="/settings"
+              className={`flex items-center text-gray-700 hover:text-gray-900 ${
+                navCollapsed ? 'justify-center' : 'gap-2'
+              }`}
+            >
+              <SettingsIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
+              {!navCollapsed && 'Settings'}
+            </Link>
+            {user?.role === 'admin' && (
+              <Link
+                to="/users"
+                className={`flex items-center text-gray-700 hover:text-gray-900 ${
+                  navCollapsed ? 'justify-center' : 'gap-2'
+                }`}
+              >
+                <UsersIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
+                {!navCollapsed && 'Users'}
+              </Link>
+            )}
+          </div>
           <button
             onClick={() => setNavCollapsed(!navCollapsed)}
-            className={`mb-4 text-gray-700 hover:text-gray-900 ${
+            className={`mt-4 text-gray-700 hover:text-gray-900 ${
               navCollapsed ? 'flex justify-center w-full' : ''
             }`}
           >
@@ -50,44 +94,6 @@ export default function AppShell() {
               <ChevronLeft className="w-4 h-4" />
             )}
           </button>
-          <Link
-            to="/"
-            className={`flex items-center mb-2 text-gray-700 hover:text-gray-900 ${
-              navCollapsed ? 'justify-center' : 'gap-2'
-            }`}
-          >
-            <Bot className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
-            {!navCollapsed && 'Agents'}
-          </Link>
-          <Link
-            to="/keys"
-            className={`flex items-center mb-2 text-gray-700 hover:text-gray-900 ${
-              navCollapsed ? 'justify-center' : 'gap-2'
-            }`}
-          >
-            <Key className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
-            {!navCollapsed && 'Keys'}
-          </Link>
-          <Link
-            to="/settings"
-            className={`flex items-center mb-2 text-gray-700 hover:text-gray-900 ${
-              navCollapsed ? 'justify-center' : 'gap-2'
-            }`}
-          >
-            <SettingsIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
-            {!navCollapsed && 'Settings'}
-          </Link>
-          {user?.role === 'admin' && (
-            <Link
-              to="/users"
-              className={`flex items-center mb-2 text-gray-700 hover:text-gray-900 ${
-                navCollapsed ? 'justify-center' : 'gap-2'
-              }`}
-            >
-              <UsersIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
-              {!navCollapsed && 'Users'}
-            </Link>
-          )}
         </nav>
         <main className="flex-1 p-3 pt-0 bg-white overflow-y-auto">
           <Outlet />
