@@ -1,0 +1,10 @@
+{$DOMAIN} {
+    encode gzip zstd
+    handle_path /api/* {
+        reverse_proxy backend:3000
+    }
+    handle {
+        root * /usr/share/caddy
+        file_server
+    }
+}
