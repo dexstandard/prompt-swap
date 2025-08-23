@@ -459,4 +459,23 @@ export default async function agentRoutes(app: FastifyInstance) {
       return toApi(row);
     }
   );
+
+  app.post(
+    '/agents/:id/review',
+    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
+    async (req, reply) => {
+      const ctx = getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { id, log, agent } = ctx;
+      if (agent.status !== AgentStatus.Active) {
+        log.error('agent not active');
+        return reply
+          .code(400)
+          .send(errorResponse('agent not active'));
+      }
+      await reviewPortfolio(req.log, id);
+      log.info('manual review triggered');
+      return { ok: true };
+    }
+  );
 }

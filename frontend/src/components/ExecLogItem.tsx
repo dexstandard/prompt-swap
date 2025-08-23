@@ -3,6 +3,11 @@ import { AlertCircle, Eye } from 'lucide-react';
 import Modal from './ui/Modal';
 import ExecSuccessItem from './ExecSuccessItem';
 
+const MAX_LEN = 255;
+function truncate(text: string) {
+  return text.length > MAX_LEN ? text.slice(0, MAX_LEN) + '…' : text;
+}
+
 export interface ExecLog {
   id: string;
   log: string;
@@ -25,16 +30,16 @@ export default function ExecLogItem({ log }: Props) {
   const hasError = error && Object.keys(error).length > 0;
   const hasResponse = response && Object.keys(response).length > 0;
   return (
-    <div>
+    <div className="w-full">
       {!hasError && !hasResponse && text && (
-        <div className="whitespace-pre-wrap">{text}</div>
+        <div className="whitespace-pre-wrap break-words">{truncate(text)}</div>
       )}
       {hasError && (
         <div className="mt-1 flex items-center gap-2 rounded border border-red-300 bg-red-50 p-2 text-red-800">
           <AlertCircle className="h-4 w-4" />
-          <div className="flex-1">
+          <div className="flex-1 break-words">
             <span className="font-bold mr-1">ERROR</span>
-            <span>{(error as any).message || JSON.stringify(error)}</span>
+            <span>{truncate((error as any).message || JSON.stringify(error))}</span>
           </div>
           <Eye
             className="h-4 w-4 cursor-pointer"
