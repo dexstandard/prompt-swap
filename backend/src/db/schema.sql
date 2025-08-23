@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users(
   ai_api_key_enc TEXT,
   binance_api_key_enc TEXT,
   binance_api_secret_enc TEXT,
-  totp_secret TEXT,
+  totp_secret_enc TEXT,
   is_totp_enabled INTEGER DEFAULT 0,
   email_enc TEXT,
   created_at INTEGER DEFAULT (unixepoch() * 1000)

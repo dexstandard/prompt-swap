@@ -3,7 +3,7 @@ import { db } from '../src/db/index.js';
 import { OAuth2Client } from 'google-auth-library';
 import { authenticator } from 'otplib';
 import buildServer from '../src/server.js';
-import { decrypt } from '../src/util/crypto.js';
+import { encrypt, decrypt } from '../src/util/crypto.js';
 import { env } from '../src/util/env.js';
 
 describe('login route', () => {
@@ -37,8 +37,8 @@ describe('login route', () => {
     } as any);
     const secret = authenticator.generateSecret();
     db.prepare(
-      'INSERT INTO users (id, is_auto_enabled, totp_secret, is_totp_enabled) VALUES (?, 0, ?, 1)'
-    ).run('user2', secret);
+      'INSERT INTO users (id, is_auto_enabled, totp_secret_enc, is_totp_enabled) VALUES (?, 0, ?, 1)'
+    ).run('user2', encrypt(secret, env.KEY_PASSWORD));
 
     const res1 = await app.inject({
       method: 'POST',
