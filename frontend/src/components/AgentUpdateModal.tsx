@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useMutation } from '@tanstack/react-query';
 import api from '../lib/axios';
 import type { Agent } from '../lib/useAgentData';
-import { useToast } from './Toast';
+import { useToast } from '../lib/useToast';
 import Button from './ui/Button';
 import Modal from './ui/Modal';
 import StrategyForm from './StrategyForm';

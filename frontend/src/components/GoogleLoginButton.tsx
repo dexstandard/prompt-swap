@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { LogOut } from 'lucide-react';
+import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import Button from './ui/Button';
@@ -41,11 +42,17 @@ export default function GoogleLoginButton() {
           const res = await api.post('/login', { token: resp.credential });
           setUser(res.data);
           if (btnRef.current) btnRef.current.innerHTML = '';
-        } catch (err: any) {
-          if (err.response?.data?.error === 'otp required') {
+        } catch (err: unknown) {
+          if (
+            axios.isAxiosError(err) &&
+            err.response?.data?.error === 'otp required'
+          ) {
             const otp = window.prompt('Enter 2FA code');
             if (otp) {
-              const res2 = await api.post('/login', { token: resp.credential, otp });
+              const res2 = await api.post('/login', {
+                token: resp.credential,
+                otp,
+              });
               setUser(res2.data);
               if (btnRef.current) btnRef.current.innerHTML = '';
             }

@@ -11,7 +11,7 @@ import { useUser } from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 import WalletBalances from '../components/WalletBalances';
-import { useToast } from '../components/Toast';
+import { useToast } from '../lib/useToast';
 import Button from '../components/ui/Button';
 import { usePrerequisites } from '../lib/usePrerequisites';
 import AgentStartButton from '../components/AgentStartButton';

@@ -4,7 +4,7 @@ import QRCode from 'react-qr-code';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import Button from '../components/ui/Button';
-import { useToast } from '../components/Toast';
+import { useToast } from '../lib/useToast';
 
 export default function Settings() {
   const { user } = useUser();

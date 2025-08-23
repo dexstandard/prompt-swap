@@ -1,9 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
-
-interface ToastContext {
-  show: (message: string, variant?: 'error' | 'success') => void;
-}
-const Context = createContext<ToastContext>({ show: () => {} });
+import { useState, type ReactNode } from 'react';
+import { ToastContext } from '../lib/useToast';
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<
@@ -16,7 +12,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Context.Provider value={{ show }}>
+    <ToastContext.Provider value={{ show }}>
       {children}
       {toast && (
         <div
@@ -27,11 +23,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {toast.message.charAt(0).toUpperCase() + toast.message.slice(1)}
         </div>
       )}
-    </Context.Provider>
+    </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  return useContext(Context);
 }
 

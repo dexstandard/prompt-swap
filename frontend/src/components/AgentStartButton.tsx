@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
-import { useToast } from './Toast';
+import { useToast } from '../lib/useToast';
 import Button from './ui/Button';
 
 interface AgentPreviewDetails {

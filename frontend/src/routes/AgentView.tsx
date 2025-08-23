@@ -10,7 +10,7 @@ import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
 import StrategyForm from '../components/StrategyForm';
 import Button from '../components/ui/Button';
-import { useToast } from '../components/Toast';
+import { useToast } from '../lib/useToast';
 import AgentPreview from './AgentPreview';
 import { Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import ExecLogItem, { type ExecLog } from '../components/ExecLogItem';

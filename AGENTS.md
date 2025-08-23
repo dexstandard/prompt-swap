@@ -5,6 +5,7 @@ Backend code lives in `/backend`; the React app lives in `/frontend`.
 ## Testing
 - Run backend tests with `npm test` from the repository root.
 - Run `npm run build` to ensure the TypeScript compiler passes with no errors.
+- Run `npm --prefix frontend run lint` to ensure the frontend lints cleanly.
 - Frontend currently has no automated tests.
 
 ## Development
