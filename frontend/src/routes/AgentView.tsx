@@ -89,7 +89,19 @@ export default function AgentView() {
       ? balance - data.startBalanceUsd
       : null;
   const pnlText =
-    pnl === null ? '-' : balLoading ? 'Loading...' : `$${pnl.toFixed(2)}`;
+    pnl === null
+      ? '-'
+      : balLoading
+      ? 'Loading...'
+      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}`;
+  const pnlClass =
+    pnl === null || balLoading
+      ? ''
+      : pnl <= -0.03
+      ? 'text-red-600'
+      : pnl >= 0.03
+      ? 'text-green-600'
+      : 'text-gray-600';
 
   const [showStrategy, setShowStrategy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -218,7 +230,8 @@ export default function AgentView() {
         <p className="mt-2">
           <strong>Balance (USD):</strong> {balanceText}
           <span className="ml-4">
-            <strong>PnL (USD):</strong> {pnlText}
+            <strong>PnL (USD):</strong>{' '}
+            <span className={pnlClass}>{pnlText}</span>
           </span>
         </p>
         {isActive ? (

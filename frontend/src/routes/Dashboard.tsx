@@ -42,7 +42,19 @@ function AgentRow({
       ? balance - agent.startBalanceUsd
       : null;
   const pnlText =
-    pnl === null ? '-' : isLoading ? 'Loading...' : `$${pnl.toFixed(2)}`;
+    pnl === null
+      ? '-'
+      : isLoading
+      ? 'Loading...'
+      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}`;
+  const pnlClass =
+    pnl === null || isLoading
+      ? ''
+      : pnl <= -0.03
+      ? 'text-red-600'
+      : pnl >= 0.03
+      ? 'text-green-600'
+      : 'text-gray-600';
   return (
     <tr key={agent.id}>
       <td>
@@ -56,7 +68,7 @@ function AgentRow({
         )}
       </td>
       <td>{balanceText}</td>
-      <td>{pnlText}</td>
+      <td className={pnlClass}>{pnlText}</td>
       <td>{agent.model || '-'}</td>
       <td>
         <AgentStatusLabel status={agent.status} />
