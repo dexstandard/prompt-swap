@@ -3,9 +3,8 @@ const developerInstructions =
 
 export async function callAi(
   model: string,
-  input: unknown,
+  input: Record<string, unknown>,
   apiKey: string,
-  previousResponses: string[],
 ): Promise<string> {
   const schema = {
     type: 'object',
@@ -54,10 +53,7 @@ export async function callAi(
     },
     body: JSON.stringify({
       model,
-      input:
-        typeof input === 'string'
-          ? JSON.stringify({ prompt: input, previous_responses: previousResponses })
-          : JSON.stringify({ ...(input as Record<string, unknown>), previous_responses: previousResponses }),
+      input: JSON.stringify(input),
       instructions: developerInstructions,
       tools: [{ type: 'web_search_preview' }],
       text: {

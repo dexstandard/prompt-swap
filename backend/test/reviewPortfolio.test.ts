@@ -57,7 +57,7 @@ describe('reviewPortfolio', () => {
     await reviewPortfolio(log, 'a1');
     expect(callAi).toHaveBeenCalledTimes(1);
     const args = (callAi as any).mock.calls[0];
-    const prev = args[3].map((s: string) => JSON.parse(s));
+    const prev = args[1].previous_responses.map((s: string) => JSON.parse(s));
     expect(prev).toEqual([
       { rebalance: true, newAllocation: 5, shortReport: 'short-5' },
       { rebalance: true, newAllocation: 4, shortReport: 'short-4' },

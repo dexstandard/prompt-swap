@@ -6,7 +6,7 @@ describe('callAi structured output', () => {
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const { callAi } = await import('../src/util/ai.js');
-    await callAi('gpt-test', { foo: 'bar' }, 'key', ['p1', 'p2']);
+    await callAi('gpt-test', { foo: 'bar', previous_responses: ['p1', 'p2'] }, 'key');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);
