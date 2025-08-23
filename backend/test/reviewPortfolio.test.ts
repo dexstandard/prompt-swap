@@ -2,6 +2,23 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 import { db } from '../src/db/index.js';
 
+const sampleIndicators = {
+  ret: { '1h': 0, '4h': 0, '24h': 0, '7d': 0, '30d': 0 },
+  sma_dist: { '20': 0, '50': 0, '200': 0 },
+  macd_hist: 0,
+  vol: { rv_7d: 0, rv_30d: 0, atr_pct: 0 },
+  range: { bb_bw: 0, donchian20: 0 },
+  volume: { z_1h: 0, z_24h: 0 },
+  corr: { BTC_30d: 0 },
+  regime: { BTC: 'range' },
+};
+
+const sampleTimeseries = {
+  minute_60: [[1, 2, 3, 4]],
+  hourly_24h: [[5, 6, 7, 8]],
+  monthly_24m: [[9, 10, 11]],
+};
+
 vi.mock('../src/util/ai.js', () => ({
   callRebalancingAgent: vi.fn().mockResolvedValue('ok'),
 }));
@@ -18,17 +35,27 @@ vi.mock('../src/services/binance.js', () => ({
     ],
   }),
   fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
+  fetchMarketTimeseries: vi.fn().mockResolvedValue(sampleTimeseries),
+}));
+
+vi.mock('../src/services/indicators.js', () => ({
+  fetchTokenIndicators: vi.fn().mockResolvedValue(sampleIndicators),
 }));
 
 let reviewPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let callRebalancingAgent: any;
 let fetchAccount: any;
 let fetchPairData: any;
+let fetchMarketTimeseries: any;
+let fetchTokenIndicators: any;
 
 beforeAll(async () => {
   reviewPortfolio = (await import('../src/jobs/review-portfolio.js')).default;
   ({ callRebalancingAgent } = await import('../src/util/ai.js'));
-  ({ fetchAccount, fetchPairData } = await import('../src/services/binance.js'));
+  ({ fetchAccount, fetchPairData, fetchMarketTimeseries } = await import(
+    '../src/services/binance.js'
+  ));
+  ({ fetchTokenIndicators } = await import('../src/services/indicators.js'));
 });
 
 describe('reviewPortfolio', () => {
@@ -73,7 +100,16 @@ describe('reviewPortfolio', () => {
     expect(cfg.policy.floors).toEqual({ BTC: 0.1, ETH: 0.2 });
     expect(cfg.portfolio.weights.BTC).toBeCloseTo(150 / 350);
     expect(cfg.portfolio.weights.ETH).toBeCloseTo(200 / 350);
-    expect(args[1].marketData).toEqual({ currentPrice: 100 });
+    expect(args[1].marketData).toEqual({
+      currentPrice: 100,
+      indicators: { BTC: sampleIndicators, ETH: sampleIndicators },
+      market_timeseries: {
+        BTCUSDT: sampleTimeseries,
+        ETHUSDT: sampleTimeseries,
+      },
+    });
+    expect(fetchTokenIndicators).toHaveBeenCalledTimes(2);
+    expect(fetchMarketTimeseries).toHaveBeenCalledTimes(2);
   });
 
   it('saves prompt and response to exec log', async () => {
@@ -120,6 +156,36 @@ describe('reviewPortfolio', () => {
     expect(parsedRows[0].log).toBe('ok');
     expect(parsedRows[0].rebalance).toBeNull();
     expect(parsedRows[0].error).toBeNull();
+  });
+
+  it('omits indicators for stablecoins', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(fetchTokenIndicators).mockClear();
+    vi.mocked(fetchMarketTimeseries).mockClear();
+    vi.mocked(fetchAccount).mockResolvedValueOnce({
+      balances: [
+        { asset: 'USDT', free: '1', locked: '0' },
+        { asset: 'ETH', free: '2', locked: '0' },
+      ],
+    });
+    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u5', 'enc');
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'Agent5', 'USDT', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+    ).run('a5', 'u5');
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewPortfolio(log, 'a5');
+    expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
+    const args = (callRebalancingAgent as any).mock.calls[0];
+    expect(args[1].marketData).toEqual({
+      currentPrice: 100,
+      indicators: { ETH: sampleIndicators },
+      market_timeseries: { ETHUSDT: sampleTimeseries },
+    });
+    expect(fetchTokenIndicators).toHaveBeenCalledTimes(1);
+    expect(fetchTokenIndicators).toHaveBeenCalledWith('ETH');
+    expect(fetchMarketTimeseries).toHaveBeenCalledTimes(1);
+    expect(fetchMarketTimeseries).toHaveBeenCalledWith('ETHUSDT');
   });
 
   it('logs error when token balances missing and skips callRebalancingAgent', async () => {

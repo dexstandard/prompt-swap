@@ -106,3 +106,64 @@ export async function fetchPairData(tokenA: string, tokenB: string) {
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
+
+export async function fetchMarketTimeseries(symbol: string) {
+  const [minRes, hourRes, monthRes] = await Promise.all([
+    fetch(
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&limit=60`,
+    ),
+    fetch(
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=24`,
+    ),
+    fetch(
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1M&limit=24`,
+    ),
+  ]);
+
+  const responses = {
+    minute_60: minRes,
+    hourly_24h: hourRes,
+    monthly_24m: monthRes,
+  } as const;
+  for (const [name, res] of Object.entries(responses)) {
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`failed to fetch ${name} data: ${res.status} ${body}`);
+    }
+  }
+
+  const [minJson, hourJson, monthJson] = await Promise.all([
+    minRes.json(),
+    hourRes.json(),
+    monthRes.json(),
+  ]);
+
+  return {
+    minute_60: (minJson as any[]).map(
+      (k: any) =>
+        [
+          Number(k[0]),
+          Number(k[1]),
+          Number(k[4]),
+          Number(k[5]),
+        ] as [number, number, number, number],
+    ),
+    hourly_24h: (hourJson as any[]).map(
+      (k: any) =>
+        [
+          Number(k[0]),
+          Number(k[1]),
+          Number(k[4]),
+          Number(k[5]),
+        ] as [number, number, number, number],
+    ),
+    monthly_24m: (monthJson as any[]).map(
+      (k: any) =>
+        [Number(k[0]), Number(k[1]), Number(k[4])] as [
+          number,
+          number,
+          number,
+        ],
+    ),
+  };
+}

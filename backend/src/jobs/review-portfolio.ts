@@ -13,7 +13,13 @@ import {
 } from '../repos/agent-exec-result.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
 import { callRebalancingAgent } from '../util/ai.js';
-import { fetchAccount, fetchPairData } from '../services/binance.js';
+import {
+  fetchAccount,
+  fetchPairData,
+  fetchMarketTimeseries,
+} from '../services/binance.js';
+import { fetchTokenIndicators } from '../services/indicators.js';
+import { isStablecoin } from '../util/tokens.js';
 import type { RebalancePrompt } from '../util/ai.js';
 
 export default async function reviewPortfolio(
@@ -85,14 +91,27 @@ async function buildPrompt(
 ): Promise<RebalancePrompt | undefined> {
   try {
     const pairData = await fetchPairData(row.token_a, row.token_b);
-    const [priceAData, priceBData] = await Promise.all([
-      row.token_a === 'USDT'
-        ? Promise.resolve({ currentPrice: 1 })
-        : fetchPairData(row.token_a, 'USDT'),
-      row.token_b === 'USDT'
-        ? Promise.resolve({ currentPrice: 1 })
-        : fetchPairData(row.token_b, 'USDT'),
-    ]);
+    const [priceAData, priceBData, indA, indB, tsA, tsB] =
+      await Promise.all([
+        row.token_a === 'USDT'
+          ? Promise.resolve({ currentPrice: 1 })
+          : fetchPairData(row.token_a, 'USDT'),
+        row.token_b === 'USDT'
+          ? Promise.resolve({ currentPrice: 1 })
+          : fetchPairData(row.token_b, 'USDT'),
+        isStablecoin(row.token_a)
+          ? Promise.resolve(undefined)
+          : fetchTokenIndicators(row.token_a),
+        isStablecoin(row.token_b)
+          ? Promise.resolve(undefined)
+          : fetchTokenIndicators(row.token_b),
+        isStablecoin(row.token_a)
+          ? Promise.resolve(undefined)
+          : fetchMarketTimeseries(`${row.token_a}USDT`),
+        isStablecoin(row.token_b)
+          ? Promise.resolve(undefined)
+          : fetchMarketTimeseries(`${row.token_b}USDT`),
+      ]);
     const priceA = priceAData.currentPrice;
     const priceB = priceBData.currentPrice;
     const valueA = balances.tokenABalance * priceA;
@@ -127,10 +146,28 @@ async function buildPrompt(
         portfolio: {
           ts: new Date().toISOString(),
           positions,
-          weights,
-        },
+        weights,
       },
-      marketData: { currentPrice: pairData.currentPrice },
+    },
+      marketData: {
+        currentPrice: pairData.currentPrice,
+        ...(indA || indB
+          ? {
+              indicators: {
+                ...(indA ? { [row.token_a]: indA } : {}),
+                ...(indB ? { [row.token_b]: indB } : {}),
+              },
+            }
+          : {}),
+        ...(tsA || tsB
+          ? {
+              market_timeseries: {
+                ...(tsA ? { [`${row.token_a}USDT`]: tsA } : {}),
+                ...(tsB ? { [`${row.token_b}USDT`]: tsB } : {}),
+              },
+            }
+          : {}),
+      },
     };
   } catch (err) {
     const msg = 'failed to fetch market data';
