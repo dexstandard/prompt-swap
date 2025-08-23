@@ -2,6 +2,10 @@
 FROM node:22-alpine AS fe-build
 WORKDIR /app/frontend
 
+# inject build-time env so Vite embeds secrets
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+
 # deps (cache-friendly)
 COPY frontend/package*.json ./
 RUN npm ci
