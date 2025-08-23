@@ -1,10 +1,14 @@
 version: '3.8'
+
 services:
   backend:
     build: ./backend
     environment:
       - NODE_ENV=production
+      - PORT=3000
       - DATABASE_URL=/data/data.db
+    expose:
+      - "3000"
     volumes:
       - backend_data:/data
     restart: unless-stopped
@@ -13,11 +17,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.caddy
+    environment:
+      - DOMAIN=${DOMAIN}
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      - DOMAIN=${DOMAIN}
     depends_on:
       - backend
     volumes:
