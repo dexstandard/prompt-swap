@@ -4,7 +4,7 @@ import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import {
   getActiveAgents,
-  type AgentRow,
+  type ActiveAgentRow,
 } from '../repos/agents.js';
 import { insertExecLog } from '../repos/agent-exec-log.js';
 import {
@@ -24,7 +24,7 @@ export default async function reviewPortfolio(
   await Promise.all(agents.map((row) => processAgent(row, log)));
 }
 
-async function processAgent(row: AgentRow, parentLog: FastifyBaseLogger) {
+async function processAgent(row: ActiveAgentRow, parentLog: FastifyBaseLogger) {
   const execLogId = randomUUID();
   const log = parentLog.child({
     userId: row.user_id,
@@ -51,7 +51,7 @@ async function processAgent(row: AgentRow, parentLog: FastifyBaseLogger) {
 }
 
 async function fetchBalances(
-  row: AgentRow,
+  row: ActiveAgentRow,
   log: FastifyBaseLogger,
   execLogId: string,
 ): Promise<{ tokenABalance: number; tokenBBalance: number } | undefined> {
@@ -78,7 +78,7 @@ async function fetchBalances(
 }
 
 async function buildPrompt(
-  row: AgentRow,
+  row: ActiveAgentRow,
   balances: { tokenABalance: number; tokenBBalance: number },
   log: FastifyBaseLogger,
   execLogId: string,
@@ -141,7 +141,7 @@ async function buildPrompt(
 }
 
 async function executeAgent(
-  row: AgentRow,
+  row: ActiveAgentRow,
   prompt: RebalancePrompt,
   key: string,
   log: FastifyBaseLogger,
@@ -180,7 +180,7 @@ async function executeAgent(
 }
 
 function saveFailure(
-  row: AgentRow,
+  row: ActiveAgentRow,
   execLogId: string,
   message: string,
   prompt?: RebalancePrompt,
