@@ -3,7 +3,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { db } from '../src/db/index.js';
 
 vi.mock('../src/util/ai.js', () => ({
-  callAi: vi.fn().mockResolvedValue('ok'),
+  callRebalancingAgent: vi.fn().mockResolvedValue('ok'),
 }));
 
 vi.mock('../src/util/crypto.js', () => ({
@@ -21,18 +21,18 @@ vi.mock('../src/services/binance.js', () => ({
 }));
 
 let reviewPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
-let callAi: any;
+let callRebalancingAgent: any;
 let fetchAccount: any;
 let fetchPairData: any;
 
 beforeAll(async () => {
   reviewPortfolio = (await import('../src/jobs/review-portfolio.js')).default;
-  ({ callAi } = await import('../src/util/ai.js'));
+  ({ callRebalancingAgent } = await import('../src/util/ai.js'));
   ({ fetchAccount, fetchPairData } = await import('../src/services/binance.js'));
 });
 
 describe('reviewPortfolio', () => {
-  it('passes last five responses to callAi', async () => {
+  it('passes last five responses to callRebalancingAgent', async () => {
     db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u1', 'enc');
     db.prepare(
       `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
@@ -55,8 +55,8 @@ describe('reviewPortfolio', () => {
     }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolio(log, 'a1');
-    expect(callAi).toHaveBeenCalledTimes(1);
-    const args = (callAi as any).mock.calls[0];
+    expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
+    const args = (callRebalancingAgent as any).mock.calls[0];
     const prev = args[1].previous_responses.map((s: string) => JSON.parse(s));
     expect(prev).toEqual([
       { rebalance: true, newAllocation: 5, shortReport: 'short-5' },
@@ -77,8 +77,8 @@ describe('reviewPortfolio', () => {
   });
 
   it('saves prompt and response to exec log', async () => {
-    vi.mocked(callAi).mockClear();
-    vi.mocked(callAi).mockResolvedValueOnce('ok');
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(callRebalancingAgent).mockResolvedValueOnce('ok');
     db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u4', 'enc');
     db.prepare(
       `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
@@ -122,8 +122,8 @@ describe('reviewPortfolio', () => {
     expect(parsedRows[0].error).toBeNull();
   });
 
-  it('logs error when token balances missing and skips callAi', async () => {
-    vi.mocked(callAi).mockClear();
+  it('logs error when token balances missing and skips callRebalancingAgent', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
     vi.mocked(fetchAccount).mockResolvedValueOnce({
       balances: [{ asset: 'BTC', free: '1', locked: '0' }],
     });
@@ -134,7 +134,7 @@ describe('reviewPortfolio', () => {
     ).run('a2', 'u2');
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolio(log, 'a2');
-    expect(callAi).not.toHaveBeenCalled();
+    expect(callRebalancingAgent).not.toHaveBeenCalled();
     const rows = db
       .prepare('SELECT response FROM agent_exec_log WHERE agent_id = ?')
       .all('a2') as { response: string | null }[];
@@ -150,8 +150,8 @@ describe('reviewPortfolio', () => {
     expect(parsedRows[0].error).toContain('failed to fetch token balances');
   });
 
-  it('logs error when market data fetch fails and skips callAi', async () => {
-    vi.mocked(callAi).mockClear();
+  it('logs error when market data fetch fails and skips callRebalancingAgent', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
     vi.mocked(fetchAccount).mockResolvedValueOnce({
       balances: [
         { asset: 'BTC', free: '1', locked: '0' },
@@ -166,7 +166,7 @@ describe('reviewPortfolio', () => {
     ).run('a3', 'u3');
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolio(log, 'a3');
-    expect(callAi).not.toHaveBeenCalled();
+    expect(callRebalancingAgent).not.toHaveBeenCalled();
     const rows = db
       .prepare('SELECT response FROM agent_exec_log WHERE agent_id = ?')
       .all('a3') as { response: string | null }[];

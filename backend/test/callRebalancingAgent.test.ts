@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { AgentPrompt } from '../src/util/ai.js';
+import type { RebalancePrompt } from '../src/util/ai.js';
 
-describe('callAi structured output', () => {
+describe('callRebalancingAgent structured output', () => {
   it('includes json schema in request', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ text: async () => '' });
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const { callAi } = await import('../src/util/ai.js');
-    const prompt: AgentPrompt = {
+    const { callRebalancingAgent } = await import('../src/util/ai.js');
+    const prompt: RebalancePrompt = {
       instructions: 'inst',
       config: {
         policy: { floors: { USDT: 0.2 } },
@@ -22,7 +22,7 @@ describe('callAi structured output', () => {
       marketData: { currentPrice: 1 },
       previous_responses: ['p1', 'p2'],
     };
-    await callAi('gpt-test', prompt, 'key');
+    await callRebalancingAgent('gpt-test', prompt, 'key');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);

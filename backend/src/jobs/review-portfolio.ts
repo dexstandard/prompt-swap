@@ -12,9 +12,9 @@ import {
   getRecentExecResults,
 } from '../repos/agent-exec-result.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
-import { callAi } from '../util/ai.js';
+import { callRebalancingAgent } from '../util/ai.js';
 import { fetchAccount, fetchPairData } from '../services/binance.js';
-import type { AgentPrompt } from '../util/ai.js';
+import type { RebalancePrompt } from '../util/ai.js';
 
 export default async function reviewPortfolio(
   log: FastifyBaseLogger,
@@ -82,7 +82,7 @@ async function buildPrompt(
   balances: { tokenABalance: number; tokenBBalance: number },
   log: FastifyBaseLogger,
   execLogId: string,
-): Promise<AgentPrompt | undefined> {
+): Promise<RebalancePrompt | undefined> {
   try {
     const pairData = await fetchPairData(row.token_a, row.token_b);
     const [priceAData, priceBData] = await Promise.all([
@@ -142,13 +142,13 @@ async function buildPrompt(
 
 async function executeAgent(
   row: AgentRow,
-  prompt: AgentPrompt,
+  prompt: RebalancePrompt,
   key: string,
   log: FastifyBaseLogger,
   execLogId: string,
 ) {
   try {
-    const text = await callAi(row.model, prompt, key);
+    const text = await callRebalancingAgent(row.model, prompt, key);
     const createdAt = Date.now();
     insertExecLog({
       id: execLogId,
@@ -183,7 +183,7 @@ function saveFailure(
   row: AgentRow,
   execLogId: string,
   message: string,
-  prompt?: AgentPrompt,
+  prompt?: RebalancePrompt,
 ) {
   const createdAt = Date.now();
   insertExecLog({
