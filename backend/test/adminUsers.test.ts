@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import buildServer from '../src/server.js';
 import { db } from '../src/db/index.js';
+import { encrypt } from '../src/util/crypto.js';
+import { env } from '../src/util/env.js';
 
 describe('admin user routes', () => {
   it('lists users for admin only', async () => {
     const app = await buildServer();
     db.prepare(
-      "INSERT INTO users (id, is_auto_enabled, role, is_enabled) VALUES ('admin1', 0, 'admin', 1)"
-    ).run();
+      "INSERT INTO users (id, is_auto_enabled, role, is_enabled, email_enc) VALUES ('admin1', 0, 'admin', 1, ?)"
+    ).run(encrypt('admin@example.com', env.KEY_PASSWORD));
     db.prepare(
-      "INSERT INTO users (id, is_auto_enabled, role, is_enabled) VALUES ('user1', 0, 'user', 1)"
-    ).run();
+      "INSERT INTO users (id, is_auto_enabled, role, is_enabled, email_enc) VALUES ('user1', 0, 'user', 1, ?)"
+    ).run(encrypt('user1@example.com', env.KEY_PASSWORD));
 
     const resForbidden = await app.inject({
       method: 'GET',
@@ -26,7 +28,9 @@ describe('admin user routes', () => {
     });
     expect(res.statusCode).toBe(200);
     const body = res.json() as any[];
-    expect(body.some((u) => u.id === 'user1')).toBe(true);
+    const user = body.find((u) => u.id === 'user1');
+    expect(user.email).toBe('user1@example.com');
+    expect(typeof user.createdAt).toBe('number');
     await app.close();
   });
 

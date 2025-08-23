@@ -15,16 +15,26 @@ export function getUser(id: string) {
     .get(id) as UserRow | undefined;
 }
 
-export function insertUser(id: string) {
+export function insertUser(id: string, emailEnc: string | null) {
   db.prepare(
-    "INSERT INTO users (id, is_auto_enabled, role, is_enabled) VALUES (?, 0, 'user', 1)"
-  ).run(id);
+    "INSERT INTO users (id, is_auto_enabled, role, is_enabled, email_enc) VALUES (?, 0, 'user', 1, ?)"
+  ).run(id, emailEnc);
+}
+
+export function setUserEmail(id: string, emailEnc: string) {
+  db.prepare('UPDATE users SET email_enc = ? WHERE id = ?').run(emailEnc, id);
 }
 
 export function listUsers() {
   return db
-    .prepare('SELECT id, role, is_enabled FROM users')
-    .all() as { id: string; role: string; is_enabled: number }[];
+    .prepare('SELECT id, role, is_enabled, email_enc, created_at FROM users')
+    .all() as {
+      id: string;
+      role: string;
+      is_enabled: number;
+      email_enc?: string;
+      created_at: number;
+    }[];
 }
 
 export function setUserEnabled(id: string, enabled: boolean) {

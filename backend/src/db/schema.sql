@@ -9,7 +9,9 @@ CREATE TABLE IF NOT EXISTS users(
   binance_api_key_enc TEXT,
   binance_api_secret_enc TEXT,
   totp_secret TEXT,
-  is_totp_enabled INTEGER DEFAULT 0
+  is_totp_enabled INTEGER DEFAULT 0,
+  email_enc TEXT,
+  created_at INTEGER DEFAULT (unixepoch() * 1000)
 );
 
 CREATE TABLE IF NOT EXISTS executions(
