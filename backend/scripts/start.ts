@@ -27,7 +27,8 @@ async function main() {
   }
 
   try {
-    await app.listen({ port: 3000 });
+    // Listen on all interfaces so Caddy can reach the backend in Docker
+    await app.listen({ port: 3000, host: '0.0.0.0' });
     log.info('server started');
   } catch (err) {
     log.error(err);
