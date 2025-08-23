@@ -2,81 +2,30 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
+import { useAgentData } from '../lib/useAgentData';
+import { useAgentActions } from '../lib/useAgentActions';
+import api from '../lib/axios';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
-import { useAgentBalanceUsd } from '../components/AgentBalance';
+import StrategyForm from '../components/StrategyForm';
 import Button from '../components/ui/Button';
 import { useToast } from '../components/Toast';
 import AgentPreview from './AgentPreview';
-import StrategyForm from '../components/StrategyForm';
 import { Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import ExecLogItem, { type ExecLog } from '../components/ExecLogItem';
-import Modal from '../components/ui/Modal';
-import AgentInstructions from '../components/AgentInstructions';
-import { normalizeAllocations } from '../lib/allocations';
 import FormattedDate from '../components/ui/FormattedDate';
-
-interface Agent {
-  id: string;
-  userId: string;
-  model: string;
-  status: 'active' | 'inactive' | 'draft';
-  createdAt: number;
-  name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
-  risk: string;
-  reviewInterval: string;
-  agentInstructions: string;
-  startBalanceUsd: number | null;
-}
+import AgentPnl from '../components/AgentPnl';
+import AgentUpdateModal from '../components/AgentUpdateModal';
 
 export default function AgentView() {
   const { id } = useParams();
   const { user } = useUser();
-  const { data } = useQuery({
-    queryKey: ['agent', id, user?.id],
-    queryFn: async () => {
-      const res = await api.get(`/agents/${id}`);
-      return res.data as Agent;
-    },
-    enabled: !!id && !!user,
-  });
+  const { data } = useAgentData(id);
+  const { startMut, stopMut } = useAgentActions(id);
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  const startMut = useMutation({
-    mutationFn: async () => {
-      await api.post(`/agents/${id}/start`);
-    },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] }),
-    onError: (err) => {
-      if (axios.isAxiosError(err) && err.response?.data?.error) {
-        toast.show(err.response.data.error);
-      } else {
-        toast.show('Failed to start agent');
-      }
-    },
-  });
-  const stopMut = useMutation({
-    mutationFn: async () => {
-      await api.post(`/agents/${id}/stop`);
-    },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] }),
-    onError: (err) => {
-      if (axios.isAxiosError(err) && err.response?.data?.error) {
-        toast.show(err.response.data.error);
-      } else {
-        toast.show('Failed to stop agent');
-      }
-    },
-  });
   const reviewMut = useMutation({
     mutationFn: async (agentId: string) => {
       await api.post(`/agents/${agentId}/review`);
@@ -92,73 +41,9 @@ export default function AgentView() {
     },
   });
 
-  const { balance, isLoading: balLoading } = useAgentBalanceUsd(
-    data?.tokenA,
-    data?.tokenB,
-  );
-  const balanceText =
-    balance === null ? '-' : balLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
-  const pnl =
-    balance !== null && data?.startBalanceUsd != null
-      ? balance - data.startBalanceUsd
-      : null;
-  const pnlText =
-    pnl === null
-      ? '-'
-      : balLoading
-      ? 'Loading...'
-      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}`;
-  const pnlClass =
-    pnl === null || balLoading
-      ? ''
-      : pnl <= -0.03
-      ? 'text-red-600'
-      : pnl >= 0.03
-      ? 'text-green-600'
-      : 'text-gray-600';
-  const pnlTooltip =
-    pnl === null || balLoading
-      ? undefined
-      : `PnL = $${balance!.toFixed(2)} - $${data!.startBalanceUsd!.toFixed(2)} = ${
-          pnl > 0 ? '+' : pnl < 0 ? '-' : ''
-        }$${Math.abs(pnl).toFixed(2)}`;
-
   const [showStrategy, setShowStrategy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
-  const [updateData, setUpdateData] = useState({
-    tokenA: '',
-    tokenB: '',
-    minTokenAAllocation: 0,
-    minTokenBAllocation: 0,
-    risk: '',
-    reviewInterval: '',
-    agentInstructions: '',
-  });
-
-  const updateMut = useMutation({
-    mutationFn: async () => {
-      if (!id) return;
-      await api.put(`/agents/${id}`, {
-        userId: data!.userId,
-        model: data!.model,
-        status: data!.status,
-        name: data!.name,
-        ...updateData,
-      });
-    },
-    onSuccess: () => {
-      setShowUpdate(false);
-      queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] });
-    },
-    onError: (err) => {
-      if (axios.isAxiosError(err) && err.response?.data?.error) {
-        toast.show(err.response.data.error);
-      } else {
-        toast.show('Failed to update agent');
-      }
-    },
-  });
 
   const [logPage, setLogPage] = useState(1);
   const { data: logData } = useQuery({
@@ -247,30 +132,14 @@ export default function AgentView() {
           </pre>
           )}
         </div>
-        <p className="mt-2">
-          <strong>Balance (USD):</strong> {balanceText}
-          <span className="ml-4">
-            <strong>PnL (USD):</strong>{' '}
-            <span className={pnlClass} title={pnlTooltip}>
-              {pnlText}
-            </span>
-          </span>
-        </p>
+        <AgentPnl
+          tokenA={data.tokenA}
+          tokenB={data.tokenB}
+          startBalanceUsd={data.startBalanceUsd}
+        />
         {isActive ? (
             <div className="mt-4 flex gap-2">
-              <Button onClick={() => {
-                setUpdateData({
-                  tokenA: data.tokenA,
-                  tokenB: data.tokenB,
-
-                  minTokenAAllocation: data.minTokenAAllocation,
-                  minTokenBAllocation: data.minTokenBAllocation,
-                  risk: data.risk,
-                  reviewInterval: data.reviewInterval,
-                  agentInstructions: data.agentInstructions,
-                });
-                setShowUpdate(true);
-              }}>
+              <Button onClick={() => setShowUpdate(true)}>
                 Update Agent
               </Button>
               <Button
@@ -351,43 +220,14 @@ export default function AgentView() {
               )}
             </div>
         )}
-        <Modal open={showUpdate} onClose={() => setShowUpdate(false)}>
-          <h2 className="text-xl font-bold mb-2">Update Agent</h2>
-          <div className="max-w-2xl">
-            <StrategyForm
-                data={updateData}
-                onChange={(key, value) =>
-                    setUpdateData((d) => {
-                      const updated = {...d, [key]: value};
-                      const normalized = normalizeAllocations(
-
-                          updated.minTokenAAllocation,
-                          updated.minTokenBAllocation,
-                      );
-                      return {...updated, ...normalized};
-                    })
-                }
-            />
-          </div>
-          <AgentInstructions
-              value={updateData.agentInstructions}
-              onChange={(v) =>
-                  setUpdateData((d) => ({...d, agentInstructions: v}))
-              }
-          />
-          <div className="mt-4 flex justify-end gap-2">
-            <Button onClick={() => setShowUpdate(false)}>Cancel</Button>
-            <Button
-                disabled={updateMut.isPending}
-                loading={updateMut.isPending}
-                onClick={() => {
-                  if (window.confirm('Update running agent?')) updateMut.mutate();
-                }}
-            >
-              Confirm
-            </Button>
-          </div>
-        </Modal>
+        <AgentUpdateModal
+          agent={data}
+          open={showUpdate}
+          onClose={() => setShowUpdate(false)}
+          onUpdated={() =>
+            queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] })
+          }
+        />
       </div>
   );
 }

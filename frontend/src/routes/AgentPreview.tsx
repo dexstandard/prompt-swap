@@ -5,7 +5,6 @@ import StrategyForm from '../components/StrategyForm';
 import AgentInstructions from '../components/AgentInstructions';
 import { normalizeAllocations } from '../lib/allocations';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
@@ -14,6 +13,8 @@ import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 import WalletBalances from '../components/WalletBalances';
 import { useToast } from '../components/Toast';
 import Button from '../components/ui/Button';
+import { usePrerequisites } from '../lib/usePrerequisites';
+import AgentStartButton from '../components/AgentStartButton';
 
 interface AgentPreviewDetails {
   name: string;
@@ -42,48 +43,13 @@ export default function AgentPreview({ draft }: Props) {
   const locationData = location.state as AgentPreviewDetails | undefined;
   const { user } = useUser();
   const toast = useToast();
-  const queryClient = useQueryClient();
   const data = draft ?? locationData;
   const [agentData, setAgentData] = useState<AgentPreviewDetails | undefined>(data);
   useEffect(() => {
     if (data) setAgentData(data);
   }, [data]);
-  const aiKeyQuery = useQuery<string | null>({
-    queryKey: ['ai-key', user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      try {
-        const res = await api.get(`/users/${user!.id}/ai-key`);
-        return res.data.key as string;
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-        throw err;
-      }
-    },
-  });
-  const hasOpenAIKey = !!aiKeyQuery.data;
-  const binanceKeyQuery = useQuery<string | null>({
-    queryKey: ['binance-key', user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      try {
-        const res = await api.get(`/users/${user!.id}/binance-key`);
-        return res.data.key as string;
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-        throw err;
-      }
-    },
-  });
-  const hasBinanceKey = !!binanceKeyQuery.data;
-  const modelsQuery = useQuery<string[]>({
-    queryKey: ['openai-models', user?.id],
-    enabled: !!user && hasOpenAIKey && (!draft || !draft.model),
-    queryFn: async () => {
-      const res = await api.get(`/users/${user!.id}/models`);
-      return res.data.models as string[];
-    },
-  });
+  const tokens = agentData ? [agentData.tokenA, agentData.tokenB] : [];
+  const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
   const [model, setModel] = useState(draft?.model || '');
   const [hadModel, setHadModel] = useState(false);
   useEffect(() => {
@@ -94,11 +60,10 @@ export default function AgentPreview({ draft }: Props) {
     if (!hasOpenAIKey) setModel('');
   }, [hasOpenAIKey]);
   useEffect(() => {
-    if (!draft?.model && modelsQuery.data && modelsQuery.data.length && !model && !hadModel) {
-      setModel(modelsQuery.data[0]);
+    if (!draft?.model && models.length && !model && !hadModel) {
+      setModel(models[0]);
     }
-  }, [modelsQuery.data, draft?.model, model, hadModel]);
-  const [isCreating, setIsCreating] = useState(false);
+  }, [models, draft?.model, model, hadModel]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   function WarningSign({ children }: { children: ReactNode }) {
@@ -148,7 +113,7 @@ export default function AgentPreview({ draft }: Props) {
           <AiApiKeySection label="OpenAI API Key" />
         </div>
       )}
-      {user && hasOpenAIKey && (modelsQuery.data?.length || draft?.model) && (
+      {user && hasOpenAIKey && (models.length || draft?.model) && (
         <div className="mt-4">
           <h2 className="text-md font-bold">Model</h2>
           <select
@@ -157,10 +122,10 @@ export default function AgentPreview({ draft }: Props) {
             onChange={(e) => setModel(e.target.value)}
             className="border rounded p-2"
           >
-            {draft?.model && !modelsQuery.data?.length ? (
+            {draft?.model && !models.length ? (
               <option value={draft.model}>{draft.model}</option>
             ) : (
-              modelsQuery.data?.map((m) => (
+              models.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
@@ -176,7 +141,7 @@ export default function AgentPreview({ draft }: Props) {
       )}
 
       <div className="mt-4">
-        <WalletBalances tokens={[agentData.tokenA, agentData.tokenB]} />
+        <WalletBalances balances={balances} hasBinanceKey={hasBinanceKey} />
         <WarningSign>
           Trading agent will use all available balance for {agentData.tokenA.toUpperCase()} and {agentData.tokenB.toUpperCase()} in
           your Binance Spot wallet. Move excess funds to futures wallet before trading.
@@ -239,54 +204,14 @@ export default function AgentPreview({ draft }: Props) {
           >
             {isDraft ? 'Update Draft' : 'Save Draft'}
           </Button>
-          <Button
+          <AgentStartButton
+            draft={draft}
+            agentData={agentData}
+            model={model}
             disabled={
-              isCreating ||
-              !user ||
-              !hasOpenAIKey ||
-              !hasBinanceKey ||
-              (!model && !modelsQuery.data?.length)
+              !user || !hasOpenAIKey || !hasBinanceKey || (!model && !models.length)
             }
-            loading={isCreating}
-            onClick={async () => {
-              if (!user) return;
-              setIsCreating(true);
-              try {
-                if (isDraft) {
-                  await api.post(`/agents/${draft!.id}/start`);
-                  queryClient.invalidateQueries({ queryKey: ['agents'] });
-                  setIsCreating(false);
-                  toast.show('Agent started successfully', 'success');
-                  navigate('/');
-                } else {
-                  const res = await api.post('/agents', {
-                    userId: user.id,
-                    model,
-                    name: agentData.name,
-                    tokenA: agentData.tokenA,
-                    tokenB: agentData.tokenB,
-                    minTokenAAllocation: agentData.minTokenAAllocation,
-                    minTokenBAllocation: agentData.minTokenBAllocation,
-                    risk: agentData.risk,
-                    reviewInterval: agentData.reviewInterval,
-                    agentInstructions: agentData.agentInstructions,
-                    status: 'active',
-                  });
-                  setIsCreating(false);
-                  navigate(`/agents/${res.data.id}`);
-                }
-              } catch (err) {
-                setIsCreating(false);
-                if (axios.isAxiosError(err) && err.response?.data?.error) {
-                  toast.show(err.response.data.error);
-                } else {
-                  toast.show('Failed to start agent');
-                }
-              }
-            }}
-          >
-            Start Agent
-          </Button>
+          />
         </div>
       </div>
     </div>
