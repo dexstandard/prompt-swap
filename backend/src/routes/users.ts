@@ -3,6 +3,8 @@ import { requireAdmin } from '../util/auth.js';
 import { listUsers, setUserEnabled, getUser } from '../repos/users.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import { errorResponse } from '../util/errorMessages.js';
+import { decrypt } from '../util/crypto.js';
+import { env } from '../util/env.js';
 
 export default async function usersRoutes(app: FastifyInstance) {
   app.get(
@@ -15,6 +17,8 @@ export default async function usersRoutes(app: FastifyInstance) {
         id: u.id,
         role: u.role,
         isEnabled: !!u.is_enabled,
+        email: u.email_enc ? decrypt(u.email_enc, env.KEY_PASSWORD) : null,
+        createdAt: u.created_at,
       }));
     },
   );

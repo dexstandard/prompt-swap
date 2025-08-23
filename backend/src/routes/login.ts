@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { authenticator } from 'otplib';
 import { env } from '../util/env.js';
 import { RATE_LIMITS } from '../rate-limit.js';
-import { getUser, insertUser } from '../repos/users.js';
+import { getUser, insertUser, setUserEmail } from '../repos/users.js';
+import { encrypt } from '../util/crypto.js';
 
 interface ValidationErr {
   code: number;
@@ -34,10 +35,14 @@ export default async function loginRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'invalid token' });
       const id = payload.sub;
       const row = getUser(id);
+      const emailEnc = payload.email
+        ? encrypt(payload.email, env.KEY_PASSWORD)
+        : null;
       if (!row) {
-        insertUser(id);
+        insertUser(id, emailEnc);
         return { id, email: payload.email, role: 'user' };
       }
+      if (emailEnc) setUserEmail(id, emailEnc);
       if (!row.is_enabled) {
         return reply.code(403).send({ error: 'user disabled' });
       }

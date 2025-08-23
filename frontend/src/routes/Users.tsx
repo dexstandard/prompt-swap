@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
+import FormattedDate from '../components/ui/FormattedDate';
 
 interface AdminUser {
   id: string;
   role: string;
+  email: string | null;
+  createdAt: number;
   isEnabled: boolean;
 }
 
@@ -41,7 +44,9 @@ export default function Users() {
         <thead>
           <tr>
             <th className="text-left">ID</th>
+            <th className="text-left">Email</th>
             <th className="text-left">Role</th>
+            <th className="text-left">Created</th>
             <th className="text-left">Enabled</th>
           </tr>
         </thead>
@@ -49,7 +54,11 @@ export default function Users() {
           {users.map((u) => (
             <tr key={u.id}>
               <td>{u.id}</td>
+              <td>{u.email ?? '-'}</td>
               <td>{u.role}</td>
+              <td>
+                <FormattedDate date={u.createdAt} />
+              </td>
               <td>
                 <label className="flex items-center gap-1 cursor-pointer">
                   <input

@@ -3,6 +3,8 @@ import { db } from '../src/db/index.js';
 import { OAuth2Client } from 'google-auth-library';
 import { authenticator } from 'otplib';
 import buildServer from '../src/server.js';
+import { decrypt } from '../src/util/crypto.js';
+import { env } from '../src/util/env.js';
 
 describe('login route', () => {
   it('creates user on first login', async () => {
@@ -20,9 +22,11 @@ describe('login route', () => {
     const body = res.json() as any;
     expect(body.role).toBe('user');
     const row = db
-      .prepare('SELECT id FROM users WHERE id = ?')
-      .get('user123') as { id: string } | undefined;
+      .prepare('SELECT email_enc FROM users WHERE id = ?')
+      .get('user123') as { email_enc: string } | undefined;
     expect(row).toBeTruthy();
+    const email = decrypt(row!.email_enc, env.KEY_PASSWORD);
+    expect(email).toBe('user@example.com');
     await app.close();
   });
 
