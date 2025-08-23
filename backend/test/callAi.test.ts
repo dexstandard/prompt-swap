@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { AgentPrompt } from '../src/util/ai.js';
 
 describe('callAi structured output', () => {
   it('includes json schema in request', async () => {
@@ -6,7 +7,22 @@ describe('callAi structured output', () => {
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const { callAi } = await import('../src/util/ai.js');
-    await callAi('gpt-test', { foo: 'bar', previous_responses: ['p1', 'p2'] }, 'key');
+    const prompt: AgentPrompt = {
+      instructions: 'inst',
+      config: {
+        policy: { floors: { USDT: 0.2 } },
+        portfolio: {
+          ts: new Date().toISOString(),
+          positions: [
+            { sym: 'USDT', qty: 1, price_usdt: 1, value_usdt: 1 },
+          ],
+          weights: { USDT: 1 },
+        },
+      },
+      marketData: { currentPrice: 1 },
+      previous_responses: ['p1', 'p2'],
+    };
+    await callAi('gpt-test', prompt, 'key');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);

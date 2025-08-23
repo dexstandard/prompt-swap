@@ -14,6 +14,7 @@ import {
 import { parseExecLog } from '../util/parse-exec-log.js';
 import { callAi } from '../util/ai.js';
 import { fetchAccount, fetchPairData } from '../services/binance.js';
+import type { AgentPrompt } from '../util/ai.js';
 
 export default async function reviewPortfolio(
   log: FastifyBaseLogger,
@@ -81,9 +82,9 @@ async function buildPrompt(
   balances: { tokenABalance: number; tokenBBalance: number },
   log: FastifyBaseLogger,
   execLogId: string,
-): Promise<Record<string, any> | undefined> {
+): Promise<AgentPrompt | undefined> {
   try {
-    const marketData = await fetchPairData(row.token_a, row.token_b);
+    const pairData = await fetchPairData(row.token_a, row.token_b);
     const [priceAData, priceBData] = await Promise.all([
       row.token_a === 'USDT'
         ? Promise.resolve({ currentPrice: 1 })
@@ -129,7 +130,7 @@ async function buildPrompt(
           weights,
         },
       },
-      marketData,
+      marketData: { currentPrice: pairData.currentPrice },
     };
   } catch (err) {
     const msg = 'failed to fetch market data';
@@ -141,7 +142,7 @@ async function buildPrompt(
 
 async function executeAgent(
   row: AgentRow,
-  prompt: Record<string, any>,
+  prompt: AgentPrompt,
   key: string,
   log: FastifyBaseLogger,
   execLogId: string,
@@ -182,7 +183,7 @@ function saveFailure(
   row: AgentRow,
   execLogId: string,
   message: string,
-  prompt?: Record<string, any>,
+  prompt?: AgentPrompt,
 ) {
   const createdAt = Date.now();
   insertExecLog({
