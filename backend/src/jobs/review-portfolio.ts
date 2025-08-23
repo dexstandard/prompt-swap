@@ -27,38 +27,116 @@ import type { RebalancePrompt } from '../util/ai.js';
 
 type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
 
-export default async function reviewPortfolio(
+/**
+ * Agents currently under review. Used to avoid concurrent runs.
+ */
+const runningAgents = new Set<string>();
+
+type PromptCache = {
+  pairData: Map<string, { currentPrice: number }>;
+  indicators: Map<string, TokenIndicators>;
+  timeseries: Map<string, MarketTimeseries>;
+};
+
+export async function reviewAgentPortfolio(
   log: FastifyBaseLogger,
-  agentId?: string,
+  agentId: string,
 ): Promise<void> {
-  const agents = getActiveAgents(agentId);
-  await Promise.all(agents.map((row) => processAgent(row, log)));
+  const agents = getActiveAgents({ agentId });
+  const { toRun, skipped } = filterRunningAgents(agents);
+  if (skipped.length) throw new Error('Agent is already reviewing portfolio');
+  await runAgents(log, toRun);
 }
 
-async function processAgent(row: ActiveAgentRow, parentLog: FastifyBaseLogger) {
-  const execLogId = randomUUID();
-  const log = parentLog.child({
-    userId: row.user_id,
-    agentId: row.id,
-    execLogId,
-  });
+export default async function reviewPortfolios(
+  log: FastifyBaseLogger,
+  interval: string,
+): Promise<void> {
+  const agents = getActiveAgents({ interval });
+  const { toRun } = filterRunningAgents(agents);
+  if (!toRun.length) return;
+  await runAgents(log, toRun);
+}
 
-  const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
+async function runAgents(
+  log: FastifyBaseLogger,
+  agents: ActiveAgentRow[],
+) {
+  const cache: PromptCache = {
+    pairData: new Map(),
+    indicators: new Map(),
+    timeseries: new Map(),
+  };
 
-  const balances = await fetchBalances(row, log, execLogId);
-  if (!balances) return;
+  const prepared = await prepareAgents(agents, log, cache);
 
-  const prompt = await buildPrompt(row, balances, log, execLogId);
-  if (!prompt) return;
+  await Promise.all(
+    prepared.map(({ row, prompt, key, log: lg, execLogId }) =>
+      executeAgent(row, prompt, key, lg, execLogId).finally(() => {
+        runningAgents.delete(row.id);
+      }),
+    ),
+  );
+}
 
-  const prevRows = getRecentExecResults(row.id, 5);
-  const previous_responses = prevRows.map((r) => {
-    const str = JSON.stringify(r);
-    return str === '{}' ? '' : str;
-  });
-  prompt.previous_responses = previous_responses;
+function filterRunningAgents(agents: ActiveAgentRow[]) {
+  const toRun: ActiveAgentRow[] = [];
+  const skipped: ActiveAgentRow[] = [];
+  for (const row of agents) {
+    if (runningAgents.has(row.id)) skipped.push(row);
+    else {
+      runningAgents.add(row.id);
+      toRun.push(row);
+    }
+  }
+  return { toRun, skipped };
+}
 
-  await executeAgent(row, prompt, key, log, execLogId);
+async function prepareAgents(
+  rows: ActiveAgentRow[],
+  parentLog: FastifyBaseLogger,
+  cache: PromptCache,
+) {
+  const prepared: {
+    row: ActiveAgentRow;
+    prompt: RebalancePrompt;
+    key: string;
+    log: FastifyBaseLogger;
+    execLogId: string;
+  }[] = [];
+
+  for (const row of rows) {
+    const execLogId = randomUUID();
+    const log = parentLog.child({
+      userId: row.user_id,
+      agentId: row.id,
+      execLogId,
+    });
+
+    const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
+
+    const balances = await fetchBalances(row, log, execLogId);
+    if (!balances) {
+      runningAgents.delete(row.id);
+      continue;
+    }
+
+    const prompt = await buildPrompt(row, balances, log, execLogId, cache);
+    if (!prompt) {
+      runningAgents.delete(row.id);
+      continue;
+    }
+
+    const prevRows = getRecentExecResults(row.id, 5);
+    prompt.previous_responses = prevRows.map((r) => {
+      const str = JSON.stringify(r);
+      return str === '{}' ? '' : str;
+    });
+
+    prepared.push({ row, prompt, key, log, execLogId });
+  }
+
+  return prepared;
 }
 
 async function fetchBalances(
@@ -93,6 +171,7 @@ async function buildPrompt(
   balances: { tokenABalance: number; tokenBBalance: number },
   log: FastifyBaseLogger,
   execLogId: string,
+  cache: PromptCache,
 ): Promise<RebalancePrompt | undefined> {
   try {
     const {
@@ -103,7 +182,7 @@ async function buildPrompt(
       indB,
       tsA,
       tsB,
-    } = await fetchPromptData(row);
+    } = await fetchPromptData(row, cache);
     const { floors, positions, weights } = computePortfolioValues(
       row,
       balances,
@@ -132,6 +211,7 @@ async function buildPrompt(
 
 async function fetchPromptData(
   row: ActiveAgentRow,
+  cache: PromptCache,
 ): Promise<{
   pairData: { currentPrice: number };
   priceA: number;
@@ -141,27 +221,50 @@ async function fetchPromptData(
   tsA?: MarketTimeseries;
   tsB?: MarketTimeseries;
 }> {
-  const pairData = await fetchPairData(row.token_a, row.token_b);
+  const pairKey = `${row.token_a}-${row.token_b}`;
+  let pairData = cache.pairData.get(pairKey);
+  if (!pairData) {
+    pairData = await fetchPairData(row.token_a, row.token_b);
+    cache.pairData.set(pairKey, pairData);
+  }
+
+  async function getPrice(sym: string): Promise<{ currentPrice: number }> {
+    if (sym === 'USDT') return { currentPrice: 1 };
+    const key = `${sym}-USDT`;
+    let val = cache.pairData.get(key);
+    if (!val) {
+      val = await fetchPairData(sym, 'USDT');
+      cache.pairData.set(key, val);
+    }
+    return val;
+  }
+
+  async function getIndicators(sym: string): Promise<TokenIndicators | undefined> {
+    if (isStablecoin(sym)) return undefined;
+    if (cache.indicators.has(sym)) return cache.indicators.get(sym);
+    const ind = await fetchTokenIndicators(sym);
+    cache.indicators.set(sym, ind);
+    return ind;
+  }
+
+  async function getTimeseries(sym: string): Promise<MarketTimeseries | undefined> {
+    if (isStablecoin(sym)) return undefined;
+    const key = `${sym}USDT`;
+    if (cache.timeseries.has(key)) return cache.timeseries.get(key);
+    const ts = await fetchMarketTimeseries(key);
+    cache.timeseries.set(key, ts);
+    return ts;
+  }
+
   const [priceAData, priceBData, indA, indB, tsA, tsB] = await Promise.all([
-    row.token_a === 'USDT'
-      ? Promise.resolve({ currentPrice: 1 })
-      : fetchPairData(row.token_a, 'USDT'),
-    row.token_b === 'USDT'
-      ? Promise.resolve({ currentPrice: 1 })
-      : fetchPairData(row.token_b, 'USDT'),
-    isStablecoin(row.token_a)
-      ? Promise.resolve(undefined)
-      : fetchTokenIndicators(row.token_a),
-    isStablecoin(row.token_b)
-      ? Promise.resolve(undefined)
-      : fetchTokenIndicators(row.token_b),
-    isStablecoin(row.token_a)
-      ? Promise.resolve(undefined)
-      : fetchMarketTimeseries(`${row.token_a}USDT`),
-    isStablecoin(row.token_b)
-      ? Promise.resolve(undefined)
-      : fetchMarketTimeseries(`${row.token_b}USDT`),
+    getPrice(row.token_a),
+    getPrice(row.token_b),
+    getIndicators(row.token_a),
+    getIndicators(row.token_b),
+    getTimeseries(row.token_a),
+    getTimeseries(row.token_b),
   ]);
+
   return {
     pairData,
     priceA: priceAData.currentPrice,

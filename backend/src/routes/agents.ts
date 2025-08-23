@@ -13,7 +13,7 @@ import {
 } from '../repos/agents.js';
 import { getAgentExecResults } from '../repos/agent-exec-result.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
-import reviewPortfolio from '../jobs/review-portfolio.js';
+import { reviewAgentPortfolio } from '../jobs/review-portfolio.js';
 import { requireUserId } from '../util/auth.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import {
@@ -108,7 +108,7 @@ export default async function agentRoutes(app: FastifyInstance) {
         });
         const row = getAgent(id)!;
         if (status === AgentStatus.Active)
-          reviewPortfolio(req.log, id).catch((err) =>
+          reviewAgentPortfolio(req.log, id).catch((err) =>
             log.error({ err, agentId: id }, 'initial review failed'),
           );
         log.info({ agentId: id }, 'created agent');
@@ -206,7 +206,7 @@ export default async function agentRoutes(app: FastifyInstance) {
         });
         const row = getAgent(id)!;
         if (status === AgentStatus.Active)
-          await reviewPortfolio(req.log, id);
+          await reviewAgentPortfolio(req.log, id);
         log.info('updated agent');
         return toApi(row);
       }
@@ -250,7 +250,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       );
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
       repoStartAgent(id, bal);
-      reviewPortfolio(req.log, id).catch((err) =>
+      reviewAgentPortfolio(req.log, id).catch((err) =>
         log.error({ err }, 'initial review failed')
       );
       const row = getAgent(id)!;
@@ -286,7 +286,14 @@ export default async function agentRoutes(app: FastifyInstance) {
           .code(400)
           .send(errorResponse('agent not active'));
       }
-      await reviewPortfolio(req.log, id);
+      try {
+        await reviewAgentPortfolio(req.log, id);
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : 'manual review failed';
+        log.error({ err: msg }, 'manual review failed');
+        return reply.code(400).send(errorResponse(msg));
+      }
       log.info('manual review triggered');
       return { ok: true };
     }
