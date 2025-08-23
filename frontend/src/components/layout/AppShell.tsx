@@ -2,8 +2,16 @@ import { Link, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from '../../lib/axios';
 import GoogleLoginButton from '../GoogleLoginButton';
-import { Bot, Key, Settings as SettingsIcon, Users as UsersIcon } from 'lucide-react';
+import {
+  Bot,
+  Key,
+  Settings as SettingsIcon,
+  Users as UsersIcon,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useUser } from '../../lib/useUser';
+import { useState } from 'react';
 
 function ApiStatus() {
   const { isSuccess } = useQuery({
@@ -16,6 +24,7 @@ function ApiStatus() {
 
 export default function AppShell() {
   const { user } = useUser();
+  const [navCollapsed, setNavCollapsed] = useState(false);
   return (
     <div className="h-screen flex flex-col">
       <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between z-10">
@@ -26,26 +35,57 @@ export default function AppShell() {
         </div>
       </header>
       <div className="flex flex-1 pt-16 pb-8 overflow-hidden">
-        <nav className="w-48 bg-gray-100 p-4 overflow-y-auto">
-          <Link to="/" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
-            <Bot className="w-4 h-4" />
-            Agents
+        <nav
+          className={`${navCollapsed ? 'w-20' : 'w-40'} bg-gray-100 p-4 overflow-y-auto transition-all duration-300`}
+        >
+          <button
+            onClick={() => setNavCollapsed(!navCollapsed)}
+            className={`mb-4 text-gray-700 hover:text-gray-900 ${
+              navCollapsed ? 'flex justify-center w-full' : ''
+            }`}
+          >
+            {navCollapsed ? (
+              <ChevronRight className="w-6 h-6" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </button>
+          <Link
+            to="/"
+            className={`flex items-center mb-2 text-gray-700 hover:text-gray-900 ${
+              navCollapsed ? 'justify-center' : 'gap-2'
+            }`}
+          >
+            <Bot className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
+            {!navCollapsed && 'Agents'}
           </Link>
-          <Link to="/keys" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
-            <Key className="w-4 h-4" />
-            Keys
+          <Link
+            to="/keys"
+            className={`flex items-center mb-2 text-gray-700 hover:text-gray-900 ${
+              navCollapsed ? 'justify-center' : 'gap-2'
+            }`}
+          >
+            <Key className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
+            {!navCollapsed && 'Keys'}
           </Link>
-          <Link to="/settings" className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900">
-            <SettingsIcon className="w-4 h-4" />
-            Settings
+          <Link
+            to="/settings"
+            className={`flex items-center mb-2 text-gray-700 hover:text-gray-900 ${
+              navCollapsed ? 'justify-center' : 'gap-2'
+            }`}
+          >
+            <SettingsIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
+            {!navCollapsed && 'Settings'}
           </Link>
           {user?.role === 'admin' && (
             <Link
               to="/users"
-              className="flex items-center gap-2 mb-2 text-gray-700 hover:text-gray-900"
+              className={`flex items-center mb-2 text-gray-700 hover:text-gray-900 ${
+                navCollapsed ? 'justify-center' : 'gap-2'
+              }`}
             >
-              <UsersIcon className="w-4 h-4" />
-              Users
+              <UsersIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
+              {!navCollapsed && 'Users'}
             </Link>
           )}
         </nav>
