@@ -4,8 +4,6 @@
     @api path /api* /healthz
     handle @api {
         reverse_proxy backend:3000
-        # If your backend does not expect the /api prefix, uncomment:
-        # uri strip_prefix /api
     }
 
     handle {

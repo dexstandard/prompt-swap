@@ -17,6 +17,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.caddy
+      args:
+        FRONTEND_BUILD_DIR: dist
     environment:
       - DOMAIN=${DOMAIN}
     ports:
