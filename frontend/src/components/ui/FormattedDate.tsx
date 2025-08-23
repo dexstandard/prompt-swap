@@ -5,7 +5,6 @@ interface Props {
 export default function FormattedDate({ date }: Props) {
   const d = new Date(date);
   const short = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
     month: "short",
     day: "numeric",
     hour: "numeric",
