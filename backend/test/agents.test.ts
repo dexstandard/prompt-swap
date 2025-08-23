@@ -22,19 +22,26 @@ describe('agent routes', () => {
     const app = await buildServer();
     addUser('user1');
 
-    const fetchMock = vi.fn();
-    fetchMock
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+          balances: [{ asset: 'BTC', free: '0.002', locked: '0' }],
         }),
       } as any)
       .mockResolvedValueOnce({
         ok: true,
+        json: async () => ({ price: '50000' }),
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [] }),
+      } as any)
+      .mockResolvedValue({
+        ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -61,7 +68,7 @@ describe('agent routes', () => {
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
       expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
 
     res = await app.inject({
       method: 'GET',
@@ -213,8 +220,12 @@ describe('agent routes', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          balances: [{ asset: 'USDT', free: '100', locked: '0' }],
+          balances: [{ asset: 'BTC', free: '0.002', locked: '0' }],
         }),
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ price: '50000' }),
       } as any)
       .mockResolvedValueOnce({
         ok: true,
@@ -223,10 +234,18 @@ describe('agent routes', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          balances: [{ asset: 'USDT', free: '200', locked: '0' }],
+          balances: [{ asset: 'BTC', free: '0.004', locked: '0' }],
         }),
       } as any)
       .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ price: '50000' }),
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [] }),
+      } as any)
+      .mockResolvedValue({
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
@@ -268,7 +287,7 @@ describe('agent routes', () => {
       .prepare('SELECT start_balance FROM agents WHERE id = ?')
       .get(id) as { start_balance: number };
     expect(row.start_balance).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
 
     await app.close();
     (globalThis as any).fetch = originalFetch;

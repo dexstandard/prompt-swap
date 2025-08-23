@@ -22,7 +22,7 @@ import {
 } from '../util/errorMessages.js';
 import reviewPortfolio from '../jobs/review-portfolio.js';
 import { requireUserId } from '../util/auth.js';
-import { fetchTotalBalanceUsd } from '../services/binance.js';
+import { fetchTokensBalanceUsd } from '../services/binance.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import { validateAllocations } from '../util/allocations.js';
 
@@ -133,9 +133,11 @@ function ensureApiKeys(log: Logger, userId: string): ValidationErr | null {
 async function getStartBalance(
   log: Logger,
   userId: string,
+  tokenA: string,
+  tokenB: string,
 ): Promise<number | ValidationErr> {
   try {
-    const startBalance = await fetchTotalBalanceUsd(userId);
+    const startBalance = await fetchTokensBalanceUsd(userId, [tokenA, tokenB]);
     if (startBalance === null) {
       log.error('failed to fetch balance');
       return { code: 500, body: errorResponse('failed to fetch balance') };
@@ -242,7 +244,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       if (body.status === AgentStatus.Active) {
         const keyErr = ensureApiKeys(log, body.userId);
         if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
-        const bal = await getStartBalance(log, userId);
+        const bal = await getStartBalance(log, userId, body.tokenA, body.tokenB);
         if (typeof bal === 'number') startBalance = bal;
         else return reply.code(bal.code).send(bal.body);
       }
@@ -376,7 +378,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       if (body.status === AgentStatus.Active) {
         const keyErr = ensureApiKeys(log, userId);
         if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
-        const bal = await getStartBalance(log, userId);
+        const bal = await getStartBalance(log, userId, body.tokenA, body.tokenB);
         if (typeof bal === 'number') startBalance = bal;
         else return reply.code(bal.code).send(bal.body);
       }
@@ -434,7 +436,12 @@ export default async function agentRoutes(app: FastifyInstance) {
       if (conflict) return reply.code(conflict.code).send(conflict.body);
       const keyErr = ensureApiKeys(log, userId);
       if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
-      const bal = await getStartBalance(log, userId);
+      const bal = await getStartBalance(
+        log,
+        userId,
+        existing.token_a,
+        existing.token_b,
+      );
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
       repoStartAgent(id, bal);
       reviewPortfolio(req.log, id).catch((err) =>
