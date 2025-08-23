@@ -77,6 +77,20 @@ export default function AgentView() {
       }
     },
   });
+  const reviewMut = useMutation({
+    mutationFn: async () => {
+      await api.post(`/agents/${id}/review`);
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['agent-log', id] }),
+    onError: (err) => {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        toast.show(err.response.data.error);
+      } else {
+        toast.show('Failed to run review');
+      }
+    },
+  });
 
   const { balance, isLoading: balLoading } = useAgentBalanceUsd(
     data?.tokenA,
@@ -266,6 +280,13 @@ export default function AgentView() {
               >
                 Stop Agent
               </Button>
+              <Button
+                  disabled={reviewMut.isPending}
+                  loading={reviewMut.isPending}
+                  onClick={() => reviewMut.mutate()}
+              >
+                Run Review
+              </Button>
             </div>
         ) : (
             <Button
@@ -284,24 +305,28 @@ export default function AgentView() {
                   <p>No logs yet.</p>
               ) : (
                   <>
-                    <table className="w-full mb-2">
+                    <table className="w-full mb-2 table-fixed">
+                      <colgroup>
+                        <col className="w-40" />
+                        <col />
+                      </colgroup>
                       <thead>
-                      <tr>
-                        <th className="text-left">Time</th>
-                        <th className="text-left">Log</th>
-                      </tr>
+                        <tr>
+                          <th className="text-left">Time</th>
+                          <th className="text-left">Log</th>
+                        </tr>
                       </thead>
                       <tbody>
-                      {logData.items.map((log) => (
+                        {logData.items.map((log) => (
                           <tr key={log.id}>
-                            <td className="align-top pr-2">
+                            <td className="align-top pr-2 whitespace-nowrap">
                               <FormattedDate date={log.createdAt} />
                             </td>
-                            <td>
-                              <ExecLogItem log={log}/>
+                            <td className="w-full">
+                              <ExecLogItem log={log} />
                             </td>
                           </tr>
-                      ))}
+                        ))}
                       </tbody>
                     </table>
                     <div className="flex items-center gap-2">
