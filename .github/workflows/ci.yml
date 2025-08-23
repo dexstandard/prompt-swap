@@ -2,20 +2,48 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
 
 jobs:
-  backend:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.18.0
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-      - run: npm --prefix backend ci
-      - run: npm --prefix backend test
-      - run: npm --prefix backend run build
+          node-version: 22
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+      - name: Lint frontend
+        run: npm --prefix frontend run lint
+      - name: Test backend
+        run: npm test
+      - name: Build backend
+        run: npm run build
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload files to droplet
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DO_SSH_HOST }}
+          username: ${{ secrets.DO_SSH_USER }}
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          source: "backend,frontend,docker-compose.yml,Dockerfile.caddy,Caddyfile"
+          target: "~/prompt-swap"
+      - name: Deploy with Docker Compose
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.DO_SSH_HOST }}
+          username: ${{ secrets.DO_SSH_USER }}
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/prompt-swap
+            DOMAIN=${{ secrets.DOMAIN }} docker compose up -d --build

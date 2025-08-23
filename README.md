@@ -21,3 +21,21 @@
    npm run dev
    ```
 
+
+## Continuous Integration
+
+A GitHub Actions workflow (`.github/workflows/ci.yml`) installs dependencies, lints the frontend, runs backend tests, and builds the TypeScript backend. On pushes to `main`, the workflow deploys the project to a DigitalOcean droplet with Docker Compose.
+
+## Production deployment
+
+The project includes a Docker Compose setup for deploying to a DigitalOcean droplet. It builds the backend service and a Caddy server that serves the frontend and proxies API requests.
+
+1. Set a `DOMAIN` environment variable to your droplet's domain.
+2. Run `docker compose up -d` on the droplet to build and start the containers.
+3. Caddy will automatically obtain TLS certificates for the provided domain.
+
+For automated deployments, configure GitHub repository secrets:
+ - `DO_SSH_HOST`: droplet IP or hostname.
+ - `DO_SSH_USER`: SSH username.
+ - `DO_SSH_PRIVATE_KEY`: private key for SSH access.
+ - `DOMAIN`: domain name for TLS certificates.
