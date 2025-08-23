@@ -24,7 +24,7 @@ function ApiStatus() {
 
 export default function AppShell() {
   const { user } = useUser();
-  const [navCollapsed, setNavCollapsed] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(true);
   return (
     <div className="h-screen flex flex-col">
       <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between z-10">
@@ -48,6 +48,7 @@ export default function AppShell() {
               className={`flex items-center text-gray-700 hover:text-gray-900 ${
                 navCollapsed ? 'justify-center' : 'gap-2'
               }`}
+              title={navCollapsed ? 'Agents' : undefined}
             >
               <Bot className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
               {!navCollapsed && 'Agents'}
@@ -57,6 +58,7 @@ export default function AppShell() {
               className={`flex items-center text-gray-700 hover:text-gray-900 ${
                 navCollapsed ? 'justify-center' : 'gap-2'
               }`}
+              title={navCollapsed ? 'Keys' : undefined}
             >
               <Key className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
               {!navCollapsed && 'Keys'}
@@ -66,6 +68,7 @@ export default function AppShell() {
               className={`flex items-center text-gray-700 hover:text-gray-900 ${
                 navCollapsed ? 'justify-center' : 'gap-2'
               }`}
+              title={navCollapsed ? 'Settings' : undefined}
             >
               <SettingsIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
               {!navCollapsed && 'Settings'}
@@ -76,6 +79,7 @@ export default function AppShell() {
                 className={`flex items-center text-gray-700 hover:text-gray-900 ${
                   navCollapsed ? 'justify-center' : 'gap-2'
                 }`}
+                title={navCollapsed ? 'Users' : undefined}
               >
                 <UsersIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
                 {!navCollapsed && 'Users'}
