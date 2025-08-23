@@ -43,7 +43,28 @@ export default async function reviewPortfolio(
   agentId?: string,
 ): Promise<void> {
   const agents = getActiveAgents(agentId);
+  const { toRun, skipped } = filterRunningAgents(agents);
+  if (agentId && skipped.length) throw new Error('Agent is already reviewing portfolio');
+  if (!toRun.length) return;
 
+  const cache: PromptCache = {
+    pairData: new Map(),
+    indicators: new Map(),
+    timeseries: new Map(),
+  };
+
+  const prepared = await prepareAgents(toRun, log, cache);
+
+  await Promise.all(
+    prepared.map(({ row, prompt, key, log: lg, execLogId }) =>
+      executeAgent(row, prompt, key, lg, execLogId).finally(() => {
+        runningAgents.delete(row.id);
+      }),
+    ),
+  );
+}
+
+function filterRunningAgents(agents: ActiveAgentRow[]) {
   const toRun: ActiveAgentRow[] = [];
   const skipped: ActiveAgentRow[] = [];
   for (const row of agents) {
@@ -53,19 +74,14 @@ export default async function reviewPortfolio(
       toRun.push(row);
     }
   }
+  return { toRun, skipped };
+}
 
-  if (agentId && skipped.length) {
-    throw new Error('Agent is already reviewing portfolio');
-  }
-
-  if (!toRun.length) return;
-
-  const cache: PromptCache = {
-    pairData: new Map(),
-    indicators: new Map(),
-    timeseries: new Map(),
-  };
-
+async function prepareAgents(
+  rows: ActiveAgentRow[],
+  parentLog: FastifyBaseLogger,
+  cache: PromptCache,
+) {
   const prepared: {
     row: ActiveAgentRow;
     prompt: RebalancePrompt;
@@ -74,9 +90,9 @@ export default async function reviewPortfolio(
     execLogId: string;
   }[] = [];
 
-  for (const row of toRun) {
+  for (const row of rows) {
     const execLogId = randomUUID();
-    const childLog = log.child({
+    const log = parentLog.child({
       userId: row.user_id,
       agentId: row.id,
       execLogId,
@@ -84,35 +100,28 @@ export default async function reviewPortfolio(
 
     const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
 
-    const balances = await fetchBalances(row, childLog, execLogId);
+    const balances = await fetchBalances(row, log, execLogId);
     if (!balances) {
       runningAgents.delete(row.id);
       continue;
     }
 
-    const prompt = await buildPrompt(row, balances, childLog, execLogId, cache);
+    const prompt = await buildPrompt(row, balances, log, execLogId, cache);
     if (!prompt) {
       runningAgents.delete(row.id);
       continue;
     }
 
     const prevRows = getRecentExecResults(row.id, 5);
-    const previous_responses = prevRows.map((r) => {
+    prompt.previous_responses = prevRows.map((r) => {
       const str = JSON.stringify(r);
       return str === '{}' ? '' : str;
     });
-    prompt.previous_responses = previous_responses;
 
-    prepared.push({ row, prompt, key, log: childLog, execLogId });
+    prepared.push({ row, prompt, key, log, execLogId });
   }
 
-  await Promise.all(
-    prepared.map(({ row, prompt, key, log: lg, execLogId }) =>
-      executeAgent(row, prompt, key, lg, execLogId).finally(() => {
-        runningAgents.delete(row.id);
-      }),
-    ),
-  );
+  return prepared;
 }
 
 async function fetchBalances(
