@@ -33,4 +33,25 @@ describe('manual review endpoint', () => {
     expect(reviewPortfolioMock.mock.calls[0][1]).toBe(agentId);
     await app.close();
   });
+
+  it('returns error when agent is already reviewing', async () => {
+    const app = await buildServer();
+    addUser('u2');
+    const agentId = 'b1';
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'A2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
+    ).run(agentId, 'u2');
+    reviewPortfolioMock.mockRejectedValueOnce(
+      new Error('Agent is already reviewing portfolio'),
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agentId}/review`,
+      headers: { 'x-user-id': 'u2' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'Agent is already reviewing portfolio' });
+    await app.close();
+  });
 });

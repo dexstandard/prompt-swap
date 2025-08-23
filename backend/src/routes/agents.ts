@@ -286,7 +286,14 @@ export default async function agentRoutes(app: FastifyInstance) {
           .code(400)
           .send(errorResponse('agent not active'));
       }
-      await reviewPortfolio(req.log, id);
+      try {
+        await reviewPortfolio(req.log, id);
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : 'manual review failed';
+        log.error({ err: msg }, 'manual review failed');
+        return reply.code(400).send(errorResponse(msg));
+      }
       log.info('manual review triggered');
       return { ok: true };
     }
