@@ -11,17 +11,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - name: Install backend dependencies
         run: npm --prefix backend ci
+
       - name: Install frontend dependencies
         run: npm --prefix frontend ci
+
       - name: Lint frontend
         run: npm --prefix frontend run lint
+
       - name: Test backend
         run: npm test
+
       - name: Build backend
         run: npm run build
 
@@ -32,20 +38,31 @@ jobs:
     environment: main
     steps:
       - uses: actions/checkout@v4
+      - name: Verify required secrets
+        run: |
+          for s in DO_SSH_HOST DO_SSH_USER DO_SSH_PRIVATE_KEY DO_SSH_PASSPHRASE DOMAIN; do
+            [ -z "${{ secrets[format('{0}', s)] }}" ] && { echo "Missing secret: $s"; exit 1; } || true
+          done
+
       - name: Upload files to droplet
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
           source: "backend,frontend,docker-compose.yml,Dockerfile.caddy,Caddyfile"
           target: "~/prompt-swap"
+
       - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
           script: |
+            set -euo pipefail
             cd ~/prompt-swap
             DOMAIN=${{ secrets.DOMAIN }} docker compose up -d --build
+            docker compose ps
