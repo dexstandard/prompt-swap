@@ -8,6 +8,12 @@ function truncate(text: string) {
   return text.length > MAX_LEN ? text.slice(0, MAX_LEN) + '…' : text;
 }
 
+function isErrorWithMessage(
+  err: Record<string, unknown>
+): err is { message: string } {
+  return typeof (err as { message?: unknown }).message === 'string';
+}
+
 export interface ExecLog {
   id: string;
   log: string;
@@ -39,7 +45,13 @@ export default function ExecLogItem({ log }: Props) {
           <AlertCircle className="h-4 w-4" />
           <div className="flex-1 break-words">
             <span className="font-bold mr-1">ERROR</span>
-            <span>{truncate((error as any).message || JSON.stringify(error))}</span>
+            <span>
+              {truncate(
+                isErrorWithMessage(error as Record<string, unknown>)
+                  ? (error as { message: string }).message
+                  : JSON.stringify(error)
+              )}
+            </span>
           </div>
           <Eye
             className="h-4 w-4 cursor-pointer"

@@ -7,12 +7,12 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
-import { useAgentBalanceUsd } from '../components/AgentBalance';
+import { useAgentBalanceUsd } from '../lib/useAgentBalanceUsd';
 import Button from '../components/ui/Button';
 import CreateAgentForm from '../components/forms/CreateAgentForm';
 import PriceChart from '../components/forms/PriceChart';
 import ErrorBoundary from '../components/ErrorBoundary';
-import { useToast } from '../components/Toast';
+import { useToast } from '../lib/useToast';
 
 interface Agent {
   id: string;

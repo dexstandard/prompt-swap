@@ -1,4 +1,4 @@
-import { useAgentBalanceUsd } from './AgentBalance';
+import { useAgentBalanceUsd } from '../lib/useAgentBalanceUsd';
 
 interface Props {
   tokenA: string;
