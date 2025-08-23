@@ -1,4 +1,6 @@
 import { db } from '../db/index.js';
+import { decrypt } from '../util/crypto.js';
+import { env } from '../util/env.js';
 
 export interface UserRow {
   totp_secret?: string;
@@ -8,11 +10,25 @@ export interface UserRow {
 }
 
 export function getUser(id: string) {
-  return db
+  const row = db
     .prepare(
-      'SELECT totp_secret, is_totp_enabled, role, is_enabled FROM users WHERE id = ?'
+      'SELECT totp_secret_enc, is_totp_enabled, role, is_enabled FROM users WHERE id = ?'
     )
-    .get(id) as UserRow | undefined;
+    .get(id) as {
+      totp_secret_enc?: string;
+      is_totp_enabled?: number;
+      role: string;
+      is_enabled: number;
+    } | undefined;
+  if (!row) return undefined;
+  return {
+    totp_secret: row.totp_secret_enc
+      ? decrypt(row.totp_secret_enc, env.KEY_PASSWORD)
+      : undefined,
+    is_totp_enabled: row.is_totp_enabled,
+    role: row.role,
+    is_enabled: row.is_enabled,
+  };
 }
 
 export function insertUser(id: string, emailEnc: string | null) {

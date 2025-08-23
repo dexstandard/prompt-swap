@@ -4,6 +4,8 @@ import { db } from '../db/index.js';
 import { requireUserId } from '../util/auth.js';
 import { errorResponse } from '../util/errorMessages.js';
 import { RATE_LIMITS } from '../rate-limit.js';
+import { encrypt, decrypt } from '../util/crypto.js';
+import { env } from '../util/env.js';
 
 export default async function twofaRoutes(app: FastifyInstance) {
   app.get(
@@ -41,8 +43,9 @@ export default async function twofaRoutes(app: FastifyInstance) {
       const valid = authenticator.verify({ token: body.token, secret: body.secret });
       if (!valid)
         return reply.code(400).send(errorResponse('invalid token'));
-      db.prepare('UPDATE users SET totp_secret = ?, is_totp_enabled = 1 WHERE id = ?').run(
-        body.secret,
+      const enc = encrypt(body.secret, env.KEY_PASSWORD);
+      db.prepare('UPDATE users SET totp_secret_enc = ?, is_totp_enabled = 1 WHERE id = ?').run(
+        enc,
         userId,
       );
       return { enabled: true };
@@ -57,13 +60,14 @@ export default async function twofaRoutes(app: FastifyInstance) {
       if (!userId) return;
       const body = req.body as { token: string };
       const row = db
-        .prepare('SELECT totp_secret FROM users WHERE id = ?')
-        .get(userId) as { totp_secret?: string } | undefined;
-      if (!row?.totp_secret)
+        .prepare('SELECT totp_secret_enc FROM users WHERE id = ?')
+        .get(userId) as { totp_secret_enc?: string } | undefined;
+      if (!row?.totp_secret_enc)
         return reply.code(400).send(errorResponse('not enabled'));
-      const valid = authenticator.verify({ token: body.token, secret: row.totp_secret });
+      const secret = decrypt(row.totp_secret_enc, env.KEY_PASSWORD);
+      const valid = authenticator.verify({ token: body.token, secret });
       if (!valid) return reply.code(400).send(errorResponse('invalid token'));
-      db.prepare('UPDATE users SET totp_secret = NULL, is_totp_enabled = 0 WHERE id = ?').run(
+      db.prepare('UPDATE users SET totp_secret_enc = NULL, is_totp_enabled = 0 WHERE id = ?').run(
         userId
       );
       return { enabled: false };
