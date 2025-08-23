@@ -5,7 +5,7 @@ import StrategyForm from '../components/StrategyForm';
 import AgentInstructions from '../components/AgentInstructions';
 import { normalizeAllocations } from '../lib/allocations';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
@@ -42,6 +42,7 @@ export default function AgentPreview({ draft }: Props) {
   const locationData = location.state as AgentPreviewDetails | undefined;
   const { user } = useUser();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const data = draft ?? locationData;
   const [agentData, setAgentData] = useState<AgentPreviewDetails | undefined>(data);
   useEffect(() => {
@@ -253,7 +254,10 @@ export default function AgentPreview({ draft }: Props) {
               try {
                 if (isDraft) {
                   await api.post(`/agents/${draft!.id}/start`);
-                  navigate(`/agents/${draft!.id}`);
+                  queryClient.invalidateQueries({ queryKey: ['agents'] });
+                  setIsCreating(false);
+                  toast.show('Agent started successfully', 'success');
+                  navigate('/');
                 } else {
                   const res = await api.post('/agents', {
                     userId: user.id,
@@ -268,6 +272,7 @@ export default function AgentPreview({ draft }: Props) {
                     agentInstructions: agentData.agentInstructions,
                     status: 'active',
                   });
+                  setIsCreating(false);
                   navigate(`/agents/${res.data.id}`);
                 }
               } catch (err) {
