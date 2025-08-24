@@ -70,7 +70,7 @@ jobs:
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
-          source: "backend,frontend,docker-compose.yml,Dockerfile.caddy,Caddyfile"
+          source: "backend,frontend,docker-compose.yml,Dockerfile,Caddyfile"
           target: "~/prompt-swap"
 
       - name: Deploy with Docker Compose

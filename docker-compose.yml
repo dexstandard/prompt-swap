@@ -18,7 +18,6 @@ services:
   caddy:
     build:
       context: .
-      dockerfile: Dockerfile.caddy
       args:
         FRONTEND_BUILD_DIR: dist
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
