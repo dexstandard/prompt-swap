@@ -28,7 +28,9 @@ export default function AppShell() {
   return (
     <div className="h-screen flex flex-col">
       <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between z-10">
-        <span className="font-bold">PromptSwap</span>
+        <Link to="/" className="font-bold">
+          PromptSwap
+        </Link>
         <div className="flex items-center gap-4">
           <span className="hidden md:inline">
             <ApiStatus />
