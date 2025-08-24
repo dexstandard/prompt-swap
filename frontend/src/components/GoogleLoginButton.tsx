@@ -70,7 +70,8 @@ export default function GoogleLoginButton() {
   if (user)
     return (
       <div className="h-5 flex items-center text-sm gap-2">
-        <span>{user.email}</span>
+        <span className="hidden md:inline">{user.email}</span>
+        <span className="md:hidden">{user.email.split('@')[0]}</span>
         <Button
           type="button"
           variant="link"
