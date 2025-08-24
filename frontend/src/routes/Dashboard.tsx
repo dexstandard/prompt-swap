@@ -161,10 +161,12 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-3 w-full">
-      <div className="flex gap-3 items-stretch">
-        <ErrorBoundary>
-          <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
-        </ErrorBoundary>
+      <div className="flex flex-col md:flex-row gap-3 items-stretch">
+        <div className="hidden md:flex flex-1">
+          <ErrorBoundary>
+            <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
+          </ErrorBoundary>
+        </div>
         <CreateAgentForm onTokensChange={handleTokensChange} />
       </div>
       <ErrorBoundary>
