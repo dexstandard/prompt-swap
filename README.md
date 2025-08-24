@@ -1,5 +1,7 @@
 # prompt-swap
 
+Currently swaps tokens via Binance using user-provided API keys.
+
 ## Run locally
 
 1. Install dependencies:

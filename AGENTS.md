@@ -1,22 +1,67 @@
 # Agent Guidelines
 
-Backend code lives in `/backend`; the React app lives in `/frontend`.
+When a task touches only the backend or the frontend, scan only the
+relevant directory to save time.
 
-## Testing
-- Run backend tests with `npm test` from the repository root.
-- Run `npm run build` to ensure the TypeScript compiler passes with no errors.
-- Run `npm --prefix frontend run lint` to ensure the frontend lints cleanly.
-- Frontend currently has no automated tests.
+## Backend
 
-## Development
-- Use `npm run dev` (or `./scripts/dev.sh`) to launch backend and frontend together.
+### Folder overview
+- `/backend/src/server.ts` bootstraps the Fastify server and cron scheduler.
+- `/backend/src/routes` holds HTTP handlers.
+- `/backend/src/repos` contains database repositories.
+- `/backend/src/services` encapsulates business logic.
+- `/backend/src/jobs` defines scheduled jobs.
+- `/backend/src/db` keeps `schema.sql` and DB helpers.
+- `/backend/test` contains backend tests.
 
-## Development Guidelines
-- Do not write DB migrations during early development - edit schema.sql directly (unless this rule is removed).
-- Always cover backend code, especially API endpoints, with sufficient amount of tests.
-- Reuse existing frontend form components (e.g., SelectInput, TokenSelect) for consistent UI and validation.
-- New backend API endpoints should use the `RATE_LIMITS` presets for rate limiting.
-- Backend logs should be structured and include `userId`, `agentId`, and `execLogId` when available.
-- Break down complex functions into reusable utilities and check for existing helpers before adding new ones (see the agent service's repository and validation utilities as an example).
-- Avoid huge functions—top-level functions should be small, self-explanatory, and readable in plain English.
+### Scheduler Flow
+cron → load users → plan action → simulate → execute → record result.
 
+### Security Model
+Trades execute on Binance using encrypted user API keys.
+Only allowlisted token pairs are traded.
+
+### Data Model
+Tables:
+- `users` — accounts and encrypted API keys.
+- `executions` — records of performed trades.
+- `agents` — user-configured trading bots.
+- `agent_exec_log` — prompt/response history per agent.
+- `agent_exec_result` — outcomes and rebalances.
+
+### Config
+Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
+
+### Testing
+- `npm test`
+- `npm run build`
+
+### Guidelines
+- Do not write DB migrations during early development—edit `schema.sql` directly (unless this rule is removed).
+- Cover backend code, especially API endpoints, with sufficient tests.
+- New API endpoints should use the `RATE_LIMITS` presets for rate limiting.
+- Use structured logging and include `userId`, `agentId`, and `execLogId` when available.
+- Break down complex functions into reusable utilities and check for existing helpers before adding new ones.
+
+## Frontend
+
+### Folder overview
+- `/frontend/src/main.tsx` is the entry point.
+- `/frontend/src/components` contains reusable components and forms.
+- `/frontend/src/routes` defines route components.
+- `/frontend/src/lib` holds shared utilities.
+- `/frontend/public` serves static assets.
+
+### Config
+Environment variables:
+- `VITE_API_BASE` — override API base URL.
+- `VITE_USE_MOCKS` — toggle mock API responses.
+- `VITE_GOOGLE_CLIENT_ID` — OAuth client ID.
+
+### Testing
+- `npm --prefix frontend run lint`
+  (no automated tests yet)
+
+### Guidelines
+- Reuse existing components (forms, tables, etc.) for consistent UI and validation.
+- Break down complex components into smaller pieces and extract helper functions when needed.
