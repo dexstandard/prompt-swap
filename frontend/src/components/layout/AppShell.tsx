@@ -34,9 +34,9 @@ export default function AppShell() {
           <GoogleLoginButton />
         </div>
       </header>
-      <div className="flex flex-1 pt-16 pb-8 overflow-hidden">
+      <div className="flex flex-1 pt-16 pb-16 md:pb-8 overflow-hidden">
         <nav
-          className={`${navCollapsed ? 'w-20' : 'w-32'} bg-gray-100 p-4 transition-all duration-300 flex flex-col`}
+          className={`${navCollapsed ? 'w-20' : 'w-32'} bg-gray-100 p-4 transition-all duration-300 hidden md:flex md:flex-col`}
         >
           <div
             className={`flex flex-col flex-1 overflow-y-auto ${
@@ -103,7 +103,7 @@ export default function AppShell() {
           <Outlet />
         </main>
       </div>
-      <footer className="fixed bottom-0 left-0 right-0 bg-gray-100 text-xs text-center py-1 border-t">
+      <footer className="hidden md:block fixed bottom-0 left-0 right-0 bg-gray-100 text-xs text-center py-1 border-t">
         <Link to="/terms" className="mx-2 hover:text-gray-900">
           Terms
         </Link>
@@ -111,6 +111,17 @@ export default function AppShell() {
           Privacy
         </Link>
       </footer>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-100 border-t flex justify-around py-2">
+        <Link to="/settings" className="text-gray-700 hover:text-gray-900" aria-label="Settings">
+          <SettingsIcon className="w-6 h-6" />
+        </Link>
+        <Link to="/" className="text-gray-700 hover:text-gray-900" aria-label="Agents">
+          <Bot className="w-6 h-6" />
+        </Link>
+        <Link to="/keys" className="text-gray-700 hover:text-gray-900" aria-label="Keys">
+          <Key className="w-6 h-6" />
+        </Link>
+      </nav>
     </div>
   );
 }
