@@ -174,7 +174,7 @@ export default function AgentView() {
                   <p>No logs yet.</p>
               ) : (
                   <>
-                    <table className="w-full mb-2 table-fixed">
+                    <table className="w-full mb-2 table-fixed hidden md:table">
                       <colgroup>
                         <col className="w-40" />
                         <col />
@@ -198,6 +198,16 @@ export default function AgentView() {
                         ))}
                       </tbody>
                     </table>
+                    <div className="md:hidden mb-2">
+                      {logData.items.map((log) => (
+                        <div key={log.id} className="mb-2">
+                          <div className="text-xs text-gray-500 mb-1">
+                            <FormattedDate date={log.createdAt} />
+                          </div>
+                          <ExecLogItem log={log} />
+                        </div>
+                      ))}
+                    </div>
                     <div className="flex items-center gap-2">
                       <Button
                           disabled={logPage === 1}
