@@ -67,11 +67,12 @@ export default function GoogleLoginButton() {
     });
   }, [user, setUser]);
 
-  if (user)
+  if (user) {
+    const email = user.email ?? '';
     return (
       <div className="h-5 flex items-center text-sm gap-2">
-        <span className="hidden md:inline">{user.email}</span>
-        <span className="md:hidden">{user.email.split('@')[0]}</span>
+        <span className="hidden md:inline">{email}</span>
+        <span className="md:hidden">{email.split('@')[0]}</span>
         <Button
           type="button"
           variant="link"
@@ -86,5 +87,6 @@ export default function GoogleLoginButton() {
         </Button>
       </div>
     );
+  }
   return <div ref={btnRef} className="h-5 capitalize" />;
 }
