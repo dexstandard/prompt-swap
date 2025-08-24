@@ -1,4 +1,4 @@
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {Controller, useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
@@ -54,6 +54,7 @@ export default function CreateAgentForm({
     );
 
     const navigate = useNavigate();
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     const onSubmit = handleSubmit(async (values) => {
         if (!user) return;
@@ -72,11 +73,20 @@ export default function CreateAgentForm({
 
     return (
         <>
+            {!mobileOpen && (
+                <Button
+                    type="button"
+                    className="w-full md:hidden"
+                    onClick={() => setMobileOpen(true)}
+                >
+                    Create Agent
+                </Button>
+            )}
             <form
                 onSubmit={onSubmit}
-                className="bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem]"
+                className={`bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem] ${mobileOpen ? '' : 'hidden'} md:block`}
             >
-                <h2 className="text-xl font-bold">Create Agent</h2>
+                <h2 className="text-lg md:text-xl font-bold">Create Agent</h2>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField label="Token A" htmlFor="tokenA">
                         <Controller
