@@ -142,18 +142,17 @@ function AgentBlock({
         }$${Math.abs(pnl).toFixed(2)}`;
   return (
     <div className="border rounded p-3 text-sm">
-      <div className="grid grid-cols-3 gap-2 mb-2">
-        <div>
-          <div className="text-xs text-gray-500">Tokens</div>
-          {agent.tokenA && agent.tokenB ? (
-            <span className="inline-flex items-center gap-1">
-              <TokenDisplay token={agent.tokenA} /> /
-              <TokenDisplay token={agent.tokenB} />
-            </span>
-          ) : (
-            '-'
-          )}
-        </div>
+      <div className="mb-2 flex items-center gap-1 font-medium">
+        {agent.tokenA && agent.tokenB ? (
+          <span className="inline-flex items-center gap-1">
+            <TokenDisplay token={agent.tokenA} /> /
+            <TokenDisplay token={agent.tokenB} />
+          </span>
+        ) : (
+          '-'
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2 mb-2 items-center">
         <div>
           <div className="text-xs text-gray-500">Balance</div>
           {balanceText}
@@ -162,30 +161,32 @@ function AgentBlock({
           <div className="text-xs text-gray-500">PnL</div>
           {pnlText}
         </div>
-      </div>
-      <div className="grid grid-cols-3 gap-2 items-center">
-        <div>
-          <div className="text-xs text-gray-500">Model</div>
-          {agent.model || '-'}
-        </div>
-        <div>
-          <div className="text-xs text-gray-500">Status</div>
-          <AgentStatusLabel status={agent.status} />
-        </div>
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end">
           <Link
             className="text-blue-600 underline inline-flex"
             to={`/agents/${agent.id}`}
             aria-label="View agent"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-5 h-5" />
           </Link>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 items-center">
+        <div>
+          <div className="text-xs text-gray-500">Status</div>
+          <AgentStatusLabel status={agent.status} />
+        </div>
+        <div>
+          <div className="text-xs text-gray-500">Model</div>
+          {agent.model || '-'}
+        </div>
+        <div className="flex justify-end">
           <button
             className="text-red-600"
             onClick={() => onDelete(agent.id)}
             aria-label="Delete agent"
           >
-            <Trash className="w-4 h-4" />
+            <Trash className="w-5 h-5" />
           </button>
         </div>
       </div>
