@@ -19,7 +19,10 @@ export default function FormField({
   return (
     <div className={className}>
       {label && (
-        <label className="block text-sm font-medium mb-1" htmlFor={htmlFor}>
+        <label
+          className="block text-xs md:text-sm font-medium mb-1"
+          htmlFor={htmlFor}
+        >
           <span className="inline-flex items-center">
             {label}
             {tooltip && <InfoTooltip>{tooltip}</InfoTooltip>}
