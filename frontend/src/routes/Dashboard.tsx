@@ -103,6 +103,97 @@ function AgentRow({
   );
 }
 
+function AgentBlock({
+  agent,
+  onDelete,
+}: {
+  agent: Agent;
+  onDelete: (id: string) => void;
+}) {
+  const { balance, isLoading } = useAgentBalanceUsd(
+    agent.tokenA,
+    agent.tokenB,
+  );
+  const balanceText =
+    balance === null ? '-' : isLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
+  const pnl =
+    balance !== null && agent.startBalanceUsd != null
+      ? balance - agent.startBalanceUsd
+      : null;
+  const pnlText =
+    pnl === null
+      ? '-'
+      : isLoading
+      ? 'Loading...'
+      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}`;
+  const pnlClass =
+    pnl === null || isLoading
+      ? ''
+      : pnl <= -0.03
+      ? 'text-red-600'
+      : pnl >= 0.03
+      ? 'text-green-600'
+      : 'text-gray-600';
+  const pnlTooltip =
+    pnl === null || isLoading
+      ? undefined
+      : `PnL = $${balance!.toFixed(2)} - $${agent.startBalanceUsd!.toFixed(2)} = ${
+          pnl > 0 ? '+' : pnl < 0 ? '-' : ''
+        }$${Math.abs(pnl).toFixed(2)}`;
+  return (
+    <div className="border rounded p-3 text-sm">
+      <div className="inline-flex items-center gap-1 mb-2 font-medium">
+        {agent.tokenA && agent.tokenB ? (
+          <>
+            <TokenDisplay token={agent.tokenA} /> /
+            <TokenDisplay token={agent.tokenB} />
+          </>
+        ) : (
+          '-'
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2 mb-2 items-center">
+        <div>
+          <div className="text-xs text-gray-500">Balance</div>
+          {balanceText}
+        </div>
+        <div className={pnlClass} title={pnlTooltip}>
+          <div className="text-xs text-gray-500">PnL</div>
+          {pnlText}
+        </div>
+        <div className="flex justify-end">
+          <Link
+            className="text-blue-600 inline-flex"
+            to={`/agents/${agent.id}`}
+            aria-label="View agent"
+          >
+            <Eye className="w-5 h-5" />
+          </Link>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 items-center">
+        <div>
+          <div className="text-xs text-gray-500">Status</div>
+          <AgentStatusLabel status={agent.status} />
+        </div>
+        <div>
+          <div className="text-xs text-gray-500">Model</div>
+          {agent.model || '-'}
+        </div>
+        <div className="flex justify-end">
+          <button
+            className="text-red-600"
+            onClick={() => onDelete(agent.id)}
+            aria-label="Delete agent"
+          >
+            <Trash className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useUser();
   const [page, setPage] = useState(1);
@@ -190,7 +281,7 @@ export default function Dashboard() {
             <p>You don't have any agents yet.</p>
           ) : (
             <>
-              <table className="w-full mb-4">
+              <table className="w-full mb-4 hidden md:table">
                 <thead>
                   <tr>
                     <th className="text-left">Tokens</th>
@@ -211,6 +302,15 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
+              <div className="md:hidden flex flex-col gap-2 mb-4">
+                {items.map((agent) => (
+                  <AgentBlock
+                    key={agent.id}
+                    agent={agent}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
               {totalPages > 0 && (
                 <div className="flex gap-2 items-center">
                   <Button
