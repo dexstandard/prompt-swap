@@ -30,7 +30,9 @@ export default function AppShell() {
       <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between z-10">
         <span className="font-bold">PromptSwap</span>
         <div className="flex items-center gap-4">
-          <ApiStatus />
+          <span className="hidden md:inline">
+            <ApiStatus />
+          </span>
           <GoogleLoginButton />
         </div>
       </header>
@@ -111,7 +113,7 @@ export default function AppShell() {
           Privacy
         </Link>
       </footer>
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-100 border-t flex justify-around py-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-100 border-t flex justify-around py-4">
         <Link to="/settings" className="text-gray-700 hover:text-gray-900" aria-label="Settings">
           <SettingsIcon className="w-6 h-6" />
         </Link>
