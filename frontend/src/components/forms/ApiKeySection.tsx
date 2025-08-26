@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
+import { useToast } from '../../lib/useToast';
 import Button from '../ui/Button';
 
 interface Field {
@@ -36,6 +37,7 @@ export default function ApiKeySection({
   getBalancePath,
 }: ApiKeySectionProps) {
   const { user } = useUser();
+  const toast = useToast();
   const defaultValues = useMemo(
     () =>
       Object.fromEntries(fields.map((f) => [f.name, ''])) as Record<string, string>,
@@ -84,7 +86,7 @@ export default function ApiKeySection({
         axios.isAxiosError(err) &&
         err.response?.data?.error === 'verification failed'
       ) {
-        alert('Key verification failed');
+        toast.show('Key verification failed');
       }
     },
   });
