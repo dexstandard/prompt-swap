@@ -207,6 +207,7 @@ describe('reviewPortfolio', () => {
     expect(args.tokenA).toBe('BTC');
     expect(args.tokenB).toBe('ETH');
     expect(args.newAllocation).toBe(60);
+    expect(args.execResultId).toBeTruthy();
   });
 
   it('skips createRebalanceLimitOrder when manualRebalance is enabled', async () => {

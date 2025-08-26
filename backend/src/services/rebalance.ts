@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
+import { insertExecution } from '../repos/executions.js';
 import { fetchPairData, createLimitOrder } from './binance.js';
 
 export async function createRebalanceLimitOrder(opts: {
@@ -7,9 +8,10 @@ export async function createRebalanceLimitOrder(opts: {
   tokenB: string;
   positions: { sym: string; value_usdt: number }[];
   newAllocation: number;
+  execResultId: string;
   log: FastifyBaseLogger;
 }) {
-  const { userId, tokenA, tokenB, positions, newAllocation, log } = opts;
+  const { userId, tokenA, tokenB, positions, newAllocation, execResultId, log } = opts;
   const posA = positions.find((p) => p.sym === tokenA);
   const posB = positions.find((p) => p.sym === tokenB);
   if (!posA || !posB) {
@@ -32,6 +34,12 @@ export async function createRebalanceLimitOrder(opts: {
     quantity,
     price: currentPrice,
   } as const;
+  insertExecution({
+    userId,
+    planned: params,
+    status: 'pending',
+    execResultId,
+  });
   log.info({ order: params }, 'creating limit order');
   await createLimitOrder(userId, params);
 }

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { FastifyBaseLogger } from 'fastify';
+import { db } from '../src/db/index.js';
 
 vi.mock('../src/services/binance.js', () => ({
   fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
@@ -9,24 +11,39 @@ import { createRebalanceLimitOrder } from '../src/services/rebalance.js';
 import { createLimitOrder } from '../src/services/binance.js';
 
 describe('createRebalanceLimitOrder', () => {
-  it('calls createLimitOrder with derived params', async () => {
-    const log = { info: () => {}, error: () => {} } as any;
-    const positions = [
-      { sym: 'BTC', value_usdt: 60 },
-      { sym: 'ETH', value_usdt: 40 },
-    ];
+  it('saves execution with status and exec result', async () => {
+    const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    db.prepare('DELETE FROM executions').run();
     await createRebalanceLimitOrder({
-      userId: 'u1',
+      userId: 'user1',
       tokenA: 'BTC',
       tokenB: 'ETH',
-      positions,
-      newAllocation: 80,
+      positions: [
+        { sym: 'BTC', value_usdt: 50 },
+        { sym: 'ETH', value_usdt: 150 },
+      ],
+      newAllocation: 50,
       log,
+      execResultId: 'res1',
     });
-    expect(createLimitOrder).toHaveBeenCalledWith('u1', {
+
+    const row = db
+      .prepare('SELECT user_id, planned_json, status, exec_result_id FROM executions')
+      .get() as any;
+
+    expect(row.user_id).toBe('user1');
+    expect(JSON.parse(row.planned_json)).toMatchObject({
       symbol: 'BTCETH',
       side: 'BUY',
-      quantity: 0.2,
+      quantity: 0.5,
+      price: 100,
+    });
+    expect(row.status).toBe('pending');
+    expect(row.exec_result_id).toBe('res1');
+    expect(createLimitOrder).toHaveBeenCalledWith('user1', {
+      symbol: 'BTCETH',
+      side: 'BUY',
+      quantity: 0.5,
       price: 100,
     });
   });
