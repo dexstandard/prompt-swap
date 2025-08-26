@@ -32,39 +32,53 @@ export default function GoogleLoginButton() {
   const { user, setUser } = useUser();
 
   useEffect(() => {
-    const google = window.google;
-    if (!google || !btnRef.current || user) return;
+    if (!btnRef.current || user) return;
 
-    google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: async (resp: CredentialResponse) => {
-        try {
-          const res = await api.post('/login', { token: resp.credential });
-          setUser(res.data);
-          if (btnRef.current) btnRef.current.innerHTML = '';
-        } catch (err: unknown) {
-          if (
-            axios.isAxiosError(err) &&
-            err.response?.data?.error === 'otp required'
-          ) {
-            const otp = window.prompt('Enter 2FA code');
-            if (otp) {
-              const res2 = await api.post('/login', {
-                token: resp.credential,
-                otp,
-              });
-              setUser(res2.data);
-              if (btnRef.current) btnRef.current.innerHTML = '';
+    const initialize = () => {
+      const google = window.google;
+      if (!google || !btnRef.current) return;
+
+      google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: async (resp: CredentialResponse) => {
+          try {
+            const res = await api.post('/login', { token: resp.credential });
+            setUser(res.data);
+            if (btnRef.current) btnRef.current.innerHTML = '';
+          } catch (err: unknown) {
+            if (
+              axios.isAxiosError(err) &&
+              err.response?.data?.error === 'otp required'
+            ) {
+              const otp = window.prompt('Enter 2FA code');
+              if (otp) {
+                const res2 = await api.post('/login', {
+                  token: resp.credential,
+                  otp,
+                });
+                setUser(res2.data);
+                if (btnRef.current) btnRef.current.innerHTML = '';
+              }
             }
           }
-        }
-      },
-    });
-    google.accounts.id.renderButton(btnRef.current, {
-      theme: 'outline',
-      size: 'small',
-      text: 'signin',
-    });
+        },
+      });
+      google.accounts.id.renderButton(btnRef.current, {
+        theme: 'outline',
+        size: 'small',
+        text: 'signin',
+      });
+    };
+
+    if (window.google) {
+      initialize();
+    } else {
+      const script = document.querySelector<HTMLScriptElement>(
+        'script[src="https://accounts.google.com/gsi/client"]'
+      );
+      script?.addEventListener('load', initialize);
+      return () => script?.removeEventListener('load', initialize);
+    }
   }, [user, setUser]);
 
   if (user) {
