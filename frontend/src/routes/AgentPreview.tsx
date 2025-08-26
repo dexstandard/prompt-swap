@@ -25,6 +25,7 @@ interface AgentPreviewDetails {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
 }
 
 interface AgentDraft extends AgentPreviewDetails {
@@ -149,6 +150,18 @@ export default function AgentPreview({ draft }: Props) {
           <strong>DON'T MOVE FUNDS ON SPOT WALLET DURING TRADING!</strong> It will confuse the trading agent and may
           lead to unexpected results.
         </WarningSign>
+        <label className="mt-4 flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={agentData.manualRebalance}
+            onChange={(e) =>
+              setAgentData((d) =>
+                d ? { ...d, manualRebalance: e.target.checked } : d,
+              )
+            }
+          />
+          <span>Enable Manual Rebalancing</span>
+        </label>
         {!user && (
           <p className="text-sm text-gray-600 mb-2 mt-4">Log in to continue</p>
         )}
@@ -172,6 +185,7 @@ export default function AgentPreview({ draft }: Props) {
                     risk: agentData.risk,
                     reviewInterval: agentData.reviewInterval,
                     agentInstructions: agentData.agentInstructions,
+                    manualRebalance: agentData.manualRebalance,
                     status: 'draft',
                   });
                 } else {
@@ -186,6 +200,7 @@ export default function AgentPreview({ draft }: Props) {
                     risk: agentData.risk,
                     reviewInterval: agentData.reviewInterval,
                     agentInstructions: agentData.agentInstructions,
+                    manualRebalance: agentData.manualRebalance,
                     status: 'draft',
                   });
                 }

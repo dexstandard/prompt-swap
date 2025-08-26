@@ -17,6 +17,7 @@ export interface Agent {
   reviewInterval: string;
   agentInstructions: string;
   startBalanceUsd: number | null;
+  manualRebalance: boolean;
 }
 
 export function useAgentData(id?: string) {

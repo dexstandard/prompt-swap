@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS agents(
   min_b_allocation INTEGER,
   risk TEXT,
   review_interval TEXT,
-  agent_instructions TEXT
+  agent_instructions TEXT,
+  manual_rebalance INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS agent_exec_log(

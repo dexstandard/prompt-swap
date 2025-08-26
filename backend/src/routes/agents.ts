@@ -105,6 +105,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           risk: validated.risk,
           reviewInterval: validated.reviewInterval,
           agentInstructions: validated.agentInstructions,
+          manualRebalance: validated.manualRebalance,
         });
         const row = getAgent(id)!;
         if (status === AgentStatus.Active)
@@ -203,6 +204,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           reviewInterval: validated.reviewInterval,
           agentInstructions: validated.agentInstructions,
           startBalance,
+          manualRebalance: validated.manualRebalance,
         });
         const row = getAgent(id)!;
         if (status === AgentStatus.Active)

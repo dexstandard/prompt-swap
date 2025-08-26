@@ -18,6 +18,7 @@ import {
   fetchPairData,
   fetchMarketTimeseries,
 } from '../services/binance.js';
+import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import {
   fetchTokenIndicators,
   type TokenIndicators,
@@ -371,6 +372,20 @@ async function executeAgent(
       ...(parsed.error ? { error: parsed.error } : {}),
       createdAt,
     });
+    if (
+      !row.manual_rebalance &&
+      parsed.response?.rebalance &&
+      parsed.response.newAllocation !== undefined
+    ) {
+      await createRebalanceLimitOrder({
+        userId: row.user_id,
+        tokenA: row.token_a,
+        tokenB: row.token_b,
+        positions: prompt.config.portfolio.positions,
+        newAllocation: parsed.response.newAllocation,
+        log,
+      });
+    }
     log.info('agent run complete');
   } catch (err) {
     saveFailure(row, execLogId, String(err), prompt);

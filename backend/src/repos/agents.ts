@@ -15,6 +15,7 @@ export interface AgentRow {
   risk: string;
   review_interval: string;
   agent_instructions: string;
+  manual_rebalance: number;
 }
 
 
@@ -34,13 +35,14 @@ export function toApi(row: AgentRow) {
     risk: row.risk,
     reviewInterval: row.review_interval,
     agentInstructions: row.agent_instructions,
+    manualRebalance: !!row.manual_rebalance,
   };
 }
 
 const baseSelect =
   'SELECT id, user_id, model, status, created_at, start_balance, name, token_a, token_b, ' +
   'min_a_allocation, min_b_allocation, risk, review_interval, ' +
-  'agent_instructions FROM agents';
+  'agent_instructions, manual_rebalance FROM agents';
 
 export function getAgent(id: string) {
   return db
@@ -81,6 +83,7 @@ export function findIdenticalDraftAgent(
     risk: string;
     reviewInterval: string;
     agentInstructions: string;
+    manualRebalance: boolean;
   },
   excludeId?: string,
 ) {
@@ -88,7 +91,7 @@ export function findIdenticalDraftAgent(
      WHERE user_id = ? AND status = 'draft'${excludeId ? ' AND id != ?' : ''} AND model = ? AND name = ?
        AND token_a = ? AND token_b = ?
        AND min_a_allocation = ? AND min_b_allocation = ?
-       AND risk = ? AND review_interval = ? AND agent_instructions = ?`;
+       AND risk = ? AND review_interval = ? AND agent_instructions = ? AND manual_rebalance = ?`;
   const params: unknown[] = [
     data.userId,
     ...(excludeId ? [excludeId] : []),
@@ -101,6 +104,7 @@ export function findIdenticalDraftAgent(
     data.risk,
     data.reviewInterval,
     data.agentInstructions,
+    data.manualRebalance ? 1 : 0,
   ];
   return db.prepare(query).get(...params) as
     | { id: string; name: string }
@@ -156,10 +160,11 @@ export function insertAgent(data: {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
 }) {
   db.prepare(
-    `INSERT INTO agents (id, user_id, model, status, created_at, start_balance, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO agents (id, user_id, model, status, created_at, start_balance, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions, manual_rebalance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     data.id,
     data.userId,
@@ -175,6 +180,7 @@ export function insertAgent(data: {
     data.risk,
     data.reviewInterval,
     data.agentInstructions,
+    data.manualRebalance ? 1 : 0,
   );
 }
 
@@ -193,9 +199,10 @@ export function updateAgent(data: {
   reviewInterval: string;
   agentInstructions: string;
   startBalance: number | null;
+  manualRebalance: boolean;
 }) {
   db.prepare(
-    `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ? WHERE id = ?`,
+    `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ?, manual_rebalance = ? WHERE id = ?`,
   ).run(
     data.userId,
     data.model,
@@ -209,6 +216,7 @@ export function updateAgent(data: {
     data.reviewInterval,
     data.agentInstructions,
     data.startBalance,
+    data.manualRebalance ? 1 : 0,
     data.id,
   );
 }
@@ -241,6 +249,7 @@ export interface ActiveAgentRow {
   review_interval: string;
   agent_instructions: string;
   ai_api_key_enc: string;
+  manual_rebalance: number;
 }
 
 export function getActiveAgents(options?: {
@@ -251,7 +260,7 @@ export function getActiveAgents(options?: {
                       a.token_a, a.token_b,
                       a.min_a_allocation, a.min_b_allocation,
                       a.risk, a.review_interval, a.agent_instructions,
-                      u.ai_api_key_enc
+                      u.ai_api_key_enc, a.manual_rebalance
                  FROM agents a
                  JOIN users u ON u.id = a.user_id
                 WHERE a.status = 'active'`;

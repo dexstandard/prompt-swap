@@ -42,6 +42,10 @@ vi.mock('../src/services/indicators.js', () => ({
   fetchTokenIndicators: vi.fn().mockResolvedValue(sampleIndicators),
 }));
 
+vi.mock('../src/services/rebalance.js', () => ({
+  createRebalanceLimitOrder: vi.fn().mockResolvedValue(undefined),
+}));
+
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let reviewPortfolios: (
   log: FastifyBaseLogger,
@@ -52,6 +56,7 @@ let fetchAccount: any;
 let fetchPairData: any;
 let fetchMarketTimeseries: any;
 let fetchTokenIndicators: any;
+let createRebalanceLimitOrder: any;
 
 beforeAll(async () => {
   ({ reviewAgentPortfolio, default: reviewPortfolios } = await import(
@@ -62,6 +67,7 @@ beforeAll(async () => {
     '../src/services/binance.js'
   ));
   ({ fetchTokenIndicators } = await import('../src/services/indicators.js'));
+  ({ createRebalanceLimitOrder } = await import('../src/services/rebalance.js'));
 });
 
 describe('reviewPortfolio', () => {
@@ -162,6 +168,79 @@ describe('reviewPortfolio', () => {
     expect(parsedRows[0].log).toBe('ok');
     expect(parsedRows[0].rebalance).toBeNull();
     expect(parsedRows[0].error).toBeNull();
+  });
+
+  it('calls createRebalanceLimitOrder when rebalance is requested', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(createRebalanceLimitOrder).mockClear();
+    vi.mocked(callRebalancingAgent).mockResolvedValueOnce(
+      JSON.stringify({
+        object: 'response',
+        output: [
+          {
+            id: 'msg_1',
+            content: [
+              {
+                text: JSON.stringify({
+                  result: { rebalance: true, newAllocation: 60, shortReport: 's' },
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    db.prepare('DELETE FROM agents').run();
+    db.prepare('DELETE FROM users').run();
+    db.prepare('DELETE FROM agent_exec_log').run();
+    db.prepare('DELETE FROM agent_exec_result').run();
+    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u11', 'enc');
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES (?, ?, 'gpt', 'active', 0, 'Agent11', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
+    ).run('a11', 'u11');
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewAgentPortfolio(log, 'a11');
+    expect(createRebalanceLimitOrder).toHaveBeenCalledTimes(1);
+    const args = vi.mocked(createRebalanceLimitOrder).mock.calls[0][0];
+    expect(args.userId).toBe('u11');
+    expect(args.tokenA).toBe('BTC');
+    expect(args.tokenB).toBe('ETH');
+    expect(args.newAllocation).toBe(60);
+  });
+
+  it('skips createRebalanceLimitOrder when manualRebalance is enabled', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(createRebalanceLimitOrder).mockClear();
+    vi.mocked(callRebalancingAgent).mockResolvedValueOnce(
+      JSON.stringify({
+        object: 'response',
+        output: [
+          {
+            id: 'msg_1',
+            content: [
+              {
+                text: JSON.stringify({
+                  result: { rebalance: true, newAllocation: 55, shortReport: 's' },
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    db.prepare('DELETE FROM agents').run();
+    db.prepare('DELETE FROM users').run();
+    db.prepare('DELETE FROM agent_exec_log').run();
+    db.prepare('DELETE FROM agent_exec_result').run();
+    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u12', 'enc');
+    db.prepare(
+      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions, manual_rebalance)
+       VALUES (?, ?, 'gpt', 'active', 0, 'Agent12', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst', 1)`
+    ).run('a12', 'u12');
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewAgentPortfolio(log, 'a12');
+    expect(createRebalanceLimitOrder).not.toHaveBeenCalled();
   });
 
   it('omits indicators for stablecoins', async () => {

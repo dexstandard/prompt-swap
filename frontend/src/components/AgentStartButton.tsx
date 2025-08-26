@@ -17,6 +17,7 @@ interface AgentPreviewDetails {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
 }
 
 interface AgentDraft extends AgentPreviewDetails {
@@ -67,6 +68,7 @@ export default function AgentStartButton({
           risk: agentData.risk,
           reviewInterval: agentData.reviewInterval,
           agentInstructions: agentData.agentInstructions,
+          manualRebalance: agentData.manualRebalance,
           status: 'active',
         });
         navigate(`/agents/${res.data.id}`);

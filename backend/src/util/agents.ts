@@ -29,6 +29,7 @@ export interface AgentInput {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
   status: AgentStatus;
 }
 
@@ -86,6 +87,7 @@ function validateAgentInput(
         risk: body.risk,
         reviewInterval: body.reviewInterval,
         agentInstructions: body.agentInstructions,
+        manualRebalance: body.manualRebalance,
       },
       id,
     );
@@ -154,6 +156,7 @@ export async function prepareAgentForUpsert(
 ): Promise<{ body: AgentInput; startBalance: number | null } | ValidationErr> {
   let norm;
   try {
+    body.manualRebalance = !!body.manualRebalance;
     norm = validateAllocations(
       body.minTokenAAllocation,
       body.minTokenBAllocation,

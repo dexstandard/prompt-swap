@@ -52,6 +52,7 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
         status: agent.status,
         name: agent.name,
         ...data,
+        manualRebalance: agent.manualRebalance,
       });
     },
     onSuccess: () => {

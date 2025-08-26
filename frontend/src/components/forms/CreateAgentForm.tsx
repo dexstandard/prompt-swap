@@ -67,6 +67,7 @@ export default function CreateAgentForm({
             risk: values.risk,
             reviewInterval: values.reviewInterval,
             agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+            manualRebalance: false,
         };
         navigate('/agent-preview', {state: previewData});
     });
