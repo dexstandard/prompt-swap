@@ -9,6 +9,7 @@ import AgentStatusLabel from '../components/AgentStatusLabel';
 import TokenDisplay from '../components/TokenDisplay';
 import { useAgentBalanceUsd } from '../lib/useAgentBalanceUsd';
 import Button from '../components/ui/Button';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import CreateAgentForm from '../components/forms/CreateAgentForm';
 import PriceChart from '../components/forms/PriceChart';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -232,13 +233,16 @@ export default function Dashboard() {
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
   const items = data?.items ?? [];
 
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm('Delete this agent?');
-    if (!confirmed) {
-      return;
-    }
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await api.delete(`/agents/${id}`);
+      await api.delete(`/agents/${deleteId}`);
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       toast.show('Agent deleted', 'success');
     } catch (err) {
@@ -247,11 +251,14 @@ export default function Dashboard() {
       } else {
         toast.show('Failed to delete agent');
       }
+    } finally {
+      setDeleteId(null);
     }
   };
 
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <>
+      <div className="flex flex-col gap-3 w-full">
       <div className="flex flex-col md:flex-row gap-3 items-stretch">
         <div className="hidden md:flex flex-1">
           <ErrorBoundary>
@@ -339,5 +346,13 @@ export default function Dashboard() {
         </div>
       </ErrorBoundary>
     </div>
+    <ConfirmDialog
+      open={deleteId !== null}
+      message="Delete this agent?"
+      confirmVariant="danger"
+      onConfirm={confirmDelete}
+      onCancel={() => setDeleteId(null)}
+    />
+    </>
   );
 }

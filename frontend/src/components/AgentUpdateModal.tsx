@@ -6,6 +6,7 @@ import type { Agent } from '../lib/useAgentData';
 import { useToast } from '../lib/useToast';
 import Button from './ui/Button';
 import Modal from './ui/Modal';
+import ConfirmDialog from './ui/ConfirmDialog';
 import StrategyForm from './StrategyForm';
 import AgentInstructions from './AgentInstructions';
 import { normalizeAllocations } from '../lib/allocations';
@@ -66,6 +67,8 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
     },
   });
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   return (
     <Modal open={open} onClose={onClose}>
       <h2 className="text-xl font-bold mb-2">Update Agent</h2>
@@ -93,13 +96,20 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
         <Button
           disabled={updateMut.isPending}
           loading={updateMut.isPending}
-          onClick={() => {
-            if (window.confirm('Update running agent?')) updateMut.mutate();
-          }}
+          onClick={() => setConfirmOpen(true)}
         >
           Confirm
         </Button>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        message="Update running agent?"
+        onConfirm={() => {
+          setConfirmOpen(false);
+          updateMut.mutate();
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </Modal>
   );
 }
