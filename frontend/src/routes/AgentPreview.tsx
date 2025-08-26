@@ -52,19 +52,16 @@ export default function AgentPreview({ draft }: Props) {
   const tokens = agentData ? [agentData.tokenA, agentData.tokenB] : [];
   const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
   const [model, setModel] = useState(draft?.model || '');
-  const [hadModel, setHadModel] = useState(false);
   useEffect(() => {
     setModel(draft?.model || '');
-    if (draft?.model) setHadModel(true);
   }, [draft?.model]);
   useEffect(() => {
-    if (!hasOpenAIKey) setModel('');
-  }, [hasOpenAIKey]);
-  useEffect(() => {
-    if (!draft?.model && models.length && !model && !hadModel) {
-      setModel(models[0]);
+    if (!hasOpenAIKey) {
+      setModel('');
+    } else if (!model) {
+      setModel(draft?.model || models[0] || '');
     }
-  }, [models, draft?.model, model, hadModel]);
+  }, [hasOpenAIKey, models, draft?.model, model]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   function WarningSign({ children }: { children: ReactNode }) {
