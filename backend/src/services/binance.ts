@@ -3,7 +3,9 @@ import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import { createHmac } from 'node:crypto';
 
-export async function fetchAccount(id: string) {
+type UserCreds = { key: string; secret: string };
+
+function getUserCreds(id: string): UserCreds | null {
   const row = db
     .prepare(
       'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
@@ -12,15 +14,20 @@ export async function fetchAccount(id: string) {
     | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
     | undefined;
   if (!row?.binance_api_key_enc || !row.binance_api_secret_enc) return null;
-
   const key = decrypt(row.binance_api_key_enc, env.KEY_PASSWORD);
   const secret = decrypt(row.binance_api_secret_enc, env.KEY_PASSWORD);
+  return { key, secret };
+}
+
+export async function fetchAccount(id: string) {
+  const creds = getUserCreds(id);
+  if (!creds) return null;
   const timestamp = Date.now();
   const query = `timestamp=${timestamp}`;
-  const signature = createHmac('sha256', secret).update(query).digest('hex');
+  const signature = createHmac('sha256', creds.secret).update(query).digest('hex');
   const accountRes = await fetch(
     `https://api.binance.com/api/v3/account?${query}&signature=${signature}`,
-    { headers: { 'X-MBX-APIKEY': key } }
+    { headers: { 'X-MBX-APIKEY': creds.key } }
   );
   if (!accountRes.ok) throw new Error('failed to fetch account');
   return (await accountRes.json()) as {
@@ -70,6 +77,71 @@ export async function fetchTokensBalanceUsd(id: string, tokens: string[]) {
     total += amount * Number(priceJson.price);
   }
   return total;
+}
+
+export async function createLimitOrder(
+  id: string,
+  opts: { symbol: string; side: 'BUY' | 'SELL'; quantity: number; price: number }
+) {
+  const creds = getUserCreds(id);
+  if (!creds) return null;
+  const timestamp = Date.now();
+  const params = new URLSearchParams({
+    symbol: opts.symbol.toUpperCase(),
+    side: opts.side,
+    type: 'LIMIT',
+    timeInForce: 'GTC',
+    quantity: String(opts.quantity),
+    price: String(opts.price),
+    timestamp: String(timestamp),
+  });
+  const signature = createHmac('sha256', creds.secret)
+    .update(params.toString())
+    .digest('hex');
+  params.append('signature', signature);
+  const res = await fetch(`https://api.binance.com/api/v3/order`, {
+    method: 'POST',
+    headers: {
+      'X-MBX-APIKEY': creds.key,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params.toString(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`failed to create order: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
+export async function cancelOrder(
+  id: string,
+  opts: { symbol: string; orderId: number }
+) {
+  const creds = getUserCreds(id);
+  if (!creds) return null;
+  const timestamp = Date.now();
+  const params = new URLSearchParams({
+    symbol: opts.symbol.toUpperCase(),
+    orderId: String(opts.orderId),
+    timestamp: String(timestamp),
+  });
+  const signature = createHmac('sha256', creds.secret)
+    .update(params.toString())
+    .digest('hex');
+  params.append('signature', signature);
+  const res = await fetch(
+    `https://api.binance.com/api/v3/order?${params.toString()}`,
+    {
+      method: 'DELETE',
+      headers: { 'X-MBX-APIKEY': creds.key },
+    }
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`failed to cancel order: ${res.status} ${body}`);
+  }
+  return res.json();
 }
 
 async function fetchSymbolData(symbol: string) {
