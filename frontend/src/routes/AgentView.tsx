@@ -6,17 +6,14 @@ import { useUser } from '../lib/useUser';
 import { useAgentData } from '../lib/useAgentData';
 import { useAgentActions } from '../lib/useAgentActions';
 import api from '../lib/axios';
-import AgentStatusLabel from '../components/AgentStatusLabel';
-import TokenDisplay from '../components/TokenDisplay';
-import StrategyForm from '../components/StrategyForm';
 import Button from '../components/ui/Button';
 import { useToast } from '../lib/useToast';
 import AgentPreview from './AgentPreview';
-import { Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import ExecLogItem, { type ExecLog } from '../components/ExecLogItem';
 import FormattedDate from '../components/ui/FormattedDate';
-import AgentPnl from '../components/AgentPnl';
 import AgentUpdateModal from '../components/AgentUpdateModal';
+import AgentDetailsDesktop from '../components/AgentDetailsDesktop';
+import AgentDetailsMobile from '../components/AgentDetailsMobile';
 
 export default function AgentView() {
   const { id } = useParams();
@@ -41,8 +38,6 @@ export default function AgentView() {
     },
   });
 
-  const [showStrategy, setShowStrategy] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
 
   const [logPage, setLogPage] = useState(1);
@@ -66,77 +61,14 @@ export default function AgentView() {
   if (data.status === 'draft') return <AgentPreview draft={data} />;
 
   const isActive = data.status === 'active';
-  const strategyData = {
-    tokenA: data.tokenA,
-    tokenB: data.tokenB,
-    minTokenAAllocation: data.minTokenAAllocation,
-    minTokenBAllocation: data.minTokenBAllocation,
-    risk: data.risk,
-    reviewInterval: data.reviewInterval,
-  };
-
   return (
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
-          <span>Agent:</span> <span>{data.name}</span>
-        </h1>
-        <p className="mt-2">
-          <strong>Created:</strong> <FormattedDate date={data.createdAt} />
-        </p>
-        <p className="mt-2">
-          <strong>Status:</strong> <AgentStatusLabel status={data.status}/>
-        </p>
-        <p className="flex items-center gap-1 mt-2">
-          <strong>Tokens:</strong>
-          <TokenDisplay token={data.tokenA}/>
-          <span>/</span>
-          <TokenDisplay token={data.tokenB}/>
-        </p>
-        <div className="mt-2">
-          <div
-              className="flex items-center gap-1 cursor-pointer"
-              onClick={() => setShowStrategy((s) => !s)}
-          >
-            <h2 className="text-l font-bold">Strategy</h2>
-            {showStrategy ? (
-                <ChevronDown className="w-4 h-4"/>
-            ) : (
-                <ChevronRight className="w-4 h-4"/>
-            )}
-          </div>
-          {showStrategy && (
-              <div className="mt-2 max-w-2xl">
-                <StrategyForm data={strategyData} onChange={() => {
-                }} disabled/>
-              </div>
-          )}
+        <div className="hidden md:block">
+          <AgentDetailsDesktop agent={data} />
         </div>
-        <div className="mt-2">
-          <div className="flex items-center gap-1">
-            <h2 className="text-l font-bold">Trading Instructions</h2>
-            {showPrompt ? (
-                <EyeOff
-                    className="w-4 h-4 cursor-pointer"
-                    onClick={() => setShowPrompt(false)}
-                />
-            ) : (
-                <Eye
-                    className="w-4 h-4 cursor-pointer"
-                    onClick={() => setShowPrompt(true)}
-                />
-            )}
-          </div>
-          {showPrompt && (
-              <pre className="whitespace-pre-wrap mt-2">
-            {data.agentInstructions}
-          </pre>
-          )}
+        <div className="md:hidden">
+          <AgentDetailsMobile agent={data} />
         </div>
-        <AgentPnl
-          tokenA={data.tokenA}
-          tokenB={data.tokenB}
-          startBalanceUsd={data.startBalanceUsd}
-        />
         {isActive ? (
             <div className="mt-4 flex gap-2">
               <Button onClick={() => setShowUpdate(true)}>

@@ -1,9 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LogOut } from 'lucide-react';
 import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import Button from './ui/Button';
+import Modal from './ui/Modal';
+import TextInput from './forms/TextInput';
+import { useToast } from '../lib/useToast';
 
 type CredentialResponse = { credential: string };
 
@@ -30,41 +33,52 @@ declare global {
 export default function GoogleLoginButton() {
   const btnRef = useRef<HTMLDivElement>(null);
   const { user, setUser } = useUser();
+  const toast = useToast();
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [pendingCred, setPendingCred] = useState<string | null>(null);
 
   useEffect(() => {
-    const google = window.google;
-    if (!google || !btnRef.current || user) return;
+    if (!btnRef.current || user) return;
 
-    google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: async (resp: CredentialResponse) => {
-        try {
-          const res = await api.post('/login', { token: resp.credential });
-          setUser(res.data);
-          if (btnRef.current) btnRef.current.innerHTML = '';
-        } catch (err: unknown) {
-          if (
-            axios.isAxiosError(err) &&
-            err.response?.data?.error === 'otp required'
-          ) {
-            const otp = window.prompt('Enter 2FA code');
-            if (otp) {
-              const res2 = await api.post('/login', {
-                token: resp.credential,
-                otp,
-              });
-              setUser(res2.data);
-              if (btnRef.current) btnRef.current.innerHTML = '';
+    const initialize = () => {
+      const google = window.google;
+      if (!google || !btnRef.current) return;
+
+      google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: async (resp: CredentialResponse) => {
+          try {
+            const res = await api.post('/login', { token: resp.credential });
+            setUser(res.data);
+            if (btnRef.current) btnRef.current.innerHTML = '';
+          } catch (err: unknown) {
+            if (
+              axios.isAxiosError(err) &&
+              err.response?.data?.error === 'otp required'
+            ) {
+              setPendingCred(resp.credential);
+              setOtpOpen(true);
             }
           }
-        }
-      },
-    });
-    google.accounts.id.renderButton(btnRef.current, {
-      theme: 'outline',
-      size: 'small',
-      text: 'signin',
-    });
+        },
+      });
+      google.accounts.id.renderButton(btnRef.current, {
+        theme: 'outline',
+        size: 'small',
+        text: 'signin',
+      });
+    };
+
+    if (window.google) {
+      initialize();
+    } else {
+      const script = document.querySelector<HTMLScriptElement>(
+        'script[src="https://accounts.google.com/gsi/client"]'
+      );
+      script?.addEventListener('load', initialize);
+      return () => script?.removeEventListener('load', initialize);
+    }
   }, [user, setUser]);
 
   if (user) {
@@ -88,5 +102,60 @@ export default function GoogleLoginButton() {
       </div>
     );
   }
-  return <div ref={btnRef} className="h-5 capitalize" />;
+  return (
+    <>
+      <div ref={btnRef} className="h-5 capitalize" />
+      <Modal
+        open={otpOpen}
+        onClose={() => {
+          setOtpOpen(false);
+          setOtp('');
+          setPendingCred(null);
+        }}
+      >
+        <h2 className="text-lg font-bold mb-2">Enter 2FA code</h2>
+        <TextInput
+          value={otp}
+          onChange={(e) => setOtp(e.target.value)}
+          className="mb-4"
+        />
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setOtpOpen(false);
+              setOtp('');
+              setPendingCred(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!pendingCred) return;
+              try {
+                const res2 = await api.post('/login', {
+                  token: pendingCred,
+                  otp,
+                });
+                setUser(res2.data);
+                if (btnRef.current) btnRef.current.innerHTML = '';
+                setOtp('');
+                setPendingCred(null);
+                setOtpOpen(false);
+              } catch (err) {
+                if (axios.isAxiosError(err) && err.response?.data?.error) {
+                  toast.show(err.response.data.error);
+                } else {
+                  toast.show('Login failed');
+                }
+              }
+            }}
+          >
+            Confirm
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
 }
