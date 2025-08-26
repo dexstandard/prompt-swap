@@ -70,7 +70,12 @@ function validateAgentInput(
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
   }
-  if (body.model.length > 50) {
+  if (!body.model) {
+    if (body.status !== AgentStatus.Draft) {
+      log.error('model required');
+      return { code: 400, body: errorResponse('model required') };
+    }
+  } else if (body.model.length > 50) {
     log.error('model too long');
     return { code: 400, body: errorResponse(lengthMessage('model', 50)) };
   }

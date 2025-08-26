@@ -48,6 +48,10 @@ export default function AgentStartButton({
 
   async function startAgent() {
     if (!user) return;
+    if (!model) {
+      toast.show('Model is required');
+      return;
+    }
     setConfirmOpen(false);
     setIsCreating(true);
     try {

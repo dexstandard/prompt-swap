@@ -160,7 +160,7 @@ export default function AgentPreview({ draft }: Props) {
               )
             }
           />
-          <span>Enable Manual Rebalancing</span>
+          <span>Manual Rebalancing</span>
         </label>
         {!user && (
           <p className="text-sm text-gray-600 mb-2 mt-4">Log in to continue</p>
@@ -223,9 +223,7 @@ export default function AgentPreview({ draft }: Props) {
             draft={draft}
             agentData={agentData}
             model={model}
-            disabled={
-              !user || !hasOpenAIKey || !hasBinanceKey || (!model && !models.length)
-            }
+            disabled={!user || !hasOpenAIKey || !hasBinanceKey || !model}
           />
         </div>
       </div>

@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { fetchPairData } from './binance.js';
+import { fetchPairData, createLimitOrder } from './binance.js';
 
 export async function createRebalanceLimitOrder(opts: {
   userId: string;
@@ -33,5 +33,5 @@ export async function createRebalanceLimitOrder(opts: {
     price: currentPrice,
   } as const;
   log.info({ order: params }, 'creating limit order');
-  // TODO: enable real order execution with createLimitOrder(userId, params);
+  await createLimitOrder(userId, params);
 }

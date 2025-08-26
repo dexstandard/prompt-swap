@@ -339,7 +339,7 @@ describe('agent routes', () => {
 
     const basePayload = {
       userId: 'u1',
-      model: '',
+      model: 'm',
       name: 'Draft1',
       tokenA: 'BTC',
       tokenB: 'ETH',
@@ -590,6 +590,39 @@ describe('agent routes', () => {
     expect(resUpd.json().error).toContain('Draft1');
     expect(resUpd.json().error).toContain(draft1);
 
+    await app.close();
+  });
+
+  it('fails to start agent without model', async () => {
+    const app = await buildServer();
+    addUser('nomodel');
+    const payload = {
+      userId: 'nomodel',
+      model: '',
+      name: 'Draft',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      status: 'draft',
+    };
+    const resCreate = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      headers: { 'x-user-id': 'nomodel' },
+      payload,
+    });
+    const id = resCreate.json().id as string;
+    const resStart = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${id}/start`,
+      headers: { 'x-user-id': 'nomodel' },
+    });
+    expect(resStart.statusCode).toBe(400);
+    expect(resStart.json().error).toContain('model');
     await app.close();
   });
 

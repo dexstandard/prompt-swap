@@ -234,6 +234,10 @@ export default async function agentRoutes(app: FastifyInstance) {
       const ctx = getAgentForRequest(req, reply);
       if (!ctx) return;
       const { userId, id, log, agent: existing } = ctx;
+      if (!existing.model) {
+        log.error('missing model');
+        return reply.code(400).send(errorResponse('model required'));
+      }
       const conflict = validateTokenConflicts(
         log,
         userId,
