@@ -13,6 +13,7 @@ import CreateAgentForm from '../components/forms/CreateAgentForm';
 import PriceChart from '../components/forms/PriceChart';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useToast } from '../lib/useToast';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 
 interface Agent {
   id: string;
@@ -231,14 +232,16 @@ export default function Dashboard() {
 
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
   const items = data?.items ?? [];
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm('Delete this agent?');
-    if (!confirmed) {
-      return;
-    }
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await api.delete(`/agents/${id}`);
+      await api.delete(`/agents/${deleteId}`);
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       toast.show('Agent deleted', 'success');
     } catch (err) {
@@ -247,19 +250,22 @@ export default function Dashboard() {
       } else {
         toast.show('Failed to delete agent');
       }
+    } finally {
+      setDeleteId(null);
     }
   };
 
   return (
-    <div className="flex flex-col gap-3 w-full">
-      <div className="flex flex-col md:flex-row gap-3 items-stretch">
-        <div className="hidden md:flex flex-1">
-          <ErrorBoundary>
-            <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
-          </ErrorBoundary>
+    <>
+      <div className="flex flex-col gap-3 w-full">
+        <div className="flex flex-col md:flex-row gap-3 items-stretch">
+          <div className="hidden md:flex flex-1">
+            <ErrorBoundary>
+              <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
+            </ErrorBoundary>
+          </div>
+          <CreateAgentForm onTokensChange={handleTokensChange} />
         </div>
-        <CreateAgentForm onTokensChange={handleTokensChange} />
-      </div>
       <ErrorBoundary>
         <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
           <div className="flex items-center justify-between mb-4">
@@ -338,6 +344,13 @@ export default function Dashboard() {
           )}
         </div>
       </ErrorBoundary>
-    </div>
+      </div>
+      <ConfirmDialog
+        open={deleteId !== null}
+        message="Delete this agent?"
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
+    </>
   );
 }

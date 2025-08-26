@@ -6,6 +6,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import { useToast } from '../lib/useToast';
 import Button from './ui/Button';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 interface AgentPreviewDetails {
   name: string;
@@ -42,10 +43,10 @@ export default function AgentStartButton({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  async function handleStart() {
+  async function startAgent() {
     if (!user) return;
-    if (!window.confirm('Start agent with current settings?')) return;
     setIsCreating(true);
     try {
       if (draft) {
@@ -81,9 +82,24 @@ export default function AgentStartButton({
   }
 
   return (
-    <Button disabled={disabled || isCreating} loading={isCreating} onClick={handleStart}>
-      Start Agent
-    </Button>
+    <>
+      <Button
+        disabled={disabled || isCreating}
+        loading={isCreating}
+        onClick={() => setConfirmOpen(true)}
+      >
+        Start Agent
+      </Button>
+      <ConfirmDialog
+        open={confirmOpen}
+        message="Start agent with current settings?"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          startAgent();
+        }}
+      />
+    </>
   );
 }
 
