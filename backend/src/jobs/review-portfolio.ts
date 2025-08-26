@@ -384,6 +384,7 @@ async function executeAgent(
         positions: prompt.config.portfolio.positions,
         newAllocation: parsed.response.newAllocation,
         log,
+        execResultId: execLogId,
       });
     }
     log.info('agent run complete');

@@ -15,12 +15,13 @@ CREATE TABLE IF NOT EXISTS users(
 );
 
 CREATE TABLE IF NOT EXISTS executions(
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   user_id TEXT,
   planned_json TEXT,
-  sim_json TEXT,
-  tx_hash TEXT,
-  created_at INTEGER
+  status TEXT,
+  exec_result_id TEXT,
+  order_id TEXT,
+  created_at INTEGER DEFAULT (unixepoch() * 1000)
 );
 CREATE TABLE IF NOT EXISTS agents(
   id TEXT PRIMARY KEY,
