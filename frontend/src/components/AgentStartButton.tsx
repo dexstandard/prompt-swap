@@ -17,6 +17,7 @@ interface AgentPreviewDetails {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
 }
 
 interface AgentDraft extends AgentPreviewDetails {
@@ -47,6 +48,10 @@ export default function AgentStartButton({
 
   async function startAgent() {
     if (!user) return;
+    if (!model) {
+      toast.show('Model is required');
+      return;
+    }
     setConfirmOpen(false);
     setIsCreating(true);
     try {
@@ -67,6 +72,7 @@ export default function AgentStartButton({
           risk: agentData.risk,
           reviewInterval: agentData.reviewInterval,
           agentInstructions: agentData.agentInstructions,
+          manualRebalance: agentData.manualRebalance,
           status: 'active',
         });
         navigate(`/agents/${res.data.id}`);

@@ -29,6 +29,7 @@ export interface AgentInput {
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
   status: AgentStatus;
 }
 
@@ -69,7 +70,12 @@ function validateAgentInput(
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
   }
-  if (body.model.length > 50) {
+  if (!body.model) {
+    if (body.status !== AgentStatus.Draft) {
+      log.error('model required');
+      return { code: 400, body: errorResponse('model required') };
+    }
+  } else if (body.model.length > 50) {
     log.error('model too long');
     return { code: 400, body: errorResponse(lengthMessage('model', 50)) };
   }
@@ -86,6 +92,7 @@ function validateAgentInput(
         risk: body.risk,
         reviewInterval: body.reviewInterval,
         agentInstructions: body.agentInstructions,
+        manualRebalance: body.manualRebalance,
       },
       id,
     );
@@ -154,6 +161,7 @@ export async function prepareAgentForUpsert(
 ): Promise<{ body: AgentInput; startBalance: number | null } | ValidationErr> {
   let norm;
   try {
+    body.manualRebalance = !!body.manualRebalance;
     norm = validateAllocations(
       body.minTokenAAllocation,
       body.minTokenBAllocation,
