@@ -21,12 +21,3 @@ export function insertExecLog(entry: ExecLogEntry): void {
       entry.createdAt,
     );
 }
-
-export function getRecentExecLogs(agentId: string, limit: number) {
-  const rows = db
-    .prepare<unknown[], { response: string | null }>(
-      'SELECT response FROM agent_exec_log WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
-    )
-    .all(agentId, limit) as { response: string | null }[];
-  return rows.map((r) => ({ response: r.response }));
-}

@@ -1,10 +1,10 @@
 import { beforeEach, afterAll } from 'vitest';
 import { db, migrate } from '../src/db/index.js';
 
-beforeEach(() => {
-  migrate();
+beforeEach(async () => {
+  await migrate();
 });
 
-afterAll(() => {
-  db.close();
+afterAll(async () => {
+  await db.end();
 });

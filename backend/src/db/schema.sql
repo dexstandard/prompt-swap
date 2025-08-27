@@ -13,17 +13,17 @@ CREATE TABLE IF NOT EXISTS users(
 
 CREATE TABLE IF NOT EXISTS executions(
   id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL REFERENCES users(id),
   planned_json TEXT NOT NULL,
   status TEXT NOT NULL,
-  exec_result_id BIGINT,
+  exec_result_id BIGINT REFERENCES agent_exec_result(id),
   order_id TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
 CREATE TABLE IF NOT EXISTS agents(
   id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL REFERENCES users(id),
   model TEXT,
   status TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS agents(
 
 CREATE TABLE IF NOT EXISTS agent_exec_log(
   id BIGSERIAL PRIMARY KEY,
-  agent_id BIGINT NOT NULL,
+  agent_id BIGINT NOT NULL REFERENCES agents(id),
   prompt TEXT,
   response TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS agent_exec_log(
 
 CREATE TABLE IF NOT EXISTS agent_exec_result(
   id BIGSERIAL PRIMARY KEY,
-  agent_id BIGINT NOT NULL,
+  agent_id BIGINT NOT NULL REFERENCES agents(id),
   log TEXT,
   rebalance BOOLEAN,
   new_allocation REAL,

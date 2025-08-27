@@ -46,7 +46,7 @@ const baseSelect =
 
 export function getAgent(id: string) {
   return db
-    .prepare<[string], AgentRow>(`${baseSelect} WHERE id = $1`)
+    .prepare(`${baseSelect} WHERE id = $1`)
     .get(id) as AgentRow | undefined;
 }
 
