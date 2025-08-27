@@ -9,12 +9,12 @@ export function clearAgentExecLog() {
 
 export function getAgentExecResponses(agentId: string) {
   return db
-    .prepare('SELECT response FROM agent_exec_log WHERE agent_id = ?')
+    .prepare('SELECT response FROM agent_exec_log WHERE agent_id = $1')
     .all(agentId) as { response: string | null }[];
 }
 
 export function getAgentExecPromptsResponses(agentId: string) {
   return db
-    .prepare('SELECT prompt, response FROM agent_exec_log WHERE agent_id = ?')
+    .prepare('SELECT prompt, response FROM agent_exec_log WHERE agent_id = $1')
     .all(agentId) as { prompt: string | null; response: string | null }[];
 }

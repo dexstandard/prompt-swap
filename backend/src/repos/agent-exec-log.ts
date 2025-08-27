@@ -11,7 +11,7 @@ export interface ExecLogEntry {
 export function insertExecLog(entry: ExecLogEntry): void {
   db
     .prepare(
-      'INSERT INTO agent_exec_log (id, agent_id, prompt, response, created_at) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO agent_exec_log (id, agent_id, prompt, response, created_at) VALUES ($1, $2, $3, $4, $5)',
     )
     .run(
       entry.id,
@@ -25,7 +25,7 @@ export function insertExecLog(entry: ExecLogEntry): void {
 export function getRecentExecLogs(agentId: string, limit: number) {
   const rows = db
     .prepare<unknown[], { response: string | null }>(
-      'SELECT response FROM agent_exec_log WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?',
+      'SELECT response FROM agent_exec_log WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
     )
     .all(agentId, limit) as { response: string | null }[];
   return rows.map((r) => ({ response: r.response }));

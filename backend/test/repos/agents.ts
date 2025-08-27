@@ -14,5 +14,5 @@ export function clearAgents() {
 }
 
 export function setAgentStatus(id: string, status: string) {
-  db.prepare('UPDATE agents SET status = ? WHERE id = ?').run(status, id);
+  db.prepare('UPDATE agents SET status = $1 WHERE id = $2').run(status, id);
 }

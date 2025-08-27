@@ -10,7 +10,7 @@ export interface ExecutionEntry {
 export function insertExecution(entry: ExecutionEntry): void {
   db
     .prepare(
-      'INSERT INTO executions (user_id, planned_json, status, exec_result_id) VALUES (?, ?, ?, ?)',
+      'INSERT INTO executions (user_id, planned_json, status, exec_result_id) VALUES ($1, $2, $3, $4)',
     )
     .run(
       entry.userId,

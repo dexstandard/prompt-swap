@@ -12,7 +12,7 @@ export { setUserEmail, setUserEnabled };
 
 export function insertAdminUser(id: string, emailEnc?: string | null) {
   db.prepare(
-    "INSERT INTO users (id, role, is_enabled, email_enc) VALUES (?, 'admin', true, ?)"
+    "INSERT INTO users (id, role, is_enabled, email_enc) VALUES ($1, 'admin', true, $2)"
   ).run(id, emailEnc ?? null);
 }
 
@@ -22,6 +22,6 @@ export function clearUsers() {
 
 export function getUserEmailEnc(id: string) {
   return db
-    .prepare('SELECT email_enc FROM users WHERE id = ?')
+    .prepare('SELECT email_enc FROM users WHERE id = $1')
     .get(id) as { email_enc?: string } | undefined;
 }
