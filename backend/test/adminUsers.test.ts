@@ -1,18 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import buildServer from '../src/server.js';
-import { db } from '../src/db/index.js';
 import { encrypt } from '../src/util/crypto.js';
 import { env } from '../src/util/env.js';
+import { insertAdminUser, insertUser } from './repos/users.js';
+import { getUser } from '../src/repos/users.js';
 
 describe('admin user routes', () => {
   it('lists users for admin only', async () => {
     const app = await buildServer();
-    db.prepare(
-      "INSERT INTO users (id, is_auto_enabled, role, is_enabled, email_enc) VALUES ('admin1', 0, 'admin', 1, ?)"
-    ).run(encrypt('admin@example.com', env.KEY_PASSWORD));
-    db.prepare(
-      "INSERT INTO users (id, is_auto_enabled, role, is_enabled, email_enc) VALUES ('user1', 0, 'user', 1, ?)"
-    ).run(encrypt('user1@example.com', env.KEY_PASSWORD));
+    insertAdminUser('admin1', encrypt('admin@example.com', env.KEY_PASSWORD));
+    insertUser('user1', encrypt('user1@example.com', env.KEY_PASSWORD));
 
     const resForbidden = await app.inject({
       method: 'GET',
@@ -36,12 +33,8 @@ describe('admin user routes', () => {
 
   it('enables and disables users', async () => {
     const app = await buildServer();
-    db.prepare(
-      "INSERT INTO users (id, is_auto_enabled, role, is_enabled) VALUES ('admin2', 0, 'admin', 1)"
-    ).run();
-    db.prepare(
-      "INSERT INTO users (id, is_auto_enabled, role, is_enabled) VALUES ('user2', 0, 'user', 1)"
-    ).run();
+    insertAdminUser('admin2');
+    insertUser('user2');
 
     const resDisable = await app.inject({
       method: 'POST',
@@ -49,10 +42,8 @@ describe('admin user routes', () => {
       headers: { 'x-user-id': 'admin2' },
     });
     expect(resDisable.statusCode).toBe(200);
-    let row = db
-      .prepare('SELECT is_enabled FROM users WHERE id = ?')
-      .get('user2') as { is_enabled: number };
-    expect(row.is_enabled).toBe(0);
+    let row = getUser('user2');
+    expect(row?.is_enabled).toBe(0);
 
     const resEnable = await app.inject({
       method: 'POST',
@@ -60,10 +51,8 @@ describe('admin user routes', () => {
       headers: { 'x-user-id': 'admin2' },
     });
     expect(resEnable.statusCode).toBe(200);
-    row = db
-      .prepare('SELECT is_enabled FROM users WHERE id = ?')
-      .get('user2') as { is_enabled: number };
-    expect(row.is_enabled).toBe(1);
+    row = getUser('user2');
+    expect(row?.is_enabled).toBe(1);
 
     await app.close();
   });

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
+import { insertUser } from './repos/users.js';
+import { setBinanceKey } from '../src/repos/api-keys.js';
 
 describe('binance balance route', () => {
   it('returns aggregated balance for user', async () => {
@@ -10,9 +11,8 @@ describe('binance balance route', () => {
     const secret = 'binSecret123456';
     const encKey = encrypt(key, process.env.KEY_PASSWORD!);
     const encSecret = encrypt(secret, process.env.KEY_PASSWORD!);
-    db.prepare(
-      'INSERT INTO users (id, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?)'
-    ).run('user1', encKey, encSecret);
+    insertUser('user1');
+    setBinanceKey('user1', encKey, encSecret);
 
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
@@ -49,9 +49,8 @@ describe('binance balance route', () => {
     const secret = 'binSecret123456';
     const encKey = encrypt(key, process.env.KEY_PASSWORD!);
     const encSecret = encrypt(secret, process.env.KEY_PASSWORD!);
-    db.prepare(
-      'INSERT INTO users (id, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?)'
-    ).run('user2', encKey, encSecret);
+    insertUser('user2');
+    setBinanceKey('user2', encKey, encSecret);
 
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;

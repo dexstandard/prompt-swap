@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { db } from '../src/db/index.js';
 import { OAuth2Client } from 'google-auth-library';
 import { authenticator } from 'otplib';
 import buildServer from '../src/server.js';
 import { encrypt, decrypt } from '../src/util/crypto.js';
 import { env } from '../src/util/env.js';
+import { insertUser, getUserEmailEnc, setUserEnabled } from './repos/users.js';
+import { setUserTotpSecret } from '../src/repos/users.js';
 
 describe('login route', () => {
   it('creates user on first login', async () => {
@@ -21,11 +22,9 @@ describe('login route', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json() as any;
     expect(body.role).toBe('user');
-    const row = db
-      .prepare('SELECT email_enc FROM users WHERE id = ?')
-      .get('user123') as { email_enc: string } | undefined;
+    const row = getUserEmailEnc('user123');
     expect(row).toBeTruthy();
-    const email = decrypt(row!.email_enc, env.KEY_PASSWORD);
+    const email = decrypt(row!.email_enc!, env.KEY_PASSWORD);
     expect(email).toBe('user@example.com');
     await app.close();
   });
@@ -36,9 +35,8 @@ describe('login route', () => {
       getPayload: () => ({ sub: 'user2', email: 'user2@example.com' }),
     } as any);
     const secret = authenticator.generateSecret();
-    db.prepare(
-      'INSERT INTO users (id, is_auto_enabled, totp_secret_enc, is_totp_enabled) VALUES (?, 0, ?, 1)'
-    ).run('user2', encrypt(secret, env.KEY_PASSWORD));
+    insertUser('user2', encrypt('user2@example.com', env.KEY_PASSWORD));
+    setUserTotpSecret('user2', secret);
 
     const res1 = await app.inject({
       method: 'POST',
@@ -62,9 +60,8 @@ describe('login route', () => {
     vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
       getPayload: () => ({ sub: 'user3', email: 'u3@example.com' }),
     } as any);
-    db.prepare(
-      "INSERT INTO users (id, is_auto_enabled, role, is_enabled) VALUES (?, 0, 'user', 0)"
-    ).run('user3');
+    insertUser('user3', encrypt('u3@example.com', env.KEY_PASSWORD));
+    setUserEnabled('user3', false);
 
     const res = await app.inject({
       method: 'POST',

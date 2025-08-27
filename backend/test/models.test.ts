@@ -1,17 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
-import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
+import { insertUser } from './repos/users.js';
+import { setAiKey } from '../src/repos/api-keys.js';
 
 describe('model routes', () => {
   it('returns filtered models', async () => {
     const app = await buildServer();
     const key = 'aikey1234567890';
     const enc = encrypt(key, process.env.KEY_PASSWORD!);
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run(
-      'user1',
-      enc,
-    );
+    insertUser('user1', null);
+    setAiKey('user1', enc);
 
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
@@ -42,7 +41,7 @@ describe('model routes', () => {
 
   it('requires a key', async () => {
     const app = await buildServer();
-    db.prepare('INSERT INTO users (id) VALUES (?)').run('user2');
+    insertUser('user2');
     const res = await app.inject({
       method: 'GET',
       url: '/api/users/user2/models',
@@ -56,10 +55,8 @@ describe('model routes', () => {
     const app = await buildServer();
     const key = 'aikey9999999999';
     const enc = encrypt(key, process.env.KEY_PASSWORD!);
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run(
-      'user3',
-      enc,
-    );
+    insertUser('user3', null);
+    setAiKey('user3', enc);
 
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;

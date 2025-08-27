@@ -1,0 +1,8 @@
+import { db } from '../../src/db/index.js';
+import { insertExecResult as insertExecResultProd } from '../../src/repos/agent-exec-result.js';
+
+export const insertExecResult = insertExecResultProd;
+
+export function clearAgentExecResult() {
+  db.prepare('DELETE FROM agent_exec_result').run();
+}

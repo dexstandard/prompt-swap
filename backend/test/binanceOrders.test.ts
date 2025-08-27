@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { db } from '../src/db/index.js';
 import { encrypt } from '../src/util/crypto.js';
+import { insertUser, clearUsers } from './repos/users.js';
+import { setBinanceKey } from '../src/repos/api-keys.js';
 import { createHmac } from 'node:crypto';
 import {
   createLimitOrder,
@@ -10,7 +11,7 @@ import {
 describe('binance order helpers', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    db.prepare('DELETE FROM users').run();
+    clearUsers();
   });
 
   it('creates a signed limit order', async () => {
@@ -18,9 +19,8 @@ describe('binance order helpers', () => {
     const secret = 'binSecret123456';
     const encKey = encrypt(key, process.env.KEY_PASSWORD!);
     const encSecret = encrypt(secret, process.env.KEY_PASSWORD!);
-    db.prepare(
-      'INSERT INTO users (id, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?)'
-    ).run('user1', encKey, encSecret);
+    insertUser('user1');
+    setBinanceKey('user1', encKey, encSecret);
 
     const fetchMock = vi
       .fn()
@@ -53,9 +53,8 @@ describe('binance order helpers', () => {
     const secret = 'binSecret654321';
     const encKey = encrypt(key, process.env.KEY_PASSWORD!);
     const encSecret = encrypt(secret, process.env.KEY_PASSWORD!);
-    db.prepare(
-      'INSERT INTO users (id, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?)'
-    ).run('user2', encKey, encSecret);
+    insertUser('user2');
+    setBinanceKey('user2', encKey, encSecret);
 
     const fetchMock = vi
       .fn()

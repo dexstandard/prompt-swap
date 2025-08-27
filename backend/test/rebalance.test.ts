@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { db } from '../src/db/index.js';
+import { clearExecutions, getExecutions } from './repos/executions.js';
 
 vi.mock('../src/services/binance.js', () => ({
   fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
@@ -13,7 +13,7 @@ import { createLimitOrder } from '../src/services/binance.js';
 describe('createRebalanceLimitOrder', () => {
   it('saves execution with status and exec result', async () => {
     const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    db.prepare('DELETE FROM executions').run();
+    clearExecutions();
     await createRebalanceLimitOrder({
       userId: 'user1',
       tokenA: 'BTC',
@@ -27,9 +27,7 @@ describe('createRebalanceLimitOrder', () => {
       execResultId: 'res1',
     });
 
-    const row = db
-      .prepare('SELECT user_id, planned_json, status, exec_result_id FROM executions')
-      .get() as any;
+    const row = getExecutions()[0];
 
     expect(row.user_id).toBe('user1');
     expect(JSON.parse(row.planned_json)).toMatchObject({
