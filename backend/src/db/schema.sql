@@ -1,34 +1,35 @@
 CREATE TABLE IF NOT EXISTS users(
-  id TEXT PRIMARY KEY,
+  id BIGSERIAL PRIMARY KEY,
   is_auto_enabled INTEGER,
   role TEXT DEFAULT 'user',
   is_enabled INTEGER DEFAULT 1,
   policy_json TEXT,
-  session_key_expires_at INTEGER,
+  session_key_expires_at BIGINT,
   ai_api_key_enc TEXT,
   binance_api_key_enc TEXT,
   binance_api_secret_enc TEXT,
   totp_secret_enc TEXT,
   is_totp_enabled INTEGER DEFAULT 0,
   email_enc TEXT,
-  created_at INTEGER DEFAULT (unixepoch() * 1000)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS executions(
-  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-  user_id TEXT,
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT,
   planned_json TEXT,
   status TEXT,
-  exec_result_id TEXT,
+  exec_result_id BIGINT,
   order_id TEXT,
-  created_at INTEGER DEFAULT (unixepoch() * 1000)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE TABLE IF NOT EXISTS agents(
-  id TEXT PRIMARY KEY,
-  user_id TEXT,
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT,
   model TEXT,
   status TEXT,
-  created_at INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   start_balance REAL,
   name TEXT,
   token_a TEXT,
@@ -42,22 +43,22 @@ CREATE TABLE IF NOT EXISTS agents(
 );
 
 CREATE TABLE IF NOT EXISTS agent_exec_log(
-  id TEXT PRIMARY KEY,
-  agent_id TEXT,
+  id BIGSERIAL PRIMARY KEY,
+  agent_id BIGINT,
   prompt TEXT,
   response TEXT,
-  created_at INTEGER
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS agent_exec_result(
-  id TEXT PRIMARY KEY,
-  agent_id TEXT,
+  id BIGSERIAL PRIMARY KEY,
+  agent_id BIGINT,
   log TEXT,
   rebalance INTEGER,
   new_allocation REAL,
   short_report TEXT,
   error TEXT,
-  created_at INTEGER
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_exec_result_agent_id_created_at
