@@ -1,11 +1,17 @@
 import { db } from '../../src/db/index.js';
 
-export function clearExecutions() {
-  db.prepare('DELETE FROM executions').run();
+export async function clearExecutions() {
+  await db.query('DELETE FROM executions');
 }
 
-export function getExecutions() {
-  return db
-    .prepare('SELECT user_id, planned_json, status, exec_result_id FROM executions')
-    .all() as { user_id: string; planned_json: string; status: string; exec_result_id: string }[];
+export async function getExecutions() {
+  const { rows } = await db.query(
+    'SELECT user_id, planned_json, status, exec_result_id FROM executions',
+  );
+  return rows as {
+    user_id: string;
+    planned_json: string;
+    status: string;
+    exec_result_id: string;
+  }[];
 }

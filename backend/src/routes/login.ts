@@ -34,15 +34,15 @@ export default async function loginRoutes(app: FastifyInstance) {
       if (!payload?.sub)
         return reply.code(400).send({ error: 'invalid token' });
       const id = payload.sub;
-      const row = getUser(id);
+      const row = await getUser(id);
       const emailEnc = payload.email
         ? encrypt(payload.email, env.KEY_PASSWORD)
         : null;
       if (!row) {
-        insertUser(id, emailEnc);
+        await insertUser(id, emailEnc);
         return { id, email: payload.email, role: 'user' };
       }
-      if (emailEnc) setUserEmail(id, emailEnc);
+      if (emailEnc) await setUserEmail(id, emailEnc);
       if (!row.is_enabled) {
         return reply.code(403).send({ error: 'user disabled' });
       }

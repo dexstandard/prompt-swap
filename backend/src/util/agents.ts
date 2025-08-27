@@ -38,14 +38,14 @@ export interface ValidationErr {
   body: unknown;
 }
 
-export function validateTokenConflicts(
+export async function validateTokenConflicts(
   log: Logger,
   userId: string,
   tokenA: string,
   tokenB: string,
   id?: string,
-): ValidationErr | null {
-  const dupRows = findActiveTokenConflicts(userId, tokenA, tokenB, id);
+): Promise<ValidationErr | null> {
+  const dupRows = await findActiveTokenConflicts(userId, tokenA, tokenB, id);
   if (!dupRows.length) return null;
   const conflicts: { token: string; id: string; name: string }[] = [];
   for (const row of dupRows) {
@@ -60,12 +60,12 @@ export function validateTokenConflicts(
   return { code: 400, body: errorResponse(msg) };
 }
 
-function validateAgentInput(
+async function validateAgentInput(
   log: Logger,
   userId: string,
   body: AgentInput,
   id?: string,
-): ValidationErr | null {
+): Promise<ValidationErr | null> {
   if (body.userId !== userId) {
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
@@ -80,7 +80,7 @@ function validateAgentInput(
     return { code: 400, body: errorResponse(lengthMessage('model', 50)) };
   }
   if (body.status === AgentStatus.Draft) {
-    const dupDraft = findIdenticalDraftAgent(
+    const dupDraft = await findIdenticalDraftAgent(
       {
         userId: body.userId,
         model: body.model,
@@ -106,7 +106,7 @@ function validateAgentInput(
       };
     }
   } else {
-    const conflict = validateTokenConflicts(
+    const conflict = await validateTokenConflicts(
       log,
       body.userId,
       body.tokenA,
@@ -118,11 +118,11 @@ function validateAgentInput(
   return null;
 }
 
-export function ensureApiKeys(
+export async function ensureApiKeys(
   log: Logger,
   userId: string,
-): ValidationErr | null {
-  const userRow = getUserApiKeys(userId);
+): Promise<ValidationErr | null> {
+  const userRow = await getUserApiKeys(userId);
   if (
     !userRow?.ai_api_key_enc ||
     !userRow.binance_api_key_enc ||
@@ -175,7 +175,7 @@ export async function prepareAgentForUpsert(
   }
   body.minTokenAAllocation = norm.minTokenAAllocation;
   body.minTokenBAllocation = norm.minTokenBAllocation;
-  const err = validateAgentInput(log, userId, body, id);
+  const err = await validateAgentInput(log, userId, body, id);
   if (err) return err;
   let startBalance: number | null = null;
   if (body.status === AgentStatus.Active) {

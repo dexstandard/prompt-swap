@@ -10,10 +10,11 @@ export default async function usersRoutes(app: FastifyInstance) {
   app.get(
     '/users',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
-    (req, reply) => {
-      const adminId = requireAdmin(req, reply);
+    async (req, reply) => {
+      const adminId = await requireAdmin(req, reply);
       if (!adminId) return;
-      return listUsers().map((u) => ({
+      const rows = await listUsers();
+      return rows.map((u) => ({
         id: u.id,
         role: u.role,
         isEnabled: !!u.is_enabled,
@@ -26,13 +27,13 @@ export default async function usersRoutes(app: FastifyInstance) {
   app.post(
     '/users/:id/enable',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
-    (req, reply) => {
-      const adminId = requireAdmin(req, reply);
+    async (req, reply) => {
+      const adminId = await requireAdmin(req, reply);
       if (!adminId) return;
       const { id } = req.params as { id: string };
-      const row = getUser(id);
+      const row = await getUser(id);
       if (!row) return reply.code(404).send(errorResponse('user not found'));
-      setUserEnabled(id, true);
+      await setUserEnabled(id, true);
       return { ok: true };
     },
   );
@@ -40,13 +41,13 @@ export default async function usersRoutes(app: FastifyInstance) {
   app.post(
     '/users/:id/disable',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
-    (req, reply) => {
-      const adminId = requireAdmin(req, reply);
+    async (req, reply) => {
+      const adminId = await requireAdmin(req, reply);
       if (!adminId) return;
       const { id } = req.params as { id: string };
-      const row = getUser(id);
+      const row = await getUser(id);
       if (!row) return reply.code(404).send(errorResponse('user not found'));
-      setUserEnabled(id, false);
+      await setUserEnabled(id, false);
       return { ok: true };
     },
   );

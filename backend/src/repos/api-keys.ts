@@ -1,44 +1,43 @@
 import { db } from '../db/index.js';
 
-export function getAiKeyRow(id: string) {
-  return db
-    .prepare('SELECT ai_api_key_enc FROM users WHERE id = $1')
-    .get(id) as { ai_api_key_enc?: string } | undefined;
+export async function getAiKeyRow(id: string) {
+  const { rows } = await db.query('SELECT ai_api_key_enc FROM users WHERE id = $1', [id]);
+  return rows[0] as { ai_api_key_enc?: string } | undefined;
 }
 
-export function setAiKey(id: string, enc: string) {
-  db.prepare('UPDATE users SET ai_api_key_enc = $1 WHERE id = $2').run(enc, id);
+export async function setAiKey(id: string, enc: string) {
+  await db.query('UPDATE users SET ai_api_key_enc = $1 WHERE id = $2', [enc, id]);
 }
 
-export function clearAiKey(id: string) {
-  db.prepare('UPDATE users SET ai_api_key_enc = NULL WHERE id = $1').run(id);
+export async function clearAiKey(id: string) {
+  await db.query('UPDATE users SET ai_api_key_enc = NULL WHERE id = $1', [id]);
 }
 
-export function getBinanceKeyRow(id: string) {
-  return db
-    .prepare(
-      'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = $1',
-    )
-    .get(id) as
+export async function getBinanceKeyRow(id: string) {
+  const { rows } = await db.query(
+    'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = $1',
+    [id],
+  );
+  return rows[0] as
     | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
     | undefined;
 }
 
-export function setBinanceKey(
+export async function setBinanceKey(
   id: string,
   keyEnc: string,
   secretEnc: string,
-) {
-  db.prepare(
+): Promise<void> {
+  await db.query(
     'UPDATE users SET binance_api_key_enc = $1, binance_api_secret_enc = $2 WHERE id = $3',
-  ).run(keyEnc, secretEnc, id);
+    [keyEnc, secretEnc, id],
+  );
 }
 
-export function clearBinanceKey(id: string) {
-  db
-    .prepare(
-      'UPDATE users SET binance_api_key_enc = NULL, binance_api_secret_enc = NULL WHERE id = $1',
-    )
-    .run(id);
+export async function clearBinanceKey(id: string): Promise<void> {
+  await db.query(
+    'UPDATE users SET binance_api_key_enc = NULL, binance_api_secret_enc = NULL WHERE id = $1',
+    [id],
+  );
 }
 

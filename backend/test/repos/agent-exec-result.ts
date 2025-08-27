@@ -3,6 +3,6 @@ import { insertExecResult as insertExecResultProd } from '../../src/repos/agent-
 
 export const insertExecResult = insertExecResultProd;
 
-export function clearAgentExecResult() {
-  db.prepare('DELETE FROM agent_exec_result').run();
+export async function clearAgentExecResult() {
+  await db.query('DELETE FROM agent_exec_result');
 }

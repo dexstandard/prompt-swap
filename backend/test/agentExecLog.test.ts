@@ -11,11 +11,11 @@ import { insertExecLog } from './repos/agent-exec-log.js';
 describe('agent exec log routes', () => {
   it('returns paginated logs and enforces ownership', async () => {
     const app = await buildServer();
-    insertUser('u1');
-    insertUser('u2');
+    await insertUser('u1');
+    await insertUser('u2');
 
     const agentId = 'a1';
-    insertAgent({
+    await insertAgent({
       id: agentId,
       userId: 'u1',
       model: 'gpt',
@@ -34,14 +34,14 @@ describe('agent exec log routes', () => {
     });
 
     for (let i = 0; i < 3; i++) {
-      insertExecLog({
+      await insertExecLog({
         id: `log${i}`,
         agentId,
         response: `log-${i}`,
         createdAt: i,
       });
       const parsed = parseExecLog(`log-${i}`);
-      insertExecResult({
+      await insertExecResult({
         id: `log${i}`,
         agentId,
         log: parsed.text,
@@ -78,10 +78,10 @@ describe('agent exec log routes', () => {
 
   it('parses OpenAI response content JSON into {response}', async () => {
     const app = await buildServer();
-    insertUser('u3');
+    await insertUser('u3');
 
     const agentId = 'a2';
-    insertAgent({
+    await insertAgent({
       id: agentId,
       userId: 'u3',
       model: 'gpt',
@@ -104,9 +104,9 @@ describe('agent exec log routes', () => {
       'utf8',
     );
 
-    insertExecLog({ id: 'log-new', agentId, response: aiLog, createdAt: 0 });
+    await insertExecLog({ id: 'log-new', agentId, response: aiLog, createdAt: 0 });
     const parsedAi = parseExecLog(aiLog);
-    insertExecResult({
+    await insertExecResult({
       id: 'log-new',
       agentId,
       log: parsedAi.text,
@@ -146,9 +146,9 @@ describe('agent exec log routes', () => {
 
   it('handles exec log entries with prompt wrapper', async () => {
     const app = await buildServer();
-    insertUser('u5');
+    await insertUser('u5');
     const agentId = 'a5';
-    insertAgent({
+    await insertAgent({
       id: agentId,
       userId: 'u5',
       model: 'gpt',
@@ -166,9 +166,9 @@ describe('agent exec log routes', () => {
       manualRebalance: false,
     });
     const entry = JSON.stringify({ prompt: { instructions: 'inst' }, response: 'ok' });
-    insertExecLog({ id: 'logp', agentId, response: entry, createdAt: 0 });
+    await insertExecLog({ id: 'logp', agentId, response: entry, createdAt: 0 });
     const parsedP = parseExecLog(entry);
-    insertExecResult({
+    await insertExecResult({
       id: 'logp',
       agentId,
       log: parsedP.text,

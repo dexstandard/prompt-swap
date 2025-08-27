@@ -14,13 +14,13 @@ export function requireUserId(
   return userId;
 }
 
-export function requireAdmin(
+export async function requireAdmin(
   req: FastifyRequest,
   reply: FastifyReply
-): string | null {
+): Promise<string | null> {
   const userId = requireUserId(req, reply);
   if (!userId) return null;
-  const row = getUser(userId);
+  const row = await getUser(userId);
   if (!row || row.role !== 'admin' || !row.is_enabled) {
     reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
     return null;

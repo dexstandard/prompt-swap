@@ -14,9 +14,9 @@ vi.mock('../src/jobs/review-portfolio.js', () => ({
 describe('manual review endpoint', () => {
   it('triggers portfolio review', async () => {
     const app = await buildServer();
-    insertUser('u1');
+    await insertUser('u1');
     const agentId = 'a1';
-    insertAgent({
+    await insertAgent({
       id: agentId,
       userId: 'u1',
       model: 'gpt',
@@ -48,9 +48,9 @@ describe('manual review endpoint', () => {
 
   it('returns error when agent is already reviewing', async () => {
     const app = await buildServer();
-    insertUser('u2');
+    await insertUser('u2');
     const agentId = 'b1';
-    insertAgent({
+    await insertAgent({
       id: agentId,
       userId: 'u2',
       model: 'gpt',
