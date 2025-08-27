@@ -54,7 +54,7 @@ export default async function loginRoutes(app: FastifyInstance) {
 }
 
 function validateOtp(
-  row: { totp_secret?: string; is_totp_enabled?: number },
+  row: { totp_secret?: string; is_totp_enabled?: boolean },
   otp: string | undefined,
 ): ValidationErr | null {
   if (row.is_totp_enabled && row.totp_secret) {

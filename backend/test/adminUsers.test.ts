@@ -27,7 +27,7 @@ describe('admin user routes', () => {
     const body = res.json() as any[];
     const user = body.find((u) => u.id === 'user1');
     expect(user.email).toBe('user1@example.com');
-    expect(typeof user.createdAt).toBe('number');
+    expect(typeof user.createdAt).toBe('string');
     await app.close();
   });
 
@@ -43,7 +43,7 @@ describe('admin user routes', () => {
     });
     expect(resDisable.statusCode).toBe(200);
     let row = getUser('user2');
-    expect(row?.is_enabled).toBe(0);
+    expect(row?.is_enabled).toBe(false);
 
     const resEnable = await app.inject({
       method: 'POST',
@@ -52,7 +52,7 @@ describe('admin user routes', () => {
     });
     expect(resEnable.statusCode).toBe(200);
     row = getUser('user2');
-    expect(row?.is_enabled).toBe(1);
+    expect(row?.is_enabled).toBe(true);
 
     await app.close();
   });

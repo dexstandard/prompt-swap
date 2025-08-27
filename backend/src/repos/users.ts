@@ -4,9 +4,9 @@ import { env } from '../util/env.js';
 
 export interface UserRow {
   totp_secret?: string;
-  is_totp_enabled?: number;
+  is_totp_enabled?: boolean;
   role: string;
-  is_enabled: number;
+  is_enabled: boolean;
 }
 
 export function getUser(id: string) {
@@ -16,9 +16,9 @@ export function getUser(id: string) {
     )
     .get(id) as {
       totp_secret_enc?: string;
-      is_totp_enabled?: number;
+      is_totp_enabled?: boolean;
       role: string;
-      is_enabled: number;
+      is_enabled: boolean;
     } | undefined;
   if (!row) return undefined;
   return {
@@ -33,7 +33,7 @@ export function getUser(id: string) {
 
 export function insertUser(id: string, emailEnc: string | null) {
   db.prepare(
-    "INSERT INTO users (id, is_auto_enabled, role, is_enabled, email_enc) VALUES (?, 0, 'user', 1, ?)"
+    "INSERT INTO users (id, role, is_enabled, email_enc) VALUES (?, 'user', true, ?)"
   ).run(id, emailEnc);
 }
 
@@ -47,15 +47,15 @@ export function listUsers() {
     .all() as {
       id: string;
       role: string;
-      is_enabled: number;
+      is_enabled: boolean;
       email_enc?: string;
-      created_at: number;
+      created_at: string;
     }[];
 }
 
 export function setUserEnabled(id: string, enabled: boolean) {
   db.prepare('UPDATE users SET is_enabled = ? WHERE id = ?').run(
-    enabled ? 1 : 0,
+    enabled,
     id,
   );
 }
@@ -63,13 +63,13 @@ export function setUserEnabled(id: string, enabled: boolean) {
 export function getUserTotpStatus(id: string) {
   const row = db
     .prepare('SELECT is_totp_enabled FROM users WHERE id = ?')
-    .get(id) as { is_totp_enabled?: number } | undefined;
+    .get(id) as { is_totp_enabled?: boolean } | undefined;
   return !!row?.is_totp_enabled;
 }
 
 export function setUserTotpSecret(id: string, secret: string) {
   const enc = encrypt(secret, env.KEY_PASSWORD);
-  db.prepare('UPDATE users SET totp_secret_enc = ?, is_totp_enabled = 1 WHERE id = ?').run(
+  db.prepare('UPDATE users SET totp_secret_enc = ?, is_totp_enabled = true WHERE id = ?').run(
     enc,
     id,
   );
@@ -84,7 +84,7 @@ export function getUserTotpSecret(id: string) {
 }
 
 export function clearUserTotp(id: string) {
-  db.prepare('UPDATE users SET totp_secret_enc = NULL, is_totp_enabled = 0 WHERE id = ?').run(
+  db.prepare('UPDATE users SET totp_secret_enc = NULL, is_totp_enabled = false WHERE id = ?').run(
     id,
   );
 }

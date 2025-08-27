@@ -12,7 +12,7 @@ export { setUserEmail, setUserEnabled };
 
 export function insertAdminUser(id: string, emailEnc?: string | null) {
   db.prepare(
-    "INSERT INTO users (id, is_auto_enabled, role, is_enabled, email_enc) VALUES (?, 0, 'admin', 1, ?)"
+    "INSERT INTO users (id, role, is_enabled, email_enc) VALUES (?, 'admin', true, ?)"
   ).run(id, emailEnc ?? null);
 }
 
