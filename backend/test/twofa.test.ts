@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
 import { authenticator } from 'otplib';
+import { insertUser } from './repos/users.js';
 
 describe('2fa routes', () => {
   it('enables and disables 2fa', async () => {
-    db.prepare('INSERT INTO users (id, is_auto_enabled) VALUES (?,0)').run('user1');
+    insertUser('user1');
     const app = await buildServer();
 
     const setupRes = await app.inject({

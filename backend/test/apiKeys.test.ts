@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
+import { insertUser } from './repos/users.js';
+import { getAiKeyRow, getBinanceKeyRow } from '../src/repos/api-keys.js';
 
 describe('AI API key routes', () => {
   it('performs CRUD operations', async () => {
     const app = await buildServer();
-    db.prepare('INSERT INTO users (id) VALUES (?)').run('user1');
+    insertUser('user1');
 
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
@@ -22,10 +23,8 @@ describe('AI API key routes', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
-    let row = db
-      .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
-      .get('user1') as any;
-    expect(row.ai_api_key_enc).toBeNull();
+    let row = getAiKeyRow('user1');
+    expect(row!.ai_api_key_enc).toBeNull();
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
     res = await app.inject({
@@ -35,10 +34,8 @@ describe('AI API key routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ key: 'aike...7890' });
-    row = db
-      .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
-      .get('user1') as any;
-    expect(row.ai_api_key_enc).not.toBe(key1);
+    row = getAiKeyRow('user1');
+    expect(row!.ai_api_key_enc).not.toBe(key1);
 
     res = await app.inject({ method: 'GET', url: '/api/users/user1/ai-key' });
     expect(res.statusCode).toBe(200);
@@ -85,7 +82,7 @@ describe('AI API key routes', () => {
 describe('Binance API key routes', () => {
   it('performs CRUD operations', async () => {
     const app = await buildServer();
-    db.prepare('INSERT INTO users (id) VALUES (?)').run('user2');
+    insertUser('user2');
 
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
@@ -104,13 +101,9 @@ describe('Binance API key routes', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
-    let row = db
-      .prepare(
-        'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
-      )
-      .get('user2') as any;
-    expect(row.binance_api_key_enc).toBeNull();
-    expect(row.binance_api_secret_enc).toBeNull();
+    let row = getBinanceKeyRow('user2');
+    expect(row!.binance_api_key_enc).toBeNull();
+    expect(row!.binance_api_secret_enc).toBeNull();
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
     res = await app.inject({
@@ -123,13 +116,9 @@ describe('Binance API key routes', () => {
       key: 'bkey...7890',
       secret: 'bsec...7890',
     });
-    row = db
-      .prepare(
-        'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
-      )
-      .get('user2') as any;
-    expect(row.binance_api_key_enc).not.toBe(key1);
-    expect(row.binance_api_secret_enc).not.toBe(secret1);
+    row = getBinanceKeyRow('user2');
+    expect(row!.binance_api_key_enc).not.toBe(key1);
+    expect(row!.binance_api_secret_enc).not.toBe(secret1);
 
     res = await app.inject({ method: 'GET', url: '/api/users/user2/binance-key' });
     expect(res.statusCode).toBe(200);

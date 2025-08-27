@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { db } from '../src/db/index.js';
+import { insertUser } from './repos/users.js';
+import { setAiKey, setBinanceKey } from '../src/repos/api-keys.js';
 
 const reviewAgentPortfolioMock = vi.fn<
   (log: unknown, agentId: string) => Promise<unknown>
@@ -15,9 +16,9 @@ function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
   const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
   const bs = encrypt('skey', process.env.KEY_PASSWORD!);
-  db.prepare(
-    'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
-  ).run(id, ai, bk, bs);
+  insertUser(id, null);
+  setAiKey(id, ai);
+  setBinanceKey(id, bk, bs);
 }
 
 describe('agent start', () => {

@@ -1,18 +1,12 @@
-import { db } from '../db/index.js';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import { createHmac } from 'node:crypto';
+import { getBinanceKeyRow } from '../repos/api-keys.js';
 
 type UserCreds = { key: string; secret: string };
 
 function getUserCreds(id: string): UserCreds | null {
-  const row = db
-    .prepare(
-      'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
-    )
-    .get(id) as
-    | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
-    | undefined;
+  const row = getBinanceKeyRow(id);
   if (!row?.binance_api_key_enc || !row.binance_api_secret_enc) return null;
   const key = decrypt(row.binance_api_key_enc, env.KEY_PASSWORD);
   const secret = decrypt(row.binance_api_secret_enc, env.KEY_PASSWORD);

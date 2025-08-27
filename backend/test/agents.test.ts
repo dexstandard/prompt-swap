@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
-import { getActiveAgents } from '../src/repos/agents.js';
+import { getActiveAgents, getAgent } from '../src/repos/agents.js';
+import { insertUser } from './repos/users.js';
+import { setAiKey, setBinanceKey } from '../src/repos/api-keys.js';
+import { setAgentStatus } from './repos/agents.js';
 
 vi.mock('../src/jobs/review-portfolio.js', () => ({
   reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
@@ -12,13 +14,13 @@ function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
   const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
   const bs = encrypt('skey', process.env.KEY_PASSWORD!);
-  db.prepare(
-    'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
-  ).run(id, ai, bk, bs);
+  insertUser(id, null);
+  setAiKey(id, ai);
+  setBinanceKey(id, bk, bs);
 }
 
 function addUserNoKeys(id: string) {
-  db.prepare('INSERT INTO users (id) VALUES (?)').run(id);
+  insertUser(id);
 }
 
 describe('agent routes', () => {
@@ -323,10 +325,8 @@ describe('agent routes', () => {
       payload: updatePayload,
     });
     expect(resUpdate.statusCode).toBe(200);
-    const row = db
-      .prepare('SELECT start_balance FROM agents WHERE id = ?')
-      .get(id) as { start_balance: number };
-    expect(row.start_balance).toBeGreaterThanOrEqual(0);
+    const row = getAgent(id);
+    expect(row?.start_balance).toBeGreaterThanOrEqual(0);
     expect(fetchMock).toHaveBeenCalledTimes(4);
 
     await app.close();
@@ -485,7 +485,7 @@ describe('agent routes', () => {
     expect(resDup.json().error).toContain('A1');
     expect(resDup.json().error).toContain(existingId);
 
-    db.prepare('UPDATE agents SET status = ? WHERE id = ?').run('inactive', existingId);
+    setAgentStatus(existingId, 'inactive');
 
     const resOk = await app.inject({
       method: 'POST',
