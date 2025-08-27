@@ -176,7 +176,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       '/agents/:id',
       { config: { rateLimit: RATE_LIMITS.TIGHT } },
       async (req, reply) => {
-        const ctx = getAgentForRequest(req, reply);
+        const ctx = await getAgentForRequest(req, reply);
         if (!ctx) return;
         const { userId, id, log } = ctx;
         const body = req.body as AgentInput;

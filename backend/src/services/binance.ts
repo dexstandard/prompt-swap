@@ -5,8 +5,8 @@ import { getBinanceKeyRow } from '../repos/api-keys.js';
 
 type UserCreds = { key: string; secret: string };
 
-function getUserCreds(id: string): UserCreds | null {
-  const row = getBinanceKeyRow(id);
+async function getUserCreds(id: string): Promise<UserCreds | null> {
+  const row = await getBinanceKeyRow(id);
   if (!row?.binance_api_key_enc || !row.binance_api_secret_enc) return null;
   const key = decrypt(row.binance_api_key_enc, env.KEY_PASSWORD);
   const secret = decrypt(row.binance_api_secret_enc, env.KEY_PASSWORD);
@@ -14,7 +14,7 @@ function getUserCreds(id: string): UserCreds | null {
 }
 
 export async function fetchAccount(id: string) {
-  const creds = getUserCreds(id);
+  const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
   const query = `timestamp=${timestamp}`;
@@ -77,7 +77,7 @@ export async function createLimitOrder(
   id: string,
   opts: { symbol: string; side: 'BUY' | 'SELL'; quantity: number; price: number }
 ) {
-  const creds = getUserCreds(id);
+  const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
   const params = new URLSearchParams({
@@ -112,7 +112,7 @@ export async function cancelOrder(
   id: string,
   opts: { symbol: string; orderId: number }
 ) {
-  const creds = getUserCreds(id);
+  const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
   const params = new URLSearchParams({

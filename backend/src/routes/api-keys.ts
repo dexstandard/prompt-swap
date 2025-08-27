@@ -26,7 +26,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       const { key } = req.body as { key: string };
-      const row = getAiKeyRow(id);
+      const row = await getAiKeyRow(id);
       let err = ensureUser(row);
       if (err) return reply.code(err.code).send(err.body);
       err = ensureKeyAbsent(row, ['ai_api_key_enc']);
@@ -34,7 +34,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       if (!(await verifyApiKey(ApiKeyType.Ai, key)))
         return reply.code(400).send({ error: 'verification failed' });
       const enc = encryptKey(key);
-      setAiKey(id, enc);
+      await setAiKey(id, enc);
       return { key: redactKey(key) };
     },
   );
@@ -44,7 +44,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const row = getAiKeyRow(id);
+      const row = await getAiKeyRow(id);
       const err = ensureKeyPresent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
       const key = decryptKey(row!.ai_api_key_enc!);
@@ -58,13 +58,13 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       const { key } = req.body as { key: string };
-      const row = getAiKeyRow(id);
+      const row = await getAiKeyRow(id);
       const err = ensureKeyPresent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
       if (!(await verifyApiKey(ApiKeyType.Ai, key)))
         return reply.code(400).send({ error: 'verification failed' });
       const enc = encryptKey(key);
-      setAiKey(id, enc);
+      await setAiKey(id, enc);
       return { key: redactKey(key) };
     },
   );
@@ -74,10 +74,10 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const row = getAiKeyRow(id);
+      const row = await getAiKeyRow(id);
       const err = ensureKeyPresent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
-      clearAiKey(id);
+      await clearAiKey(id);
       return { ok: true };
     },
   );
@@ -88,7 +88,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       const { key, secret } = req.body as { key: string; secret: string };
-      const row = getBinanceKeyRow(id);
+      const row = await getBinanceKeyRow(id);
       let err = ensureUser(row);
       if (err) return reply.code(err.code).send(err.body);
       err = ensureKeyAbsent(row, ['binance_api_key_enc', 'binance_api_secret_enc']);
@@ -97,7 +97,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'verification failed' });
       const encKey = encryptKey(key);
       const encSecret = encryptKey(secret);
-      setBinanceKey(id, encKey, encSecret);
+      await setBinanceKey(id, encKey, encSecret);
       return { key: redactKey(key), secret: redactKey(secret) };
     },
   );
@@ -107,7 +107,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const row = getBinanceKeyRow(id);
+      const row = await getBinanceKeyRow(id);
       const err = ensureKeyPresent(row, [
         'binance_api_key_enc',
         'binance_api_secret_enc',
@@ -125,7 +125,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       const { key, secret } = req.body as { key: string; secret: string };
-      const row = getBinanceKeyRow(id);
+      const row = await getBinanceKeyRow(id);
       const err = ensureKeyPresent(row, [
         'binance_api_key_enc',
         'binance_api_secret_enc',
@@ -135,7 +135,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'verification failed' });
       const encKey = encryptKey(key);
       const encSecret = encryptKey(secret);
-      setBinanceKey(id, encKey, encSecret);
+      await setBinanceKey(id, encKey, encSecret);
       return { key: redactKey(key), secret: redactKey(secret) };
     },
   );
@@ -145,13 +145,13 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id;
-      const row = getBinanceKeyRow(id);
+      const row = await getBinanceKeyRow(id);
       const err = ensureKeyPresent(row, [
         'binance_api_key_enc',
         'binance_api_secret_enc',
       ]);
       if (err) return reply.code(err.code).send(err.body);
-      clearBinanceKey(id);
+      await clearBinanceKey(id);
       return { ok: true };
     },
   );

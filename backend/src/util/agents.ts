@@ -179,7 +179,7 @@ export async function prepareAgentForUpsert(
   if (err) return err;
   let startBalance: number | null = null;
   if (body.status === AgentStatus.Active) {
-    const keyErr = ensureApiKeys(log, body.userId);
+    const keyErr = await ensureApiKeys(log, body.userId);
     if (keyErr) return keyErr;
     const bal = await getStartBalance(log, userId, body.tokenA, body.tokenB);
     if (typeof bal === 'number') startBalance = bal;

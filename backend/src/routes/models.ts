@@ -30,7 +30,7 @@ export default async function modelsRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const id = (req.params as any).id;
       if (!requireUserIdMatch(req, reply, id)) return;
-    const row = getAiKeyRow(id);
+    const row = await getAiKeyRow(id);
     if (!row?.ai_api_key_enc)
       return reply
         .code(404)

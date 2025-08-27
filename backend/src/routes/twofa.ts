@@ -17,7 +17,7 @@ export default async function twofaRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const userId = requireUserId(req, reply);
       if (!userId) return;
-      return { enabled: getUserTotpStatus(userId) };
+      return { enabled: await getUserTotpStatus(userId) };
     }
   );
 
@@ -43,7 +43,7 @@ export default async function twofaRoutes(app: FastifyInstance) {
       const valid = authenticator.verify({ token: body.token, secret: body.secret });
       if (!valid)
         return reply.code(400).send(errorResponse('invalid token'));
-      setUserTotpSecret(userId, body.secret);
+      await setUserTotpSecret(userId, body.secret);
       return { enabled: true };
     }
   );
@@ -55,12 +55,12 @@ export default async function twofaRoutes(app: FastifyInstance) {
       const userId = requireUserId(req, reply);
       if (!userId) return;
       const body = req.body as { token: string };
-      const secret = getUserTotpSecret(userId);
+      const secret = await getUserTotpSecret(userId);
       if (!secret)
         return reply.code(400).send(errorResponse('not enabled'));
       const valid = authenticator.verify({ token: body.token, secret });
       if (!valid) return reply.code(400).send(errorResponse('invalid token'));
-      clearUserTotp(userId);
+      await clearUserTotp(userId);
       return { enabled: false };
     }
   );

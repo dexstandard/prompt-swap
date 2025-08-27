@@ -43,7 +43,7 @@ export async function reviewAgentPortfolio(
   log: FastifyBaseLogger,
   agentId: string,
 ): Promise<void> {
-  const agents = getActiveAgents({ agentId });
+  const agents = await getActiveAgents({ agentId });
   const { toRun, skipped } = filterRunningAgents(agents);
   if (skipped.length) throw new Error('Agent is already reviewing portfolio');
   await runAgents(log, toRun);
@@ -53,7 +53,7 @@ export default async function reviewPortfolios(
   log: FastifyBaseLogger,
   interval: string,
 ): Promise<void> {
-  const agents = getActiveAgents({ interval });
+  const agents = await getActiveAgents({ interval });
   const { toRun } = filterRunningAgents(agents);
   if (!toRun.length) return;
   await runAgents(log, toRun);
@@ -128,8 +128,8 @@ async function prepareAgents(
       continue;
     }
 
-    const prevRows = getRecentExecResults(row.id, 5);
-    prompt.previous_responses = prevRows.map((r) => {
+    const prevRows = await getRecentExecResults(row.id, 5);
+    prompt.previous_responses = prevRows.map((r: any) => {
       const str = JSON.stringify(r);
       return str === '{}' ? '' : str;
     });
