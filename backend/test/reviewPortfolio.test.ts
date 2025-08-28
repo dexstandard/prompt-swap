@@ -428,6 +428,7 @@ describe('reviewPortfolio', () => {
     await expect(reviewAgentPortfolio(log, '8')).rejects.toThrow(
       'Agent is already reviewing portfolio',
     );
+    await vi.waitFor(() => expect(callRebalancingAgent).toHaveBeenCalled());
     resolveFn('ok');
     await p1;
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);

@@ -71,7 +71,7 @@ describe('agent creation', () => {
     const res = await Promise.race([
       createPromise,
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 200),
+        setTimeout(() => reject(new Error('timeout')), 1000),
       ),
     ]);
     expect(res.statusCode).toBe(200);

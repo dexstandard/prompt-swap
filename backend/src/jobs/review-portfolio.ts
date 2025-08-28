@@ -155,7 +155,7 @@ async function fetchBalances(
   }
   if (tokenABalance === undefined || tokenBBalance === undefined) {
     const msg = 'failed to fetch token balances';
-    saveFailure(row, msg);
+    await saveFailure(row, msg);
     log.error({ err: msg }, 'agent run failed');
     return undefined;
   }
@@ -198,7 +198,7 @@ async function buildPrompt(
     };
   } catch (err) {
     const msg = 'failed to fetch market data';
-    saveFailure(row, msg);
+    await saveFailure(row, msg);
     log.error({ err }, 'agent run failed');
     return undefined;
   }
@@ -377,23 +377,23 @@ async function executeAgent(
     }
     log.info('agent run complete');
   } catch (err) {
-    saveFailure(row, String(err), prompt);
+    await saveFailure(row, String(err), prompt);
     log.error({ err }, 'agent run failed');
   }
 }
 
-function saveFailure(
+async function saveFailure(
   row: ActiveAgentRow,
   message: string,
   prompt?: RebalancePrompt,
 ) {
-  insertExecLog({
+  await insertExecLog({
     agentId: row.id,
     ...(prompt ? { prompt } : {}),
     response: { error: message },
   });
   const parsed = parseExecLog({ error: message });
-  insertExecResult({
+  await insertExecResult({
     agentId: row.id,
     log: parsed.text,
     ...(parsed.response
