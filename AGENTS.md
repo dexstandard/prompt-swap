@@ -33,13 +33,13 @@ Tables:
 Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
 
 ### Testing
-- Backend tests require a local PostgreSQL server.
+- Backend tests require a local PostgreSQL server. Do **not** use Testcontainers.
   - Check `psql` or `pg_isready` to confirm PostgreSQL is installed; install it if missing.
   - Provide a database named `promptswap_test` on
     `postgres://postgres:postgres@localhost:5432`.
-- Run tests with
-  `DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test`.
-- `npm run build`
+  - Run tests with
+    `DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test`.
+  - `npm run build`
 
 ### Guidelines
 - Do not write DB migrations during early development—edit `schema.sql` directly (unless this rule is removed).
