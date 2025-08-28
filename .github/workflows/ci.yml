@@ -82,30 +82,7 @@ jobs:
             else
               echo "Secret $s present, length=${#v}"
             fi
-
-           # Extra diagnostics ONLY for the SSH key (won't leak the key body)
-           if [ "$s" = "DO_SSH_PRIVATE_KEY" ]; then
-           echo "----- SSH key quick check -----"
-           # Show BEGIN/END markers only
-           begin_line="$(printf '%s' "$v" | head -n1)"
-           end_line="$(printf '%s' "$v" | tail -n1)"
-           echo "BEGIN: $begin_line"
-           echo "END  : $end_line"
-           
-           # Show whether the secret has literal '\n' characters or real newlines
-           if printf '%s' "$v" | grep -q '\\n'; then
-           echo "Key contains literal \\n sequences (needs newline conversion)."
-           else
-           echo "Key uses real newlines."
-           fi
-           
-           # Visualize non-printables without dumping the whole key (first 80 visible chars)
-           echo "Preview (escaped, first 80 chars of the raw secret):"
-           printf '%s' "$v" | LC_ALL=C tr -d '\n' | head -c 80 | cat -v
-           echo
-           echo "--------------------------------"
-           fi
-         done
+          done
 
       - name: Upload files to droplet
         uses: appleboy/scp-action@v0.1.4
