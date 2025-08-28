@@ -28,9 +28,9 @@ export default async function modelsRoutes(app: FastifyInstance) {
     '/users/:id/models',
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
-      const id = (req.params as any).id;
+      const id = (req.params as any).id as string;
       if (!requireUserIdMatch(req, reply, id)) return;
-    const row = getAiKeyRow(id);
+    const row = await getAiKeyRow(id);
     if (!row?.ai_api_key_enc)
       return reply
         .code(404)

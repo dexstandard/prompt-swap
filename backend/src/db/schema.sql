@@ -1,63 +1,68 @@
 CREATE TABLE IF NOT EXISTS users(
-  id TEXT PRIMARY KEY,
-  is_auto_enabled INTEGER,
-  role TEXT DEFAULT 'user',
-  is_enabled INTEGER DEFAULT 1,
-  policy_json TEXT,
-  session_key_expires_at INTEGER,
+  id BIGSERIAL PRIMARY KEY,
+  role TEXT NOT NULL DEFAULT 'user',
+  is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   ai_api_key_enc TEXT,
   binance_api_key_enc TEXT,
   binance_api_secret_enc TEXT,
   totp_secret_enc TEXT,
-  is_totp_enabled INTEGER DEFAULT 0,
+  is_totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   email_enc TEXT,
-  created_at INTEGER DEFAULT (unixepoch() * 1000)
+  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
-CREATE TABLE IF NOT EXISTS executions(
-  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-  user_id TEXT,
-  planned_json TEXT,
-  status TEXT,
-  exec_result_id TEXT,
-  order_id TEXT,
-  created_at INTEGER DEFAULT (unixepoch() * 1000)
+CREATE TABLE IF NOT EXISTS user_identities(
+  user_id BIGINT NOT NULL REFERENCES users(id),
+  provider TEXT NOT NULL,
+  sub TEXT NOT NULL,
+  UNIQUE(provider, sub)
 );
+
 CREATE TABLE IF NOT EXISTS agents(
-  id TEXT PRIMARY KEY,
-  user_id TEXT,
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id),
   model TEXT,
-  status TEXT,
-  created_at INTEGER,
+  status TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
   start_balance REAL,
-  name TEXT,
-  token_a TEXT,
-  token_b TEXT,
+  name VARCHAR(100),
+  token_a VARCHAR(20) NOT NULL,
+  token_b VARCHAR(20) NOT NULL,
   min_a_allocation INTEGER,
   min_b_allocation INTEGER,
-  risk TEXT,
-  review_interval TEXT,
-  agent_instructions TEXT,
-  manual_rebalance INTEGER DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS agent_exec_log(
-  id TEXT PRIMARY KEY,
-  agent_id TEXT,
-  prompt TEXT,
-  response TEXT,
-  created_at INTEGER
+  risk VARCHAR(20) NOT NULL,
+  review_interval VARCHAR(20) NOT NULL,
+  agent_instructions VARCHAR(1000) NOT NULL,
+  manual_rebalance BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS agent_exec_result(
-  id TEXT PRIMARY KEY,
-  agent_id TEXT,
+  id BIGSERIAL PRIMARY KEY,
+  agent_id BIGINT NOT NULL REFERENCES agents(id),
   log TEXT,
-  rebalance INTEGER,
+  rebalance BOOLEAN,
   new_allocation REAL,
   short_report TEXT,
   error TEXT,
-  created_at INTEGER
+  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
+);
+
+CREATE TABLE IF NOT EXISTS executions(
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id),
+  planned_json TEXT NOT NULL,
+  status TEXT NOT NULL,
+  exec_result_id BIGINT REFERENCES agent_exec_result(id),
+  order_id TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
+);
+
+CREATE TABLE IF NOT EXISTS agent_exec_log(
+  id BIGSERIAL PRIMARY KEY,
+  agent_id BIGINT NOT NULL REFERENCES agents(id),
+  prompt TEXT,
+  response TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_exec_result_agent_id_created_at

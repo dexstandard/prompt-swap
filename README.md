@@ -23,6 +23,25 @@ Currently swaps tokens via Binance using user-provided API keys.
    npm run dev
    ```
 
+## Testing
+
+Backend tests require a local PostgreSQL server. Start one with Docker:
+
+```bash
+docker run --rm --name promptswap-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=promptswap_test -p 5432:5432 -d postgres:16
+```
+
+Run the tests:
+
+```bash
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm test
+```
+
+When you're done, stop the database:
+
+```bash
+docker stop promptswap-pg
+```
 
 ## Continuous Integration
 

@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Logger } from 'pino';
-import { randomUUID } from 'node:crypto';
 import {
   getAgent,
   getAgentsPaginated,
@@ -26,15 +25,15 @@ import {
 } from '../util/agents.js';
 
 
-function getAgentForRequest(
+async function getAgentForRequest(
   req: FastifyRequest,
   reply: FastifyReply,
-): { userId: string; id: string; log: Logger; agent: any } | undefined {
+): Promise<{ userId: string; id: string; log: Logger; agent: any } | undefined> {
   const userId = requireUserId(req, reply);
   if (!userId) return;
-  const id = (req.params as any).id;
+  const id = (req.params as any).id as string;
   const log = req.log.child({ userId, agentId: id }) as unknown as Logger;
-  const agent = getAgent(id);
+  const agent = await getAgent(id);
   if (!agent) {
     log.error('agent not found');
     reply.code(404).send(errorResponse(ERROR_MESSAGES.notFound));
@@ -65,7 +64,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       const p = Math.max(parseInt(page, 10), 1);
       const ps = Math.max(parseInt(pageSize, 10), 1);
       const offset = (p - 1) * ps;
-      const { rows, total } = getAgentsPaginated(userId, status, ps, offset);
+      const { rows, total } = await getAgentsPaginated(userId, status, ps, offset);
       log.info('listed agents');
       return {
         items: rows.map(toApi),
@@ -87,15 +86,11 @@ export default async function agentRoutes(app: FastifyInstance) {
         const res = await prepareAgentForUpsert(log, userId, body);
         if ('code' in res) return reply.code(res.code).send(res.body);
         const { body: validated, startBalance } = res;
-        const id = randomUUID();
         const status = validated.status;
-        const createdAt = Date.now();
-        insertAgent({
-          id,
+        const row = await insertAgent({
           userId: validated.userId,
           model: validated.model,
           status,
-          createdAt,
           startBalance,
           name: validated.name,
           tokenA: validated.tokenA,
@@ -107,12 +102,11 @@ export default async function agentRoutes(app: FastifyInstance) {
           agentInstructions: validated.agentInstructions,
           manualRebalance: validated.manualRebalance,
         });
-        const row = getAgent(id)!;
         if (status === AgentStatus.Active)
-          reviewAgentPortfolio(req.log, id).catch((err) =>
-            log.error({ err, agentId: id }, 'initial review failed'),
+          reviewAgentPortfolio(req.log, row.id).catch((err) =>
+            log.error({ err, agentId: row.id }, 'initial review failed'),
           );
-        log.info({ agentId: id }, 'created agent');
+        log.info({ agentId: row.id }, 'created agent');
         return toApi(row);
       }
     );
@@ -121,7 +115,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id/exec-log',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
-      const ctx = getAgentForRequest(req, reply);
+      const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
       const { id, log } = ctx;
       const { page = '1', pageSize = '10' } = req.query as {
@@ -131,7 +125,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       const p = Math.max(parseInt(page, 10), 1);
       const ps = Math.max(parseInt(pageSize, 10), 1);
       const offset = (p - 1) * ps;
-      const { rows, total } = getAgentExecResults(id, ps, offset);
+      const { rows, total } = await getAgentExecResults(id, ps, offset);
       log.info('fetched exec log');
       return {
         items: rows.map((r) => {
@@ -164,7 +158,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
-      const ctx = getAgentForRequest(req, reply);
+      const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
       const { log, agent: row } = ctx;
       log.info('fetched agent');
@@ -176,7 +170,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       '/agents/:id',
       { config: { rateLimit: RATE_LIMITS.TIGHT } },
       async (req, reply) => {
-        const ctx = getAgentForRequest(req, reply);
+        const ctx = await getAgentForRequest(req, reply);
         if (!ctx) return;
         const { userId, id, log } = ctx;
         const body = req.body as AgentInput;
@@ -190,9 +184,8 @@ export default async function agentRoutes(app: FastifyInstance) {
         if ('code' in res) return reply.code(res.code).send(res.body);
         const { body: validated, startBalance } = res;
         const status = validated.status;
-        updateAgent({
+        await updateAgent({
           id,
-          userId: validated.userId,
           model: validated.model,
           status,
           name: validated.name,
@@ -206,7 +199,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           startBalance,
           manualRebalance: validated.manualRebalance,
         });
-        const row = getAgent(id)!;
+        const row = (await getAgent(id))!;
         if (status === AgentStatus.Active)
           await reviewAgentPortfolio(req.log, id);
         log.info('updated agent');
@@ -218,10 +211,10 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
-      const ctx = getAgentForRequest(req, reply);
+      const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
       const { id, log } = ctx;
-      repoDeleteAgent(id);
+      await repoDeleteAgent(id);
       log.info('deleted agent');
       return { ok: true };
     }
@@ -231,14 +224,14 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id/start',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
-      const ctx = getAgentForRequest(req, reply);
+      const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
       const { userId, id, log, agent: existing } = ctx;
       if (!existing.model) {
         log.error('missing model');
         return reply.code(400).send(errorResponse('model required'));
       }
-      const conflict = validateTokenConflicts(
+      const conflict = await validateTokenConflicts(
         log,
         userId,
         existing.token_a,
@@ -246,7 +239,7 @@ export default async function agentRoutes(app: FastifyInstance) {
         id,
       );
       if (conflict) return reply.code(conflict.code).send(conflict.body);
-      const keyErr = ensureApiKeys(log, userId);
+      const keyErr = await ensureApiKeys(log, userId);
       if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
       const bal = await getStartBalance(
         log,
@@ -255,11 +248,11 @@ export default async function agentRoutes(app: FastifyInstance) {
         existing.token_b,
       );
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
-      repoStartAgent(id, bal);
+      await repoStartAgent(id, bal);
       reviewAgentPortfolio(req.log, id).catch((err) =>
         log.error({ err }, 'initial review failed')
       );
-      const row = getAgent(id)!;
+      const row = (await getAgent(id))!;
       log.info('started agent');
       return toApi(row);
     }
@@ -269,11 +262,11 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id/stop',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
-      const ctx = getAgentForRequest(req, reply);
+      const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
       const { id, log } = ctx;
-      repoStopAgent(id);
-      const row = getAgent(id)!;
+      await repoStopAgent(id);
+      const row = (await getAgent(id))!;
       log.info('stopped agent');
       return toApi(row);
     }
@@ -283,7 +276,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     '/agents/:id/review',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
-      const ctx = getAgentForRequest(req, reply);
+      const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
       const { id, log, agent } = ctx;
       if (agent.status !== AgentStatus.Active) {

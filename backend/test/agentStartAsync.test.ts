@@ -12,21 +12,22 @@ vi.mock('../src/jobs/review-portfolio.js', () => ({
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
 
-function addUser(id: string) {
+async function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
   const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
   const bs = encrypt('skey', process.env.KEY_PASSWORD!);
-  insertUser(id, null);
-  setAiKey(id, ai);
-  setBinanceKey(id, bk, bs);
+  const userId = await insertUser(id, null);
+  await setAiKey(userId, ai);
+  await setBinanceKey(userId, bk, bs);
+  return userId;
 }
 
 describe('agent start', () => {
   it('does not await initial review', async () => {
     const app = await buildServer();
-    addUser('u1');
+    const userId = await addUser('1');
     const payload = {
-      userId: 'u1',
+      userId,
       model: 'm',
       name: 'Draft',
       tokenA: 'BTC',
@@ -41,7 +42,7 @@ describe('agent start', () => {
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'u1' },
+      headers: { 'x-user-id': userId },
       payload,
     });
     const id = resCreate.json().id as string;
@@ -71,7 +72,7 @@ describe('agent start', () => {
     const startPromise = app.inject({
       method: 'POST',
       url: `/api/agents/${id}/start`,
-      headers: { 'x-user-id': 'u1' },
+      headers: { 'x-user-id': userId },
     });
     const res = await Promise.race([
       startPromise,

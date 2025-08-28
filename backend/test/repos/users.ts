@@ -4,24 +4,26 @@ import {
   setUserEmail,
   setUserEnabled,
 } from '../../src/repos/users.js';
+import { insertUserIdentity } from '../../src/repos/user-identities.js';
 
-export function insertUser(id: string, emailEnc?: string | null) {
-  insertUserProd(id, emailEnc ?? null);
+export async function insertUser(sub?: string, emailEnc?: string | null) {
+  const id = await insertUserProd(emailEnc ?? null);
+  if (sub) await insertUserIdentity(id, 'google', sub);
+  return id;
 }
 export { setUserEmail, setUserEnabled };
 
-export function insertAdminUser(id: string, emailEnc?: string | null) {
-  db.prepare(
-    "INSERT INTO users (id, is_auto_enabled, role, is_enabled, email_enc) VALUES (?, 0, 'admin', 1, ?)"
-  ).run(id, emailEnc ?? null);
+export async function insertAdminUser(sub?: string, emailEnc?: string | null) {
+  const { rows } = await db.query(
+    "INSERT INTO users (role, is_enabled, email_enc) VALUES ('admin', true, $1) RETURNING id",
+    [emailEnc ?? null],
+  );
+  const id = rows[0].id as string;
+  if (sub) await insertUserIdentity(id, 'google', sub);
+  return id;
 }
 
-export function clearUsers() {
-  db.prepare('DELETE FROM users').run();
-}
-
-export function getUserEmailEnc(id: string) {
-  return db
-    .prepare('SELECT email_enc FROM users WHERE id = ?')
-    .get(id) as { email_enc?: string } | undefined;
+export async function getUserEmailEnc(id: string) {
+  const { rows } = await db.query('SELECT email_enc FROM users WHERE id = $1', [id]);
+  return rows[0] as { email_enc?: string } | undefined;
 }

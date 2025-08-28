@@ -4,7 +4,11 @@ import { z } from 'zod';
 import { authenticator } from 'otplib';
 import { env } from '../util/env.js';
 import { RATE_LIMITS } from '../rate-limit.js';
-import { getUser, insertUser, setUserEmail } from '../repos/users.js';
+import { insertUser, setUserEmail } from '../repos/users.js';
+import {
+  findUserByIdentity,
+  insertUserIdentity,
+} from '../repos/user-identities.js';
 import { encrypt } from '../util/crypto.js';
 
 interface ValidationErr {
@@ -33,16 +37,18 @@ export default async function loginRoutes(app: FastifyInstance) {
       const payload = await verifyToken(body.token);
       if (!payload?.sub)
         return reply.code(400).send({ error: 'invalid token' });
-      const id = payload.sub;
-      const row = getUser(id);
       const emailEnc = payload.email
         ? encrypt(payload.email, env.KEY_PASSWORD)
         : null;
+      const row = await findUserByIdentity('google', payload.sub);
+      let id: string;
       if (!row) {
-        insertUser(id, emailEnc);
+        id = await insertUser(emailEnc);
+        await insertUserIdentity(id, 'google', payload.sub);
         return { id, email: payload.email, role: 'user' };
       }
-      if (emailEnc) setUserEmail(id, emailEnc);
+      id = row.id;
+      if (emailEnc) await setUserEmail(id, emailEnc);
       if (!row.is_enabled) {
         return reply.code(403).send({ error: 'user disabled' });
       }
@@ -54,7 +60,7 @@ export default async function loginRoutes(app: FastifyInstance) {
 }
 
 function validateOtp(
-  row: { totp_secret?: string; is_totp_enabled?: number },
+  row: { totp_secret?: string; is_totp_enabled?: boolean },
   otp: string | undefined,
 ): ValidationErr | null {
   if (row.is_totp_enabled && row.totp_secret) {

@@ -7,7 +7,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 async function main() {
-  migrate();
+  await migrate();
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const routesDir = path.join(__dirname, '../src/routes');
   const app = await buildServer(routesDir);

@@ -8,51 +8,51 @@ import { getUser } from '../src/repos/users.js';
 describe('admin user routes', () => {
   it('lists users for admin only', async () => {
     const app = await buildServer();
-    insertAdminUser('admin1', encrypt('admin@example.com', env.KEY_PASSWORD));
-    insertUser('user1', encrypt('user1@example.com', env.KEY_PASSWORD));
+    const adminId = await insertAdminUser('admin1', encrypt('admin@example.com', env.KEY_PASSWORD));
+    const userId = await insertUser('1', encrypt('user1@example.com', env.KEY_PASSWORD));
 
     const resForbidden = await app.inject({
       method: 'GET',
       url: '/api/users',
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
     });
     expect(resForbidden.statusCode).toBe(403);
 
     const res = await app.inject({
       method: 'GET',
       url: '/api/users',
-      headers: { 'x-user-id': 'admin1' },
+      headers: { 'x-user-id': adminId },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json() as any[];
-    const user = body.find((u) => u.id === 'user1');
+    const user = body.find((u) => u.id === userId);
     expect(user.email).toBe('user1@example.com');
-    expect(typeof user.createdAt).toBe('number');
+    expect(typeof user.createdAt).toBe('string');
     await app.close();
   });
 
   it('enables and disables users', async () => {
     const app = await buildServer();
-    insertAdminUser('admin2');
-    insertUser('user2');
+    const adminId = await insertAdminUser('admin2');
+    const userId = await insertUser('2');
 
     const resDisable = await app.inject({
       method: 'POST',
-      url: '/api/users/user2/disable',
-      headers: { 'x-user-id': 'admin2' },
+      url: `/api/users/${userId}/disable`,
+      headers: { 'x-user-id': adminId },
     });
     expect(resDisable.statusCode).toBe(200);
-    let row = getUser('user2');
-    expect(row?.is_enabled).toBe(0);
+    let row = await getUser(userId);
+    expect(row?.is_enabled).toBe(false);
 
     const resEnable = await app.inject({
       method: 'POST',
-      url: '/api/users/user2/enable',
-      headers: { 'x-user-id': 'admin2' },
+      url: `/api/users/${userId}/enable`,
+      headers: { 'x-user-id': adminId },
     });
     expect(resEnable.statusCode).toBe(200);
-    row = getUser('user2');
-    expect(row?.is_enabled).toBe(1);
+    row = await getUser(userId);
+    expect(row?.is_enabled).toBe(true);
 
     await app.close();
   });

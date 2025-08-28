@@ -10,23 +10,25 @@ vi.mock('../src/jobs/review-portfolio.js', () => ({
   reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
 }));
 
-function addUser(id: string) {
+async function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
   const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
   const bs = encrypt('skey', process.env.KEY_PASSWORD!);
-  insertUser(id, null);
-  setAiKey(id, ai);
-  setBinanceKey(id, bk, bs);
+  const userId = await insertUser(id, null);
+  await setAiKey(userId, ai);
+  await setBinanceKey(userId, bk, bs);
+  return userId;
 }
 
-function addUserNoKeys(id: string) {
-  insertUser(id);
+async function addUserNoKeys(id: string) {
+  const userId = await insertUser(id);
+  return userId;
 }
 
 describe('agent routes', () => {
   it('performs CRUD operations', async () => {
     const app = await buildServer();
-    addUser('user1');
+    const userId = await addUser('1');
 
     const fetchMock = vi.fn();
     fetchMock
@@ -65,7 +67,7 @@ describe('agent routes', () => {
     (globalThis as any).fetch = fetchMock;
 
     const payload = {
-      userId: 'user1',
+      userId,
       model: 'gpt-5',
       name: 'A1',
       tokenA: 'BTC',
@@ -81,7 +83,7 @@ describe('agent routes', () => {
     let res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
       payload,
     });
     expect(res.statusCode).toBe(200);
@@ -92,7 +94,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
       expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
@@ -100,7 +102,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10',
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
@@ -109,7 +111,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10&status=active',
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
@@ -119,7 +121,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'PUT',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
       payload: update,
     });
     expect(res.statusCode).toBe(200);
@@ -128,7 +130,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10&status=active',
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 0, page: 1, pageSize: 10 });
@@ -137,7 +139,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10&status=draft',
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
@@ -146,22 +148,22 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'DELETE',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
 
     res = await app.inject({
       method: 'GET',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': 'user1' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(404);
 
     res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'user2' },
-      payload: { ...payload, userId: 'user3', name: 'A2' },
+      headers: { 'x-user-id': '999' },
+      payload: { ...payload, userId, name: 'A2' },
     });
     expect(res.statusCode).toBe(403);
 
@@ -171,9 +173,9 @@ describe('agent routes', () => {
 
   it('starts and stops agent', async () => {
     const app = await buildServer();
-    addUser('starter');
+    const starterId = await addUser('starter');
     const draftPayload = {
-      userId: 'starter',
+      userId: starterId,
       model: 'm',
       name: 'Draft',
       tokenA: 'BTC',
@@ -188,7 +190,7 @@ describe('agent routes', () => {
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'starter' },
+      headers: { 'x-user-id': starterId },
       payload: draftPayload,
     });
     const id = resCreate.json().id as string;
@@ -223,21 +225,21 @@ describe('agent routes', () => {
     let res = await app.inject({
       method: 'POST',
       url: `/api/agents/${id}/start`,
-      headers: { 'x-user-id': 'starter' },
+      headers: { 'x-user-id': starterId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'active' });
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(getActiveAgents().find((a) => a.id === id)).toBeDefined();
+    expect((await getActiveAgents()).find((a) => a.id === id)).toBeDefined();
 
     res = await app.inject({
       method: 'POST',
       url: `/api/agents/${id}/stop`,
-      headers: { 'x-user-id': 'starter' },
+      headers: { 'x-user-id': starterId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'inactive' });
-    expect(getActiveAgents().find((a) => a.id === id)).toBeUndefined();
+    expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
@@ -245,7 +247,7 @@ describe('agent routes', () => {
 
   it('updates running agent and refreshes start balance', async () => {
     const app = await buildServer();
-    addUser('update-user');
+    const updateUserId = await addUser('update-user');
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -295,7 +297,7 @@ describe('agent routes', () => {
     (globalThis as any).fetch = fetchMock;
 
     const createPayload = {
-      userId: 'update-user',
+      userId: updateUserId,
       model: 'm',
       name: 'A',
       tokenA: 'BTC',
@@ -311,7 +313,7 @@ describe('agent routes', () => {
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'update-user' },
+      headers: { 'x-user-id': updateUserId },
       payload: createPayload,
     });
     expect(resCreate.statusCode).toBe(200);
@@ -321,11 +323,11 @@ describe('agent routes', () => {
     const resUpdate = await app.inject({
       method: 'PUT',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': 'update-user' },
+      headers: { 'x-user-id': updateUserId },
       payload: updatePayload,
     });
     expect(resUpdate.statusCode).toBe(200);
-    const row = getAgent(id);
+    const row = await getAgent(id);
     expect(row?.start_balance).toBeGreaterThanOrEqual(0);
     expect(fetchMock).toHaveBeenCalledTimes(4);
 
@@ -335,10 +337,10 @@ describe('agent routes', () => {
 
   it('handles drafts and api key validation', async () => {
     const app = await buildServer();
-    addUserNoKeys('u1');
+    const u1Id = await addUserNoKeys('1');
 
     const basePayload = {
-      userId: 'u1',
+      userId: u1Id,
       model: 'm',
       name: 'Draft1',
       tokenA: 'BTC',
@@ -353,7 +355,7 @@ describe('agent routes', () => {
     let res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'u1' },
+      headers: { 'x-user-id': u1Id },
       payload: { ...basePayload, status: 'active' },
     });
     expect(res.statusCode).toBe(400);
@@ -361,13 +363,13 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'u1' },
+      headers: { 'x-user-id': u1Id },
       payload: { ...basePayload, status: 'draft' },
     });
     expect(res.statusCode).toBe(200);
     const draftId = res.json().id as string;
 
-    addUser('u2');
+    const u2Id = await addUser('2');
     const fetchMock = vi.fn();
     fetchMock
       .mockResolvedValueOnce({
@@ -398,8 +400,8 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'u2' },
-      payload: { ...basePayload, userId: 'u2', name: 'Active', status: 'active' },
+      headers: { 'x-user-id': u2Id },
+      payload: { ...basePayload, userId: u2Id, name: 'Active', status: 'active' },
     });
     expect(res.statusCode).toBe(200);
     const activeId = res.json().id as string;
@@ -407,12 +409,12 @@ describe('agent routes', () => {
     const resDraft2 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'u2' },
-      payload: { ...basePayload, userId: 'u2', name: 'Draft2', status: 'draft' },
+      headers: { 'x-user-id': u2Id },
+      payload: { ...basePayload, userId: u2Id, name: 'Draft2', status: 'draft' },
     });
     const draft2Id = resDraft2.json().id as string;
 
-    const activeAgents = getActiveAgents();
+    const activeAgents = await getActiveAgents();
     expect(activeAgents.find((a) => a.id === activeId)).toBeDefined();
     expect(activeAgents.find((a) => a.id === draftId)).toBeUndefined();
     expect(activeAgents.find((a) => a.id === draft2Id)).toBeUndefined();
@@ -423,7 +425,7 @@ describe('agent routes', () => {
 
   it('checks duplicates based on status and tokens', async () => {
     const app = await buildServer();
-    addUser('dupUser');
+    const dupId = await addUser('dupUser');
     const fetchMock = vi.fn();
     fetchMock
       .mockResolvedValueOnce({
@@ -453,7 +455,7 @@ describe('agent routes', () => {
     (globalThis as any).fetch = fetchMock;
 
     const base = {
-      userId: 'dupUser',
+      userId: dupId,
       model: 'm',
       name: 'A1',
       tokenA: 'BTC',
@@ -469,7 +471,7 @@ describe('agent routes', () => {
     const res1 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'dupUser' },
+      headers: { 'x-user-id': dupId },
       payload: base,
     });
     const existingId = res1.json().id as string;
@@ -477,7 +479,7 @@ describe('agent routes', () => {
     const resDup = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'dupUser' },
+      headers: { 'x-user-id': dupId },
       payload: { ...base, name: 'B1', tokenA: 'BTC', tokenB: 'SOL' },
     });
     expect(resDup.statusCode).toBe(400);
@@ -485,12 +487,12 @@ describe('agent routes', () => {
     expect(resDup.json().error).toContain('A1');
     expect(resDup.json().error).toContain(existingId);
 
-    setAgentStatus(existingId, 'inactive');
+    await setAgentStatus(existingId, 'inactive');
 
     const resOk = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'dupUser' },
+      headers: { 'x-user-id': dupId },
       payload: { ...base, name: 'B2', tokenA: 'BTC', tokenB: 'SOL' },
     });
     expect(resOk.statusCode).toBe(200);
@@ -501,10 +503,10 @@ describe('agent routes', () => {
 
   it('detects identical drafts', async () => {
     const app = await buildServer();
-    addUserNoKeys('draftUser');
+    const draftUserId = await addUserNoKeys('draftUser');
 
     const draftPayload = {
-      userId: 'draftUser',
+      userId: draftUserId,
       model: 'm',
       name: 'Draft',
       tokenA: 'BTC',
@@ -520,7 +522,7 @@ describe('agent routes', () => {
     const res1 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'draftUser' },
+      headers: { 'x-user-id': draftUserId },
       payload: draftPayload,
     });
     const draftId = res1.json().id as string;
@@ -528,7 +530,7 @@ describe('agent routes', () => {
     const resDup = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'draftUser' },
+      headers: { 'x-user-id': draftUserId },
       payload: draftPayload,
     });
     expect(resDup.statusCode).toBe(400);
@@ -538,7 +540,7 @@ describe('agent routes', () => {
     const resOk = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'draftUser' },
+      headers: { 'x-user-id': draftUserId },
       payload: { ...draftPayload, name: 'Draft2' },
     });
     expect(resOk.statusCode).toBe(200);
@@ -548,10 +550,10 @@ describe('agent routes', () => {
 
   it('rejects duplicate draft updates', async () => {
     const app = await buildServer();
-    addUserNoKeys('updUser');
+    const updId = await addUserNoKeys('updUser');
 
     const base = {
-      userId: 'updUser',
+      userId: updId,
       model: 'm1',
       name: 'Draft1',
       tokenA: 'BTC',
@@ -567,7 +569,7 @@ describe('agent routes', () => {
     const res1 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'updUser' },
+      headers: { 'x-user-id': updId },
       payload: base,
     });
     const draft1 = res1.json().id as string;
@@ -575,7 +577,7 @@ describe('agent routes', () => {
     const res2 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'updUser' },
+      headers: { 'x-user-id': updId },
       payload: { ...base, name: 'Draft2', tokenB: 'SOL' },
     });
     const draft2 = res2.json().id as string;
@@ -583,7 +585,7 @@ describe('agent routes', () => {
     const resUpd = await app.inject({
       method: 'PUT',
       url: `/api/agents/${draft2}`,
-      headers: { 'x-user-id': 'updUser' },
+      headers: { 'x-user-id': updId },
       payload: { ...base },
     });
     expect(resUpd.statusCode).toBe(400);
@@ -595,9 +597,9 @@ describe('agent routes', () => {
 
   it('fails to start agent without model', async () => {
     const app = await buildServer();
-    addUser('nomodel');
+    const nomodelId = await addUser('nomodel');
     const payload = {
-      userId: 'nomodel',
+      userId: nomodelId,
       model: '',
       name: 'Draft',
       tokenA: 'BTC',
@@ -612,14 +614,14 @@ describe('agent routes', () => {
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'nomodel' },
+      headers: { 'x-user-id': nomodelId },
       payload,
     });
     const id = resCreate.json().id as string;
     const resStart = await app.inject({
       method: 'POST',
       url: `/api/agents/${id}/start`,
-      headers: { 'x-user-id': 'nomodel' },
+      headers: { 'x-user-id': nomodelId },
     });
     expect(resStart.statusCode).toBe(400);
     expect(resStart.json().error).toContain('model');
@@ -628,9 +630,9 @@ describe('agent routes', () => {
 
   it('rejects allocations exceeding 95%', async () => {
     const app = await buildServer();
-    addUserNoKeys('allocUser');
+    const allocId = await addUserNoKeys('allocUser');
     const payload = {
-      userId: 'allocUser',
+      userId: allocId,
       model: 'm',
       name: 'Bad',
       tokenA: 'BTC',
@@ -645,7 +647,7 @@ describe('agent routes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'allocUser' },
+      headers: { 'x-user-id': allocId },
       payload,
     });
     expect(res.statusCode).toBe(400);

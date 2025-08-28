@@ -14,14 +14,11 @@ vi.mock('../src/jobs/review-portfolio.js', () => ({
 describe('manual review endpoint', () => {
   it('triggers portfolio review', async () => {
     const app = await buildServer();
-    insertUser('u1');
-    const agentId = 'a1';
-    insertAgent({
-      id: agentId,
-      userId: 'u1',
+    const userId = await insertUser('1');
+    const agent = await insertAgent({
+      userId,
       model: 'gpt',
       status: 'active',
-      createdAt: 0,
       startBalance: null,
       name: 'A',
       tokenA: 'BTC',
@@ -33,11 +30,12 @@ describe('manual review endpoint', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
+    const agentId = agent.id;
 
     const res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agentId}/review`,
-      headers: { 'x-user-id': 'u1' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ok: true });
@@ -48,14 +46,11 @@ describe('manual review endpoint', () => {
 
   it('returns error when agent is already reviewing', async () => {
     const app = await buildServer();
-    insertUser('u2');
-    const agentId = 'b1';
-    insertAgent({
-      id: agentId,
-      userId: 'u2',
+    const userId = await insertUser('2');
+    const agent = await insertAgent({
+      userId,
       model: 'gpt',
       status: 'active',
-      createdAt: 0,
       startBalance: null,
       name: 'A2',
       tokenA: 'BTC',
@@ -67,13 +62,14 @@ describe('manual review endpoint', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
+    const agentId = agent.id;
     reviewAgentPortfolioMock.mockRejectedValueOnce(
       new Error('Agent is already reviewing portfolio'),
     );
     const res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agentId}/review`,
-      headers: { 'x-user-id': 'u2' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: 'Agent is already reviewing portfolio' });
