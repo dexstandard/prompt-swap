@@ -79,6 +79,8 @@ jobs:
             if [ -z "$v" ]; then
               echo "Missing secret: $s"
               exit 1
+            else
+              echo "Secret $s present, length=${#v}"
             fi
           done
 
