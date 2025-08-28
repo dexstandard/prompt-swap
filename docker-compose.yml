@@ -4,11 +4,11 @@ services:
   backend:
     build: ./backend
     environment:
-      NODE_ENV: production
-      PORT: 3000
-      DATABASE_URL: ${DB_CONNECTION_STR}
-      KEY_PASSWORD: ${KEY_PASSWORD}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DB_CONNECTION_STR}
+      - KEY_PASSWORD=${KEY_PASSWORD}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     expose:
       - "3000"
     volumes:
@@ -22,7 +22,7 @@ services:
         FRONTEND_BUILD_DIR: dist
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
     environment:
-      DOMAIN: ${DOMAIN}
+      - DOMAIN=${DOMAIN}
     ports:
       - "80:80"
       - "443:443"
