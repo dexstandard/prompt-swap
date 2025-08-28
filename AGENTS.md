@@ -33,10 +33,10 @@ Tables:
 Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
 
 ### Testing
-- Backend tests require a local PostgreSQL server. Do **not** use Testcontainers.
+- Backend tests require a local PostgreSQL server.
   - Check `psql` or `pg_isready` to confirm PostgreSQL is installed; install it if missing.
-  - Provide a database named `promptswap_test` on
-    `postgres://postgres:postgres@localhost:5432`.
+  - Start a database if needed:
+    `docker run --rm --name promptswap-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=promptswap_test -p 5432:5432 -d postgres:16`
   - Run tests with
     `DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test`.
   - `npm run build`
