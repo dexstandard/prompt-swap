@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 import { clearExecutions, getExecutions } from './repos/executions.js';
+import { insertUser } from './repos/users.js';
+import { insertAgent } from './repos/agents.js';
+import { insertExecResult } from './repos/agent-exec-result.js';
 
 vi.mock('../src/services/binance.js', () => ({
   fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
@@ -14,8 +17,25 @@ describe('createRebalanceLimitOrder', () => {
   it('saves execution with status and exec result', async () => {
     const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     clearExecutions();
+    const userId = await insertUser('1');
+    const agent = await insertAgent({
+      userId,
+      model: 'm',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const execResultId = await insertExecResult({ agentId: agent.id, log: '' });
     await createRebalanceLimitOrder({
-      userId: 'user1',
+      userId,
       tokenA: 'BTC',
       tokenB: 'ETH',
       positions: [
@@ -24,12 +44,12 @@ describe('createRebalanceLimitOrder', () => {
       ],
       newAllocation: 50,
       log,
-      execResultId: 'res1',
+      execResultId,
     });
 
     const row = getExecutions()[0];
 
-    expect(row.user_id).toBe('user1');
+    expect(row.user_id).toBe(userId);
     expect(JSON.parse(row.planned_json)).toMatchObject({
       symbol: 'BTCETH',
       side: 'BUY',
@@ -37,8 +57,8 @@ describe('createRebalanceLimitOrder', () => {
       price: 100,
     });
     expect(row.status).toBe('pending');
-    expect(row.exec_result_id).toBe('res1');
-    expect(createLimitOrder).toHaveBeenCalledWith('user1', {
+    expect(row.exec_result_id).toBe(execResultId);
+    expect(createLimitOrder).toHaveBeenCalledWith(userId, {
       symbol: 'BTCETH',
       side: 'BUY',
       quantity: 0.5,

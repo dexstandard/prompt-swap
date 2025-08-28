@@ -3,12 +3,12 @@ import { insertExecution } from '../repos/executions.js';
 import { fetchPairData, createLimitOrder } from './binance.js';
 
 export async function createRebalanceLimitOrder(opts: {
-  userId: number;
+  userId: string;
   tokenA: string;
   tokenB: string;
   positions: { sym: string; value_usdt: number }[];
   newAllocation: number;
-  execResultId: number;
+  execResultId: string;
   log: FastifyBaseLogger;
 }) {
   const { userId, tokenA, tokenB, positions, newAllocation, execResultId, log } = opts;

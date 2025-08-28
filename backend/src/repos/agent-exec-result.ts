@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 
 export interface ExecResultInsert {
-  agentId: number;
+  agentId: string;
   log: string;
   rebalance?: boolean;
   newAllocation?: number;
@@ -9,7 +9,7 @@ export interface ExecResultInsert {
   error?: Record<string, unknown>;
 }
 
-export async function insertExecResult(entry: ExecResultInsert): Promise<number> {
+export async function insertExecResult(entry: ExecResultInsert): Promise<string> {
   const { rows } = await db.query(
     'INSERT INTO agent_exec_result (agent_id, log, rebalance, new_allocation, short_report, error) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
     [
@@ -21,10 +21,10 @@ export async function insertExecResult(entry: ExecResultInsert): Promise<number>
       entry.error ? JSON.stringify(entry.error) : null,
     ],
   );
-  return Number(rows[0].id);
+  return rows[0].id as string;
 }
 
-export async function getRecentExecResults(agentId: number, limit: number) {
+export async function getRecentExecResults(agentId: string, limit: number) {
   const { rows } = await db.query(
     'SELECT rebalance, new_allocation, short_report, error FROM agent_exec_result WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
     [agentId, limit],
@@ -42,7 +42,7 @@ export async function getRecentExecResults(agentId: number, limit: number) {
   }));
 }
 
-export async function getAgentExecResults(agentId: number, limit: number, offset: number) {
+export async function getAgentExecResults(agentId: string, limit: number, offset: number) {
   const totalRes = await db.query(
     'SELECT COUNT(*) as count FROM agent_exec_result WHERE agent_id = $1',
     [agentId],

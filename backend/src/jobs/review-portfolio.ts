@@ -30,7 +30,7 @@ type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
 /**
  * Agents currently under review. Used to avoid concurrent runs.
  */
-const runningAgents = new Set<number>();
+const runningAgents = new Set<string>();
 
 type PromptCache = {
   pairData: Map<string, { currentPrice: number }>;
@@ -40,7 +40,7 @@ type PromptCache = {
 
 export async function reviewAgentPortfolio(
   log: FastifyBaseLogger,
-  agentId: number,
+  agentId: string,
 ): Promise<void> {
   const agents = await getActiveAgents({ agentId });
   const { toRun, skipped } = filterRunningAgents(agents);

@@ -11,6 +11,13 @@ CREATE TABLE IF NOT EXISTS users(
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
+CREATE TABLE IF NOT EXISTS user_identities(
+  user_id BIGINT NOT NULL REFERENCES users(id),
+  provider TEXT NOT NULL,
+  sub TEXT NOT NULL,
+  UNIQUE(provider, sub)
+);
+
 CREATE TABLE IF NOT EXISTS agents(
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id),

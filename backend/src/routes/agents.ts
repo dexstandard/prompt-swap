@@ -28,10 +28,10 @@ import {
 async function getAgentForRequest(
   req: FastifyRequest,
   reply: FastifyReply,
-): Promise<{ userId: number; id: number; log: Logger; agent: any } | undefined> {
+): Promise<{ userId: string; id: string; log: Logger; agent: any } | undefined> {
   const userId = requireUserId(req, reply);
   if (!userId) return;
-  const id = Number((req.params as any).id);
+  const id = (req.params as any).id as string;
   const log = req.log.child({ userId, agentId: id }) as unknown as Logger;
   const agent = await getAgent(id);
   if (!agent) {

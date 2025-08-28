@@ -11,16 +11,13 @@ import { insertExecLog } from './repos/agent-exec-log.js';
 describe('agent exec log routes', () => {
   it('returns paginated logs and enforces ownership', async () => {
     const app = await buildServer();
-    await insertUser('u1');
-    await insertUser('u2');
+    const user1Id = await insertUser('1');
+    const user2Id = await insertUser('2');
 
-    const agentId = 'a1';
-    await insertAgent({
-      id: agentId,
-      userId: 'u1',
+    const agent = await insertAgent({
+      userId: user1Id,
       model: 'gpt',
       status: 'active',
-      createdAt: 0,
       startBalance: null,
       name: 'A',
       tokenA: 'BTC',
@@ -32,17 +29,12 @@ describe('agent exec log routes', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
+    const agentId = agent.id;
 
     for (let i = 0; i < 3; i++) {
-      await insertExecLog({
-        id: `log${i}`,
-        agentId,
-        response: `log-${i}`,
-        createdAt: i,
-      });
+      await insertExecLog({ agentId, response: `log-${i}` });
       const parsed = parseExecLog(`log-${i}`);
       await insertExecResult({
-        id: `log${i}`,
         agentId,
         log: parsed.text,
         ...(parsed.response
@@ -53,14 +45,13 @@ describe('agent exec log routes', () => {
             }
           : {}),
         ...(parsed.error ? { error: parsed.error } : {}),
-        createdAt: i,
       });
     }
 
     let res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=2`,
-      headers: { 'x-user-id': 'u1' },
+      headers: { 'x-user-id': user1Id },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 3, page: 1, pageSize: 2 });
@@ -69,7 +60,7 @@ describe('agent exec log routes', () => {
     res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=2`,
-      headers: { 'x-user-id': 'u2' },
+      headers: { 'x-user-id': user2Id },
     });
     expect(res.statusCode).toBe(403);
 
@@ -78,15 +69,12 @@ describe('agent exec log routes', () => {
 
   it('parses OpenAI response content JSON into {response}', async () => {
     const app = await buildServer();
-    await insertUser('u3');
+    const userId = await insertUser('3');
 
-    const agentId = 'a2';
-    await insertAgent({
-      id: agentId,
-      userId: 'u3',
+    const agent = await insertAgent({
+      userId,
       model: 'gpt',
       status: 'active',
-      createdAt: 0,
       startBalance: null,
       name: 'A',
       tokenA: 'BTC',
@@ -98,16 +86,16 @@ describe('agent exec log routes', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
+    const agentId = agent.id;
 
     const aiLog = readFileSync(
       join(__dirname, 'fixtures/real-openai-log.json'),
       'utf8',
     );
 
-    await insertExecLog({ id: 'log-new', agentId, response: aiLog, createdAt: 0 });
+    await insertExecLog({ agentId, response: aiLog });
     const parsedAi = parseExecLog(aiLog);
     await insertExecResult({
-      id: 'log-new',
       agentId,
       log: parsedAi.text,
       ...(parsedAi.response
@@ -118,13 +106,12 @@ describe('agent exec log routes', () => {
           }
         : {}),
       ...(parsedAi.error ? { error: parsedAi.error } : {}),
-      createdAt: 0,
     });
 
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
-      headers: { 'x-user-id': 'u3' },
+      headers: { 'x-user-id': userId },
     });
 
     expect(res.statusCode).toBe(200);
@@ -146,14 +133,11 @@ describe('agent exec log routes', () => {
 
   it('handles exec log entries with prompt wrapper', async () => {
     const app = await buildServer();
-    await insertUser('u5');
-    const agentId = 'a5';
-    await insertAgent({
-      id: agentId,
-      userId: 'u5',
+    const userId = await insertUser('5');
+    const agent = await insertAgent({
+      userId,
       model: 'gpt',
       status: 'active',
-      createdAt: 0,
       startBalance: null,
       name: 'A',
       tokenA: 'BTC',
@@ -165,11 +149,11 @@ describe('agent exec log routes', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
+    const agentId = agent.id;
     const entry = JSON.stringify({ prompt: { instructions: 'inst' }, response: 'ok' });
-    await insertExecLog({ id: 'logp', agentId, response: entry, createdAt: 0 });
+    await insertExecLog({ agentId, response: entry });
     const parsedP = parseExecLog(entry);
     await insertExecResult({
-      id: 'logp',
       agentId,
       log: parsedP.text,
       ...(parsedP.response
@@ -180,12 +164,11 @@ describe('agent exec log routes', () => {
           }
         : {}),
       ...(parsedP.error ? { error: parsedP.error } : {}),
-      createdAt: 0,
     });
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
-      headers: { 'x-user-id': 'u5' },
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();

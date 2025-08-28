@@ -31,7 +31,7 @@ export default async function usersRoutes(app: FastifyInstance) {
       const adminId = await requireAdmin(req, reply);
       if (!adminId) return;
       const { id } = req.params as { id: string };
-      const userId = Number(id);
+      const userId = id;
       const row = await getUser(userId);
       if (!row) return reply.code(404).send(errorResponse('user not found'));
       await setUserEnabled(userId, true);
@@ -46,7 +46,7 @@ export default async function usersRoutes(app: FastifyInstance) {
       const adminId = await requireAdmin(req, reply);
       if (!adminId) return;
       const { id } = req.params as { id: string };
-      const userId = Number(id);
+      const userId = id;
       const row = await getUser(userId);
       if (!row) return reply.code(404).send(errorResponse('user not found'));
       await setUserEnabled(userId, false);

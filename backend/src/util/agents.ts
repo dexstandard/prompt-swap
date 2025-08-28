@@ -19,7 +19,7 @@ export enum AgentStatus {
 }
 
 export interface AgentInput {
-  userId: number;
+  userId: string;
   model: string;
   name: string;
   tokenA: string;
@@ -40,14 +40,14 @@ export interface ValidationErr {
 
 export async function validateTokenConflicts(
   log: Logger,
-  userId: number,
+  userId: string,
   tokenA: string,
   tokenB: string,
-  id?: number,
+  id?: string,
 ): Promise<ValidationErr | null> {
   const dupRows = await findActiveTokenConflicts(userId, tokenA, tokenB, id);
   if (!dupRows.length) return null;
-  const conflicts: { token: string; id: number; name: string }[] = [];
+  const conflicts: { token: string; id: string; name: string }[] = [];
   for (const row of dupRows) {
     if (row.token_a === tokenA || row.token_b === tokenA)
       conflicts.push({ token: tokenA, id: row.id, name: row.name });
@@ -62,9 +62,9 @@ export async function validateTokenConflicts(
 
 async function validateAgentInput(
   log: Logger,
-  userId: number,
+  userId: string,
   body: AgentInput,
-  id?: number,
+  id?: string,
 ): Promise<ValidationErr | null> {
   if (body.userId !== userId) {
     log.error('user mismatch');
@@ -120,7 +120,7 @@ async function validateAgentInput(
 
 export async function ensureApiKeys(
   log: Logger,
-  userId: number,
+  userId: string,
 ): Promise<ValidationErr | null> {
   const userRow = await getUserApiKeys(userId);
   if (
@@ -136,7 +136,7 @@ export async function ensureApiKeys(
 
 export async function getStartBalance(
   log: Logger,
-  userId: number,
+  userId: string,
   tokenA: string,
   tokenB: string,
 ): Promise<number | ValidationErr> {
@@ -155,9 +155,9 @@ export async function getStartBalance(
 
 export async function prepareAgentForUpsert(
   log: Logger,
-  userId: number,
+  userId: string,
   body: AgentInput,
-  id?: number,
+  id?: string,
 ): Promise<{ body: AgentInput; startBalance: number | null } | ValidationErr> {
   let norm;
   try {

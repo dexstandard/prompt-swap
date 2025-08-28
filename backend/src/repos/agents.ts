@@ -2,8 +2,8 @@ import { db } from '../db/index.js';
 import { AgentStatus } from '../util/agents.js';
 
 export interface AgentRow {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   model: string;
   status: string;
   created_at: string;
@@ -44,13 +44,13 @@ const baseSelect =
   'min_a_allocation, min_b_allocation, risk, review_interval, ' +
   'agent_instructions, manual_rebalance FROM agents';
 
-export async function getAgent(id: number): Promise<AgentRow | undefined> {
+export async function getAgent(id: string): Promise<AgentRow | undefined> {
   const { rows } = await db.query(`${baseSelect} WHERE id = $1`, [id]);
   return rows[0] as AgentRow | undefined;
 }
 
 export async function getAgentsPaginated(
-  userId: number,
+  userId: string,
   status: string | undefined,
   limit: number,
   offset: number,
@@ -69,7 +69,7 @@ export async function getAgentsPaginated(
 
 export async function findIdenticalDraftAgent(
   data: {
-    userId: number;
+    userId: string;
     model: string;
     name: string;
     tokenA: string;
@@ -81,7 +81,7 @@ export async function findIdenticalDraftAgent(
     agentInstructions: string;
     manualRebalance: boolean;
   },
-  excludeId?: number,
+  excludeId?: string,
 ) {
   const query = `SELECT id, name FROM agents
      WHERE user_id = $1 AND status = 'draft' AND ($2::bigint IS NULL OR id != $2) AND model = $3 AND name = $4
@@ -103,14 +103,14 @@ export async function findIdenticalDraftAgent(
     data.manualRebalance,
   ];
   const { rows } = await db.query(query, params as any[]);
-  return rows[0] as { id: number; name: string } | undefined;
+  return rows[0] as { id: string; name: string } | undefined;
 }
 
 export async function findActiveTokenConflicts(
-  userId: number,
+  userId: string,
   tokenA: string,
   tokenB: string,
-  excludeId?: number,
+  excludeId?: string,
 ) {
   const query = `SELECT id, name, token_a, token_b FROM agents
        WHERE user_id = $1 AND status = 'active' AND ($2::bigint IS NULL OR id != $2)
@@ -118,14 +118,14 @@ export async function findActiveTokenConflicts(
   const params: unknown[] = [userId, excludeId ?? null, tokenA, tokenB];
   const { rows } = await db.query(query, params as any[]);
   return rows as {
-    id: number;
+    id: string;
     name: string;
     token_a: string;
     token_b: string;
   }[];
 }
 
-export async function getUserApiKeys(userId: number) {
+export async function getUserApiKeys(userId: string) {
   const { rows } = await db.query(
     'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = $1',
     [userId],
@@ -140,7 +140,7 @@ export async function getUserApiKeys(userId: number) {
 }
 
 export async function insertAgent(data: {
-  userId: number;
+  userId: string;
   model: string;
   status: string;
   startBalance: number | null;
@@ -178,7 +178,7 @@ export async function insertAgent(data: {
 
 
 export async function updateAgent(data: {
-  id: number;
+  id: string;
   model: string;
   status: string;
   name: string;
@@ -212,11 +212,11 @@ export async function updateAgent(data: {
   );
 }
 
-export async function deleteAgent(id: number): Promise<void> {
+export async function deleteAgent(id: string): Promise<void> {
   await db.query('DELETE FROM agents WHERE id = $1', [id]);
 }
 
-export async function startAgent(id: number, startBalance: number): Promise<void> {
+export async function startAgent(id: string, startBalance: number): Promise<void> {
   await db.query('UPDATE agents SET status = $1, start_balance = $2 WHERE id = $3', [
     AgentStatus.Active,
     startBalance,
@@ -224,7 +224,7 @@ export async function startAgent(id: number, startBalance: number): Promise<void
   ]);
 }
 
-export async function stopAgent(id: number): Promise<void> {
+export async function stopAgent(id: string): Promise<void> {
   await db.query('UPDATE agents SET status = $1, start_balance = NULL WHERE id = $2', [
     AgentStatus.Inactive,
     id,
@@ -232,8 +232,8 @@ export async function stopAgent(id: number): Promise<void> {
 }
 
 export interface ActiveAgentRow {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   model: string;
   token_a: string;
   token_b: string;
@@ -247,7 +247,7 @@ export interface ActiveAgentRow {
 }
 
 export async function getActiveAgents(options?: {
-  agentId?: number;
+  agentId?: string;
   interval?: string;
 }): Promise<ActiveAgentRow[]> {
   const sql = `SELECT a.id, a.user_id, a.model,

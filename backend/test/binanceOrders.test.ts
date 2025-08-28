@@ -19,15 +19,15 @@ describe('binance order helpers', () => {
     const secret = 'binSecret123456';
     const encKey = encrypt(key, process.env.KEY_PASSWORD!);
     const encSecret = encrypt(secret, process.env.KEY_PASSWORD!);
-    insertUser('user1');
-    setBinanceKey('user1', encKey, encSecret);
+    const id1 = await insertUser('1');
+    await setBinanceKey(id1, encKey, encSecret);
 
     const fetchMock = vi
       .fn()
       .mockResolvedValue({ ok: true, json: async () => ({ orderId: 1 }) });
     vi.stubGlobal('fetch', fetchMock as any);
 
-    await createLimitOrder('user1', {
+    await createLimitOrder(id1, {
       symbol: 'BTCUSDT',
       side: 'BUY',
       quantity: 0.1,
@@ -53,15 +53,15 @@ describe('binance order helpers', () => {
     const secret = 'binSecret654321';
     const encKey = encrypt(key, process.env.KEY_PASSWORD!);
     const encSecret = encrypt(secret, process.env.KEY_PASSWORD!);
-    insertUser('user2');
-    setBinanceKey('user2', encKey, encSecret);
+    const id2 = await insertUser('2');
+    await setBinanceKey(id2, encKey, encSecret);
 
     const fetchMock = vi
       .fn()
       .mockResolvedValue({ ok: true, json: async () => ({ status: 'canceled' }) });
     vi.stubGlobal('fetch', fetchMock as any);
 
-    await cancelOrder('user2', { symbol: 'BTCUSDT', orderId: 42 });
+    await cancelOrder(id2, { symbol: 'BTCUSDT', orderId: 42 });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = fetchMock.mock.calls[0];

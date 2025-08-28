@@ -11,8 +11,8 @@ describe('binance balance route', () => {
     const secret = 'binSecret123456';
     const encKey = encrypt(key, process.env.KEY_PASSWORD!);
     const encSecret = encrypt(secret, process.env.KEY_PASSWORD!);
-    insertUser('user1');
-    setBinanceKey('user1', encKey, encSecret);
+    const userId = await insertUser('1');
+    await setBinanceKey(userId, encKey, encSecret);
 
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
@@ -33,8 +33,8 @@ describe('binance balance route', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/api/users/user1/binance-balance',
-      headers: { 'x-user-id': 'user1' },
+      url: `/api/users/${userId}/binance-balance`,
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ totalUsd: 20100 });
@@ -49,8 +49,8 @@ describe('binance balance route', () => {
     const secret = 'binSecret123456';
     const encKey = encrypt(key, process.env.KEY_PASSWORD!);
     const encSecret = encrypt(secret, process.env.KEY_PASSWORD!);
-    insertUser('user2');
-    setBinanceKey('user2', encKey, encSecret);
+    const userId = await insertUser('2');
+    await setBinanceKey(userId, encKey, encSecret);
 
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
@@ -64,8 +64,8 @@ describe('binance balance route', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/api/users/user2/binance-balance/BTC',
-      headers: { 'x-user-id': 'user2' },
+      url: `/api/users/${userId}/binance-balance/BTC`,
+      headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ asset: 'BTC', free: 1.5, locked: 0.5 });
@@ -78,8 +78,8 @@ describe('binance balance route', () => {
     const app = await buildServer();
     const res = await app.inject({
       method: 'GET',
-      url: '/api/users/other/binance-balance',
-      headers: { 'x-user-id': 'user1' },
+      url: '/api/users/999/binance-balance',
+      headers: { 'x-user-id': '1' },
     });
     expect(res.statusCode).toBe(403);
     await app.close();

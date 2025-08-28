@@ -4,7 +4,11 @@ import { z } from 'zod';
 import { authenticator } from 'otplib';
 import { env } from '../util/env.js';
 import { RATE_LIMITS } from '../rate-limit.js';
-import { insertUser, setUserEmail, findUserByEmail } from '../repos/users.js';
+import { insertUser, setUserEmail } from '../repos/users.js';
+import {
+  findUserByIdentity,
+  insertUserIdentity,
+} from '../repos/user-identities.js';
 import { encrypt } from '../util/crypto.js';
 
 interface ValidationErr {
@@ -36,10 +40,11 @@ export default async function loginRoutes(app: FastifyInstance) {
       const emailEnc = payload.email
         ? encrypt(payload.email, env.KEY_PASSWORD)
         : null;
-      const row = emailEnc ? await findUserByEmail(emailEnc) : undefined;
-      let id: number;
+      const row = await findUserByIdentity('google', payload.sub);
+      let id: string;
       if (!row) {
         id = await insertUser(emailEnc);
+        await insertUserIdentity(id, 'google', payload.sub);
         return { id, email: payload.email, role: 'user' };
       }
       id = row.id;

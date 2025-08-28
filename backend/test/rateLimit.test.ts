@@ -22,19 +22,19 @@ const endpoints: Endpoint[] = [
     setup: async () => {
       const { OAuth2Client } = await import('google-auth-library');
       vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
-        getPayload: () => ({ sub: 'user1', email: 'user@example.com' }),
+        getPayload: () => ({ sub: '1', email: 'user@example.com' }),
       } as any);
     },
   },
   { name: 'agents', method: 'GET', url: '/api/agents/paginated', limit: RATE_LIMITS.RELAXED.max },
-  { name: 'api-keys', method: 'GET', url: '/api/users/u1/ai-key', limit: RATE_LIMITS.MODERATE.max },
+  { name: 'api-keys', method: 'GET', url: '/api/users/1/ai-key', limit: RATE_LIMITS.MODERATE.max },
   {
     name: 'binance-balance',
     method: 'GET',
-    url: '/api/users/u1/binance-balance',
+    url: '/api/users/1/binance-balance',
     limit: RATE_LIMITS.MODERATE.max,
   },
-  { name: 'models', method: 'GET', url: '/api/users/u1/models', limit: RATE_LIMITS.MODERATE.max },
+  { name: 'models', method: 'GET', url: '/api/users/1/models', limit: RATE_LIMITS.MODERATE.max },
   { name: 'twofa-status', method: 'GET', url: '/api/2fa/status', limit: RATE_LIMITS.MODERATE.max },
   { name: 'twofa-setup', method: 'GET', url: '/api/2fa/setup', limit: RATE_LIMITS.TIGHT.max },
 ];

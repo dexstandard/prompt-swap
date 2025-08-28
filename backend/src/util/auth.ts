@@ -4,25 +4,20 @@ import { getUser } from '../repos/users.js';
 
 export function requireUserId(
   req: FastifyRequest,
-  reply: FastifyReply
-): number | null {
+  reply: FastifyReply,
+): string | null {
   const userIdHeader = req.headers['x-user-id'] as string | undefined;
   if (!userIdHeader) {
     reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
     return null;
   }
-  const userId = Number(userIdHeader);
-  if (!Number.isFinite(userId)) {
-    reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
-    return null;
-  }
-  return userId;
+  return userIdHeader;
 }
 
 export async function requireAdmin(
   req: FastifyRequest,
-  reply: FastifyReply
-): Promise<number | null> {
+  reply: FastifyReply,
+): Promise<string | null> {
   const userId = requireUserId(req, reply);
   if (!userId) return null;
   const row = await getUser(userId);
@@ -36,8 +31,8 @@ export async function requireAdmin(
 export function requireUserIdMatch(
   req: FastifyRequest,
   reply: FastifyReply,
-  id: number,
-): number | null {
+  id: string,
+): string | null {
   const userId = requireUserId(req, reply);
   if (!userId) return null;
   if (userId !== id) {

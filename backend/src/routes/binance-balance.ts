@@ -9,7 +9,7 @@ export default async function binanceBalanceRoutes(app: FastifyInstance) {
     '/users/:id/binance-balance',
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
-      const id = Number((req.params as any).id);
+      const id = (req.params as any).id as string;
       if (!requireUserIdMatch(req, reply, id)) return;
     let total;
     try {
@@ -30,7 +30,7 @@ export default async function binanceBalanceRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
       const { id, token } = req.params as any;
-      const userId = Number(id);
+      const userId = id as string;
       if (!requireUserIdMatch(req, reply, userId)) return;
       let account;
       try {
