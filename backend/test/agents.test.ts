@@ -230,7 +230,7 @@ describe('agent routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'active' });
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(getActiveAgents().find((a) => a.id === id)).toBeDefined();
+    expect((await getActiveAgents()).find((a) => a.id === id)).toBeDefined();
 
     res = await app.inject({
       method: 'POST',
@@ -239,7 +239,7 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'inactive' });
-    expect(getActiveAgents().find((a) => a.id === id)).toBeUndefined();
+    expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
@@ -327,7 +327,7 @@ describe('agent routes', () => {
       payload: updatePayload,
     });
     expect(resUpdate.statusCode).toBe(200);
-    const row = getAgent(id);
+    const row = await getAgent(id);
     expect(row?.start_balance).toBeGreaterThanOrEqual(0);
     expect(fetchMock).toHaveBeenCalledTimes(4);
 
@@ -414,7 +414,7 @@ describe('agent routes', () => {
     });
     const draft2Id = resDraft2.json().id as string;
 
-    const activeAgents = getActiveAgents();
+    const activeAgents = await getActiveAgents();
     expect(activeAgents.find((a) => a.id === activeId)).toBeDefined();
     expect(activeAgents.find((a) => a.id === draftId)).toBeUndefined();
     expect(activeAgents.find((a) => a.id === draft2Id)).toBeUndefined();
@@ -487,7 +487,7 @@ describe('agent routes', () => {
     expect(resDup.json().error).toContain('A1');
     expect(resDup.json().error).toContain(existingId);
 
-    setAgentStatus(existingId, 'inactive');
+    await setAgentStatus(existingId, 'inactive');
 
     const resOk = await app.inject({
       method: 'POST',

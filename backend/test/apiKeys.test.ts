@@ -23,7 +23,7 @@ describe('AI API key routes', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
-    let row = getAiKeyRow(userId);
+    let row = await getAiKeyRow(userId);
     expect(row!.ai_api_key_enc).toBeNull();
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
@@ -34,7 +34,7 @@ describe('AI API key routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ key: 'aike...7890' });
-    row = getAiKeyRow(userId);
+    row = await getAiKeyRow(userId);
     expect(row!.ai_api_key_enc).not.toBe(key1);
 
     res = await app.inject({ method: 'GET', url: `/api/users/${userId}/ai-key` });
@@ -101,7 +101,7 @@ describe('Binance API key routes', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
-    let row = getBinanceKeyRow(userId);
+    let row = await getBinanceKeyRow(userId);
     expect(row!.binance_api_key_enc).toBeNull();
     expect(row!.binance_api_secret_enc).toBeNull();
 
@@ -116,7 +116,7 @@ describe('Binance API key routes', () => {
       key: 'bkey...7890',
       secret: 'bsec...7890',
     });
-    row = getBinanceKeyRow(userId);
+    row = await getBinanceKeyRow(userId);
     expect(row!.binance_api_key_enc).not.toBe(key1);
     expect(row!.binance_api_secret_enc).not.toBe(secret1);
 
