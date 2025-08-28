@@ -33,12 +33,13 @@ Tables:
 Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
 
 ### Testing
-- Backend tests require a running PostgreSQL instance.
-  - Check if `psql` exists or `pg_isready` succeeds before installing to avoid
-    clobbering an existing server.
-  - Ensure a database named `promptswap_test` is available on
+- Backend tests can launch a disposable PostgreSQL using Testcontainers when
+  `USE_TESTCONTAINERS=1` and Docker is available.
+- Without Docker, ensure `psql` exists or `pg_isready` succeeds before
+  installing PostgreSQL to avoid clobbering an existing server.
+  - Provide a database named `promptswap_test` on
     `postgres://postgres:postgres@localhost:5432`.
-  - Run tests with `DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test`.
+- Run tests via `npm test` (set `USE_TESTCONTAINERS=1` to use Testcontainers).
 - `npm run build`
 
 ### Guidelines

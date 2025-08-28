@@ -23,6 +23,25 @@ Currently swaps tokens via Binance using user-provided API keys.
    npm run dev
    ```
 
+## Testing
+
+Backend tests can run against a temporary PostgreSQL instance provided by
+[Testcontainers](https://testcontainers.com/) or a local PostgreSQL server.
+
+- **With Docker available** (recommended):
+
+  ```bash
+  USE_TESTCONTAINERS=1 npm test
+  ```
+
+- **Without Docker**: ensure PostgreSQL is running and `DATABASE_URL`
+  points at a test database (default
+  `postgres://postgres:postgres@localhost:5432/promptswap_test`), then run:
+
+  ```bash
+  npm test
+  ```
+
 
 ## Continuous Integration
 
