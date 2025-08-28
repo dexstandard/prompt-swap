@@ -105,7 +105,7 @@ describe('reviewPortfolio', () => {
     const ethPos = cfg.portfolio.positions.find((p: any) => p.sym === 'ETH');
     expect(btcPos.qty).toBe(1.5);
     expect(ethPos.qty).toBe(2);
-    expect(cfg.policy.floors).toEqual({ BTC: 0.1, ETH: 0.2 });
+    expect(cfg.policy.floorPercents).toEqual({ BTC: 10, ETH: 20 });
     expect(cfg.portfolio.weights.BTC).toBeCloseTo(150 / 350);
     expect(cfg.portfolio.weights.ETH).toBeCloseTo(200 / 350);
     expect(args[1].marketData).toEqual({
@@ -143,7 +143,7 @@ describe('reviewPortfolio', () => {
     expect(JSON.parse(rowsTyped[0].prompt!)).toMatchObject({
       instructions: 'inst',
       config: {
-        policy: { floors: { BTC: 0.1, ETH: 0.2 } },
+        policy: { floorPercents: { BTC: 10, ETH: 20 } },
         portfolio: {
           positions: [
             expect.objectContaining({ sym: 'BTC', qty: 1.5 }),

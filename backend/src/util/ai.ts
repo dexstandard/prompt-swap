@@ -19,7 +19,7 @@ export interface RebalancePosition {
 export interface RebalancePrompt {
   instructions: string;
   config: {
-    policy: { floors: Record<string, number> };
+    policy: { floorPercents: Record<string, number> };
     portfolio: {
       ts: string;
       positions: RebalancePosition[];
