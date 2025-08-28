@@ -34,7 +34,7 @@ export async function createRebalanceLimitOrder(opts: {
     quantity,
     price: currentPrice,
   } as const;
-  insertExecution({
+  await insertExecution({
     userId,
     planned: params,
     status: 'pending',
