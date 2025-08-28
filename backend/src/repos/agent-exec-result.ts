@@ -1,33 +1,30 @@
 import { db } from '../db/index.js';
 
-export interface ExecResultEntry {
-  id: string;
-  agentId: string;
+export interface ExecResultInsert {
+  agentId: number;
   log: string;
   rebalance?: boolean;
   newAllocation?: number;
   shortReport?: string;
   error?: Record<string, unknown>;
-  createdAt: number;
 }
 
-export async function insertExecResult(entry: ExecResultEntry): Promise<void> {
-  await db.query(
-    'INSERT INTO agent_exec_result (id, agent_id, log, rebalance, new_allocation, short_report, error, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+export async function insertExecResult(entry: ExecResultInsert): Promise<number> {
+  const { rows } = await db.query(
+    'INSERT INTO agent_exec_result (agent_id, log, rebalance, new_allocation, short_report, error) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
     [
-      entry.id,
       entry.agentId,
       entry.log,
       entry.rebalance === undefined ? null : entry.rebalance,
       entry.newAllocation ?? null,
       entry.shortReport ?? null,
       entry.error ? JSON.stringify(entry.error) : null,
-      entry.createdAt,
     ],
   );
+  return Number(rows[0].id);
 }
 
-export async function getRecentExecResults(agentId: string, limit: number) {
+export async function getRecentExecResults(agentId: number, limit: number) {
   const { rows } = await db.query(
     'SELECT rebalance, new_allocation, short_report, error FROM agent_exec_result WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
     [agentId, limit],
@@ -45,7 +42,7 @@ export async function getRecentExecResults(agentId: string, limit: number) {
   }));
 }
 
-export async function getAgentExecResults(agentId: string, limit: number, offset: number) {
+export async function getAgentExecResults(agentId: number, limit: number, offset: number) {
   const totalRes = await db.query(
     'SELECT COUNT(*) as count FROM agent_exec_result WHERE agent_id = $1',
     [agentId],

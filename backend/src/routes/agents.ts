@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Logger } from 'pino';
-import { randomUUID } from 'node:crypto';
 import {
   getAgent,
   getAgentsPaginated,
@@ -29,10 +28,10 @@ import {
 async function getAgentForRequest(
   req: FastifyRequest,
   reply: FastifyReply,
-): Promise<{ userId: string; id: string; log: Logger; agent: any } | undefined> {
+): Promise<{ userId: number; id: number; log: Logger; agent: any } | undefined> {
   const userId = requireUserId(req, reply);
   if (!userId) return;
-  const id = (req.params as any).id;
+  const id = Number((req.params as any).id);
   const log = req.log.child({ userId, agentId: id }) as unknown as Logger;
   const agent = await getAgent(id);
   if (!agent) {
@@ -87,15 +86,11 @@ export default async function agentRoutes(app: FastifyInstance) {
         const res = await prepareAgentForUpsert(log, userId, body);
         if ('code' in res) return reply.code(res.code).send(res.body);
         const { body: validated, startBalance } = res;
-        const id = randomUUID();
         const status = validated.status;
-        const createdAt = Date.now();
-        await insertAgent({
-          id,
+        const row = await insertAgent({
           userId: validated.userId,
           model: validated.model,
           status,
-          createdAt,
           startBalance,
           name: validated.name,
           tokenA: validated.tokenA,
@@ -107,12 +102,11 @@ export default async function agentRoutes(app: FastifyInstance) {
           agentInstructions: validated.agentInstructions,
           manualRebalance: validated.manualRebalance,
         });
-        const row = (await getAgent(id))!;
         if (status === AgentStatus.Active)
-          reviewAgentPortfolio(req.log, id).catch((err) =>
-            log.error({ err, agentId: id }, 'initial review failed'),
+          reviewAgentPortfolio(req.log, row.id).catch((err) =>
+            log.error({ err, agentId: row.id }, 'initial review failed'),
           );
-        log.info({ agentId: id }, 'created agent');
+        log.info({ agentId: row.id }, 'created agent');
         return toApi(row);
       }
     );
@@ -192,7 +186,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         const status = validated.status;
         await updateAgent({
           id,
-          userId: validated.userId,
           model: validated.model,
           status,
           name: validated.name,

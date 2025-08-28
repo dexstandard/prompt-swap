@@ -1,22 +1,19 @@
 import { db } from '../db/index.js';
 
-export interface ExecLogEntry {
-  id: string;
-  agentId: string;
+export interface ExecLogInsert {
+  agentId: number;
   prompt?: unknown;
   response: unknown;
-  createdAt: number;
 }
 
-export async function insertExecLog(entry: ExecLogEntry): Promise<void> {
-  await db.query(
-    'INSERT INTO agent_exec_log (id, agent_id, prompt, response, created_at) VALUES ($1, $2, $3, $4, $5)',
+export async function insertExecLog(entry: ExecLogInsert): Promise<number> {
+  const { rows } = await db.query(
+    'INSERT INTO agent_exec_log (agent_id, prompt, response) VALUES ($1, $2, $3) RETURNING id',
     [
-      entry.id,
       entry.agentId,
       entry.prompt === undefined ? null : JSON.stringify(entry.prompt),
       JSON.stringify(entry.response),
-      entry.createdAt,
     ],
   );
+  return Number(rows[0].id);
 }

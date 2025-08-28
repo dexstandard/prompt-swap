@@ -1,5 +1,4 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { randomUUID } from 'node:crypto';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import {
@@ -31,7 +30,7 @@ type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
 /**
  * Agents currently under review. Used to avoid concurrent runs.
  */
-const runningAgents = new Set<string>();
+const runningAgents = new Set<number>();
 
 type PromptCache = {
   pairData: Map<string, { currentPrice: number }>;
@@ -41,7 +40,7 @@ type PromptCache = {
 
 export async function reviewAgentPortfolio(
   log: FastifyBaseLogger,
-  agentId: string,
+  agentId: number,
 ): Promise<void> {
   const agents = await getActiveAgents({ agentId });
   const { toRun, skipped } = filterRunningAgents(agents);
@@ -72,8 +71,8 @@ async function runAgents(
   const prepared = await prepareAgents(agents, log, cache);
 
   await Promise.all(
-    prepared.map(({ row, prompt, key, log: lg, execLogId }) =>
-      executeAgent(row, prompt, key, lg, execLogId).finally(() => {
+    prepared.map(({ row, prompt, key, log: lg }) =>
+      executeAgent(row, prompt, key, lg).finally(() => {
         runningAgents.delete(row.id);
       }),
     ),
@@ -103,26 +102,23 @@ async function prepareAgents(
     prompt: RebalancePrompt;
     key: string;
     log: FastifyBaseLogger;
-    execLogId: string;
   }[] = [];
 
   for (const row of rows) {
-    const execLogId = randomUUID();
     const log = parentLog.child({
       userId: row.user_id,
       agentId: row.id,
-      execLogId,
     });
 
     const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
 
-    const balances = await fetchBalances(row, log, execLogId);
+    const balances = await fetchBalances(row, log);
     if (!balances) {
       runningAgents.delete(row.id);
       continue;
     }
 
-    const prompt = await buildPrompt(row, balances, log, execLogId, cache);
+    const prompt = await buildPrompt(row, balances, log, cache);
     if (!prompt) {
       runningAgents.delete(row.id);
       continue;
@@ -134,7 +130,7 @@ async function prepareAgents(
       return str === '{}' ? '' : str;
     });
 
-    prepared.push({ row, prompt, key, log, execLogId });
+    prepared.push({ row, prompt, key, log });
   }
 
   return prepared;
@@ -143,7 +139,6 @@ async function prepareAgents(
 async function fetchBalances(
   row: ActiveAgentRow,
   log: FastifyBaseLogger,
-  execLogId: string,
 ): Promise<{ tokenABalance: number; tokenBBalance: number } | undefined> {
   let tokenABalance: number | undefined;
   let tokenBBalance: number | undefined;
@@ -160,7 +155,7 @@ async function fetchBalances(
   }
   if (tokenABalance === undefined || tokenBBalance === undefined) {
     const msg = 'failed to fetch token balances';
-    saveFailure(row, execLogId, msg);
+    saveFailure(row, msg);
     log.error({ err: msg }, 'agent run failed');
     return undefined;
   }
@@ -171,7 +166,6 @@ async function buildPrompt(
   row: ActiveAgentRow,
   balances: { tokenABalance: number; tokenBBalance: number },
   log: FastifyBaseLogger,
-  execLogId: string,
   cache: PromptCache,
 ): Promise<RebalancePrompt | undefined> {
   try {
@@ -204,7 +198,7 @@ async function buildPrompt(
     };
   } catch (err) {
     const msg = 'failed to fetch market data';
-    saveFailure(row, execLogId, msg);
+    saveFailure(row, msg);
     log.error({ err }, 'agent run failed');
     return undefined;
   }
@@ -345,21 +339,16 @@ async function executeAgent(
   prompt: RebalancePrompt,
   key: string,
   log: FastifyBaseLogger,
-  execLogId: string,
 ) {
   try {
     const text = await callRebalancingAgent(row.model, prompt, key);
-    const createdAt = Date.now();
-    insertExecLog({
-      id: execLogId,
+    const logId = await insertExecLog({
       agentId: row.id,
       prompt,
       response: text,
-      createdAt,
     });
     const parsed = parseExecLog(text);
-    insertExecResult({
-      id: execLogId,
+    const resultId = await insertExecResult({
       agentId: row.id,
       log: parsed.text,
       ...(parsed.response
@@ -370,7 +359,6 @@ async function executeAgent(
           }
         : {}),
       ...(parsed.error ? { error: parsed.error } : {}),
-      createdAt,
     });
     if (
       !row.manual_rebalance &&
@@ -384,33 +372,28 @@ async function executeAgent(
         positions: prompt.config.portfolio.positions,
         newAllocation: parsed.response.newAllocation,
         log,
-        execResultId: execLogId,
+        execResultId: resultId,
       });
     }
     log.info('agent run complete');
   } catch (err) {
-    saveFailure(row, execLogId, String(err), prompt);
+    saveFailure(row, String(err), prompt);
     log.error({ err }, 'agent run failed');
   }
 }
 
 function saveFailure(
   row: ActiveAgentRow,
-  execLogId: string,
   message: string,
   prompt?: RebalancePrompt,
 ) {
-  const createdAt = Date.now();
   insertExecLog({
-    id: execLogId,
     agentId: row.id,
     ...(prompt ? { prompt } : {}),
     response: { error: message },
-    createdAt,
   });
   const parsed = parseExecLog({ error: message });
   insertExecResult({
-    id: execLogId,
     agentId: row.id,
     log: parsed.text,
     ...(parsed.response
@@ -421,7 +404,6 @@ function saveFailure(
         }
       : {}),
     ...(parsed.error ? { error: parsed.error } : {}),
-    createdAt,
   });
 }
 

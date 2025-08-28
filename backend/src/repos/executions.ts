@@ -1,10 +1,10 @@
 import { db } from '../db/index.js';
 
 export interface ExecutionEntry {
-  userId: string;
+  userId: number;
   planned: Record<string, unknown>;
   status: string;
-  execResultId: string;
+  execResultId: number;
 }
 
 export async function insertExecution(entry: ExecutionEntry): Promise<void> {

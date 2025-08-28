@@ -9,7 +9,7 @@ export interface UserRow {
   is_enabled: boolean;
 }
 
-export async function getUser(id: string) {
+export async function getUser(id: number) {
   const { rows } = await db.query(
     'SELECT totp_secret_enc, is_totp_enabled, role, is_enabled FROM users WHERE id = $1',
     [id],
@@ -31,14 +31,15 @@ export async function getUser(id: string) {
   };
 }
 
-export async function insertUser(id: string, emailEnc: string | null): Promise<void> {
-  await db.query(
-    "INSERT INTO users (id, role, is_enabled, email_enc) VALUES ($1, 'user', true, $2)",
-    [id, emailEnc],
+export async function insertUser(emailEnc: string | null): Promise<number> {
+  const { rows } = await db.query(
+    "INSERT INTO users (role, is_enabled, email_enc) VALUES ('user', true, $1) RETURNING id",
+    [emailEnc],
   );
+  return Number(rows[0].id);
 }
 
-export async function setUserEmail(id: string, emailEnc: string): Promise<void> {
+export async function setUserEmail(id: number, emailEnc: string): Promise<void> {
   await db.query('UPDATE users SET email_enc = $1 WHERE id = $2', [emailEnc, id]);
 }
 
@@ -47,7 +48,7 @@ export async function listUsers() {
     'SELECT id, role, is_enabled, email_enc, created_at FROM users',
   );
   return rows as {
-    id: string;
+    id: number;
     role: string;
     is_enabled: boolean;
     email_enc?: string;
@@ -55,11 +56,11 @@ export async function listUsers() {
   }[];
 }
 
-export async function setUserEnabled(id: string, enabled: boolean): Promise<void> {
+export async function setUserEnabled(id: number, enabled: boolean): Promise<void> {
   await db.query('UPDATE users SET is_enabled = $1 WHERE id = $2', [enabled, id]);
 }
 
-export async function getUserTotpStatus(id: string) {
+export async function getUserTotpStatus(id: number) {
   const { rows } = await db.query(
     'SELECT is_totp_enabled FROM users WHERE id = $1',
     [id],
@@ -68,7 +69,7 @@ export async function getUserTotpStatus(id: string) {
   return !!row?.is_totp_enabled;
 }
 
-export async function setUserTotpSecret(id: string, secret: string): Promise<void> {
+export async function setUserTotpSecret(id: number, secret: string): Promise<void> {
   const enc = encrypt(secret, env.KEY_PASSWORD);
   await db.query(
     'UPDATE users SET totp_secret_enc = $1, is_totp_enabled = true WHERE id = $2',
@@ -76,7 +77,7 @@ export async function setUserTotpSecret(id: string, secret: string): Promise<voi
   );
 }
 
-export async function getUserTotpSecret(id: string) {
+export async function getUserTotpSecret(id: number) {
   const { rows } = await db.query(
     'SELECT totp_secret_enc FROM users WHERE id = $1',
     [id],
@@ -86,9 +87,33 @@ export async function getUserTotpSecret(id: string) {
   return decrypt(row.totp_secret_enc, env.KEY_PASSWORD);
 }
 
-export async function clearUserTotp(id: string): Promise<void> {
+export async function clearUserTotp(id: number): Promise<void> {
   await db.query(
     'UPDATE users SET totp_secret_enc = NULL, is_totp_enabled = false WHERE id = $1',
     [id],
   );
+}
+
+export async function findUserByEmail(emailEnc: string) {
+  const { rows } = await db.query(
+    'SELECT id, role, is_enabled, totp_secret_enc, is_totp_enabled FROM users WHERE email_enc = $1',
+    [emailEnc],
+  );
+  const row = rows[0] as {
+    id: number;
+    role: string;
+    is_enabled: boolean;
+    totp_secret_enc?: string;
+    is_totp_enabled?: boolean;
+  } | undefined;
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    role: row.role,
+    is_enabled: row.is_enabled,
+    totp_secret: row.totp_secret_enc
+      ? decrypt(row.totp_secret_enc, env.KEY_PASSWORD)
+      : undefined,
+    is_totp_enabled: row.is_totp_enabled,
+  };
 }

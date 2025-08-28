@@ -1,7 +1,13 @@
 import { db } from '../../src/db/index.js';
 import { insertExecLog as insertExecLogProd } from '../../src/repos/agent-exec-log.js';
 
-export const insertExecLog = insertExecLogProd;
+export function insertExecLog(entry: any) {
+  return insertExecLogProd({
+    agentId: entry.agentId,
+    prompt: entry.prompt,
+    response: entry.response,
+  });
+}
 
 export async function clearAgentExecLog() {
   await db.query('DELETE FROM agent_exec_log');

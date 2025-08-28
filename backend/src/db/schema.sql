@@ -11,16 +11,6 @@ CREATE TABLE IF NOT EXISTS users(
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
-CREATE TABLE IF NOT EXISTS executions(
-  id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT NOT NULL REFERENCES users(id),
-  planned_json TEXT NOT NULL,
-  status TEXT NOT NULL,
-  exec_result_id BIGINT REFERENCES agent_exec_result(id),
-  order_id TEXT,
-  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
-);
-
 CREATE TABLE IF NOT EXISTS agents(
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id),
@@ -39,14 +29,6 @@ CREATE TABLE IF NOT EXISTS agents(
   manual_rebalance BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TABLE IF NOT EXISTS agent_exec_log(
-  id BIGSERIAL PRIMARY KEY,
-  agent_id BIGINT NOT NULL REFERENCES agents(id),
-  prompt TEXT,
-  response TEXT,
-  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
-);
-
 CREATE TABLE IF NOT EXISTS agent_exec_result(
   id BIGSERIAL PRIMARY KEY,
   agent_id BIGINT NOT NULL REFERENCES agents(id),
@@ -55,6 +37,24 @@ CREATE TABLE IF NOT EXISTS agent_exec_result(
   new_allocation REAL,
   short_report TEXT,
   error TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
+);
+
+CREATE TABLE IF NOT EXISTS executions(
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id),
+  planned_json TEXT NOT NULL,
+  status TEXT NOT NULL,
+  exec_result_id BIGINT REFERENCES agent_exec_result(id),
+  order_id TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
+);
+
+CREATE TABLE IF NOT EXISTS agent_exec_log(
+  id BIGSERIAL PRIMARY KEY,
+  agent_id BIGINT NOT NULL REFERENCES agents(id),
+  prompt TEXT,
+  response TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 

@@ -5,7 +5,7 @@ import { getBinanceKeyRow } from '../repos/api-keys.js';
 
 type UserCreds = { key: string; secret: string };
 
-async function getUserCreds(id: string): Promise<UserCreds | null> {
+async function getUserCreds(id: number): Promise<UserCreds | null> {
   const row = await getBinanceKeyRow(id);
   if (!row?.binance_api_key_enc || !row.binance_api_secret_enc) return null;
   const key = decrypt(row.binance_api_key_enc, env.KEY_PASSWORD);
@@ -13,7 +13,7 @@ async function getUserCreds(id: string): Promise<UserCreds | null> {
   return { key, secret };
 }
 
-export async function fetchAccount(id: string) {
+export async function fetchAccount(id: number) {
   const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
@@ -29,7 +29,7 @@ export async function fetchAccount(id: string) {
   };
 }
 
-export async function fetchTotalBalanceUsd(id: string) {
+export async function fetchTotalBalanceUsd(id: number) {
   const account = await fetchAccount(id);
   if (!account) return null;
   let total = 0;
@@ -50,7 +50,7 @@ export async function fetchTotalBalanceUsd(id: string) {
   return total;
 }
 
-export async function fetchTokensBalanceUsd(id: string, tokens: string[]) {
+export async function fetchTokensBalanceUsd(id: number, tokens: string[]) {
   const account = await fetchAccount(id);
   if (!account) return null;
   const wanted = new Set(tokens.map((t) => t.toUpperCase()));
@@ -74,7 +74,7 @@ export async function fetchTokensBalanceUsd(id: string, tokens: string[]) {
 }
 
 export async function createLimitOrder(
-  id: string,
+  id: number,
   opts: { symbol: string; side: 'BUY' | 'SELL'; quantity: number; price: number }
 ) {
   const creds = await getUserCreds(id);
@@ -109,7 +109,7 @@ export async function createLimitOrder(
 }
 
 export async function cancelOrder(
-  id: string,
+  id: number,
   opts: { symbol: string; orderId: number }
 ) {
   const creds = await getUserCreds(id);
