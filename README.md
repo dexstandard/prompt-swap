@@ -62,5 +62,6 @@ For automated deployments, configure GitHub repository secrets:
  - `DOMAIN`: domain name for TLS certificates.
  - `KEY_PASSWORD`: password for encrypting sensitive keys.
  - `GOOGLE_CLIENT_ID`: OAuth client ID used by both backend and frontend.
+ - `DB_CONNECTION_STR`: PostgreSQL connection string used by the backend.
 
 The CI workflow injects these secrets as environment variables when running `docker compose` during deployment.

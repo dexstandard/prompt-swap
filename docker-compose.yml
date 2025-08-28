@@ -6,7 +6,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=/data/data.db
+      - DATABASE_URL=${DB_CONNECTION_STR}
       - KEY_PASSWORD=${KEY_PASSWORD}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     expose:
