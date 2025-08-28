@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
   workflow_dispatch:
 
@@ -69,9 +69,10 @@ jobs:
           DOMAIN: ${{ secrets.DOMAIN }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          DB_CONNECTION_STR: ${{ secrets.DB_CONNECTION_STR }}
         run: |
           set -euo pipefail
-          for s in DO_SSH_HOST DO_SSH_USER DO_SSH_PRIVATE_KEY DO_SSH_PASSPHRASE DOMAIN KEY_PASSWORD GOOGLE_CLIENT_ID; do
+          for s in DO_SSH_HOST DO_SSH_USER DO_SSH_PRIVATE_KEY DO_SSH_PASSPHRASE DOMAIN KEY_PASSWORD GOOGLE_CLIENT_ID DB_CONNECTION_STR; do
             v="${!s}"
             if [ -z "$v" ]; then
               echo "Missing secret: $s"
@@ -95,12 +96,13 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           DOMAIN: ${{ secrets.DOMAIN }}
+          DB_CONNECTION_STR: ${{ secrets.DB_CONNECTION_STR }}
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
-          envs: KEY_PASSWORD,GOOGLE_CLIENT_ID,DOMAIN
+          envs: KEY_PASSWORD,GOOGLE_CLIENT_ID,DOMAIN,DB_CONNECTION_STR
           script: |
             set -euo pipefail
             cd ~/prompt-swap
@@ -108,6 +110,7 @@ jobs:
             export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
             export DOMAIN="${DOMAIN}"
             export VITE_GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
+            export DB_CONNECTION_STR="${DB_CONNECTION_STR}"
             docker compose up -d --build
             # Wait for backend health endpoint via Caddy
             timeout 60s bash -c 'until curl -fsS -H "Host: ${DOMAIN}" http://localhost/api/health; do sleep 3; done'
