@@ -77,14 +77,15 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['1', '1'],
     );
+    const base = new Date('2023-01-01T00:00:00Z');
     for (let i = 0; i < 6; i++) {
       await db.query(
         'INSERT INTO agent_exec_result (agent_id, log, rebalance, new_allocation, short_report, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
-        ['1', 'ignore', 1, i, `short-${i}`, i],
+        ['1', 'ignore', 1, i, `short-${i}`, new Date(base.getTime() + i * 1000)],
       );
     }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -127,8 +128,8 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent4', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent4', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['4', '4'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -200,8 +201,8 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent11', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent11', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['11', '11'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -244,8 +245,8 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions, manual_rebalance)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent12', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst', 1)`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions, manual_rebalance)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent12', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst', 1)`,
       ['12', '12'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -268,8 +269,8 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent5', 'USDT', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent5', 'USDT', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['5', '5'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -297,8 +298,8 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['2', '2'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -335,8 +336,8 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent3', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent3', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['3', '3'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -371,13 +372,13 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent6', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent6', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['6', '6'],
     );
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent7', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent7', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['7', '6'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -399,13 +400,13 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent9', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent9', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['9', '8'],
     );
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent10', 'BTC', 'ETH', 10, 20, 'low', '3h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent10', 'BTC', 'ETH', 10, 20, 'low', '3h', 'inst')`,
       ['10', '8'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -433,8 +434,8 @@ describe('reviewPortfolio', () => {
       'enc',
     ]);
     await db.query(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES ($1, $2, 'gpt', 'active', 0, 'Agent8', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
+      `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
+       VALUES ($1, $2, 'gpt', 'active', 'Agent8', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`,
       ['8', '7'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
