@@ -30,6 +30,8 @@ jobs:
         run: npm --prefix frontend run lint
 
       - name: Test backend
+        env:
+          USE_TESTCONTAINERS: '1'
         run: npm test
 
       - name: Build backend
