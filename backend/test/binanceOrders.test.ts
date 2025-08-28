@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { encrypt } from '../src/util/crypto.js';
-import { insertUser, clearUsers } from './repos/users.js';
+import { insertUser } from './repos/users.js';
 import { setBinanceKey } from '../src/repos/api-keys.js';
 import { createHmac } from 'node:crypto';
 import {
@@ -11,7 +11,6 @@ import {
 describe('binance order helpers', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    clearUsers();
   });
 
   it('creates a signed limit order', async () => {

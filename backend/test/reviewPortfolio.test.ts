@@ -192,10 +192,6 @@ describe('reviewPortfolio', () => {
         ],
       }),
     );
-    await db.query('DELETE FROM agents');
-    await db.query('DELETE FROM users');
-    await db.query('DELETE FROM agent_exec_log');
-    await db.query('DELETE FROM agent_exec_result');
     await db.query('INSERT INTO users (id, ai_api_key_enc) VALUES ($1, $2)', [
       '11',
       'enc',
@@ -236,17 +232,13 @@ describe('reviewPortfolio', () => {
         ],
       }),
     );
-    await db.query('DELETE FROM agents');
-    await db.query('DELETE FROM users');
-    await db.query('DELETE FROM agent_exec_log');
-    await db.query('DELETE FROM agent_exec_result');
     await db.query('INSERT INTO users (id, ai_api_key_enc) VALUES ($1, $2)', [
       '12',
       'enc',
     ]);
     await db.query(
       `INSERT INTO agents (id, user_id, model, status, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions, manual_rebalance)
-       VALUES ($1, $2, 'gpt', 'active', 'Agent12', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst', 1)`,
+       VALUES ($1, $2, 'gpt', 'active', 'Agent12', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst', TRUE)`,
       ['12', '12'],
     );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -365,8 +357,6 @@ describe('reviewPortfolio', () => {
     vi.mocked(fetchPairData).mockClear();
     vi.mocked(fetchTokenIndicators).mockClear();
     vi.mocked(fetchMarketTimeseries).mockClear();
-    await db.query('DELETE FROM agents');
-    await db.query('DELETE FROM users');
     await db.query('INSERT INTO users (id, ai_api_key_enc) VALUES ($1, $2)', [
       '6',
       'enc',
@@ -391,10 +381,6 @@ describe('reviewPortfolio', () => {
 
   it('runs only agents matching interval', async () => {
     vi.mocked(callRebalancingAgent).mockClear();
-    await db.query('DELETE FROM agents');
-    await db.query('DELETE FROM users');
-    await db.query('DELETE FROM agent_exec_log');
-    await db.query('DELETE FROM agent_exec_result');
     await db.query('INSERT INTO users (id, ai_api_key_enc) VALUES ($1, $2)', [
       '8',
       'enc',
@@ -420,8 +406,6 @@ describe('reviewPortfolio', () => {
 
   it('prevents concurrent runs for same agent', async () => {
     vi.mocked(callRebalancingAgent).mockClear();
-    await db.query('DELETE FROM agents');
-    await db.query('DELETE FROM users');
     let resolveFn!: (v: unknown) => void;
     vi.mocked(callRebalancingAgent).mockImplementation(
       () =>

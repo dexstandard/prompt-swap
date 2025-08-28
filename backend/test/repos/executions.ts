@@ -1,9 +1,5 @@
 import { db } from '../../src/db/index.js';
 
-export async function clearExecutions() {
-  await db.query('DELETE FROM executions');
-}
-
 export async function getExecutions() {
   const { rows } = await db.query(
     'SELECT user_id, planned_json, status, exec_result_id FROM executions',

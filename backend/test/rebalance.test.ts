@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { clearExecutions, getExecutions } from './repos/executions.js';
+import { getExecutions } from './repos/executions.js';
 import { insertUser } from './repos/users.js';
 import { insertAgent } from './repos/agents.js';
 import { insertExecResult } from './repos/agent-exec-result.js';
@@ -16,7 +16,6 @@ import { createLimitOrder } from '../src/services/binance.js';
 describe('createRebalanceLimitOrder', () => {
   it('saves execution with status and exec result', async () => {
     const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    clearExecutions();
     const userId = await insertUser('1');
     const agent = await insertAgent({
       userId,
@@ -47,7 +46,7 @@ describe('createRebalanceLimitOrder', () => {
       execResultId,
     });
 
-    const row = getExecutions()[0];
+    const row = (await getExecutions())[0];
 
     expect(row.user_id).toBe(userId);
     expect(JSON.parse(row.planned_json)).toMatchObject({

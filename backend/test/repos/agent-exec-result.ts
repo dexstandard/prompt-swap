@@ -11,7 +11,3 @@ export function insertExecResult(entry: any) {
     error: entry.error,
   });
 }
-
-export async function clearAgentExecResult() {
-  await db.query('DELETE FROM agent_exec_result');
-}

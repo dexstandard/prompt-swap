@@ -9,10 +9,6 @@ import {
 export const insertAgent = insertAgentProd;
 export { startAgent, stopAgent, deleteAgent };
 
-export async function clearAgents() {
-  await db.query('DELETE FROM agents');
-}
-
 export async function setAgentStatus(id: string, status: string) {
   await db.query('UPDATE agents SET status = $1 WHERE id = $2', [status, id]);
 }

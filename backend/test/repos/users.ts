@@ -23,10 +23,6 @@ export async function insertAdminUser(sub?: string, emailEnc?: string | null) {
   return id;
 }
 
-export async function clearUsers() {
-  await db.query('DELETE FROM users');
-}
-
 export async function getUserEmailEnc(id: string) {
   const { rows } = await db.query('SELECT email_enc FROM users WHERE id = $1', [id]);
   return rows[0] as { email_enc?: string } | undefined;

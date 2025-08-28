@@ -9,10 +9,6 @@ export function insertExecLog(entry: any) {
   });
 }
 
-export async function clearAgentExecLog() {
-  await db.query('DELETE FROM agent_exec_log');
-}
-
 export async function getAgentExecResponses(agentId: string) {
   const { rows } = await db.query(
     'SELECT response FROM agent_exec_log WHERE agent_id = $1',
