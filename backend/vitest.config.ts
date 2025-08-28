@@ -9,5 +9,8 @@ export default defineConfig({
     environment: 'node',
     exclude: ['frontend/**', 'node_modules/**', 'dist/**'],
     setupFiles: ['test/setup.ts'],
+    // Tests share a single PostgreSQL instance; run sequentially to avoid
+    // cross-test state leaks.
+    fileParallelism: false,
   },
 });
