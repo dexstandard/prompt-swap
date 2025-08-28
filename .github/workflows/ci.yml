@@ -57,7 +57,7 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}
     runs-on: ubuntu-latest
     # use environment derived from branch; define env-specific secrets there
-    environment: dev
+    environment: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
