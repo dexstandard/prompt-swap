@@ -53,16 +53,11 @@ jobs:
 
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    # run on push (not PR) and only on main or dev
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - branch: main
-            environment: main
-          - branch: dev
-            environment: dev
-    environment: ${{ matrix.environment }}
+    # use environment derived from branch; define env-specific secrets there
+    environment: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
