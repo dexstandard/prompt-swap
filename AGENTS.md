@@ -33,14 +33,13 @@ Tables:
 Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
 
 ### Testing
-- Backend tests can launch a disposable PostgreSQL using Testcontainers when
-  `USE_TESTCONTAINERS=1` and Docker is available.
-- Without Docker, ensure `psql` exists or `pg_isready` succeeds before
-  installing PostgreSQL to avoid clobbering an existing server.
-  - Provide a database named `promptswap_test` on
-    `postgres://postgres:postgres@localhost:5432`.
-- Run tests via `npm test` (set `USE_TESTCONTAINERS=1` to use Testcontainers).
-- `npm run build`
+- Backend tests require a local PostgreSQL server.
+  - Check `psql` or `pg_isready` to confirm PostgreSQL is installed; install it if missing.
+  - Start a database if needed:
+    `docker run --rm --name promptswap-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=promptswap_test -p 5432:5432 -d postgres:16`
+  - Run tests with
+    `DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test`.
+  - `npm run build`
 
 ### Guidelines
 - Do not write DB migrations during early development—edit `schema.sql` directly (unless this rule is removed).
