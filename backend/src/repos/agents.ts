@@ -45,7 +45,10 @@ const baseSelect =
   'agent_instructions, manual_rebalance FROM agents';
 
 export async function getAgent(id: string): Promise<AgentRow | undefined> {
-  const { rows } = await db.query(`${baseSelect} WHERE id = $1`, [id]);
+  const { rows } = await db.query(`${baseSelect} WHERE id = $1 AND status != $2`, [
+    id,
+    AgentStatus.Retired,
+  ]);
   return rows[0] as AgentRow | undefined;
 }
 
@@ -56,6 +59,8 @@ export async function getAgentsPaginated(
   offset: number,
 ) {
   if (status) {
+    if (status === AgentStatus.Retired)
+      return { rows: [], total: 0 };
     const where = 'WHERE user_id = $1 AND status = $2';
     const totalRes = await db.query(
       `SELECT COUNT(*) as count FROM agents ${where}`,

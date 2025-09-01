@@ -71,6 +71,10 @@ async function validateAgentInput(
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
   }
+  if (body.status === AgentStatus.Retired) {
+    log.error('invalid status');
+    return { code: 400, body: errorResponse('invalid status') };
+  }
   if (!body.model) {
     if (body.status !== AgentStatus.Draft) {
       log.error('model required');

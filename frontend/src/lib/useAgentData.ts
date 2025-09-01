@@ -6,7 +6,7 @@ export interface Agent {
   id: string;
   userId: string;
   model: string;
-  status: 'active' | 'inactive' | 'draft' | 'retired';
+  status: 'active' | 'inactive' | 'draft';
   createdAt: number;
   name: string;
   tokenA: string;

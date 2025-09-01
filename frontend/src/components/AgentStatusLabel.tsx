@@ -1,5 +1,5 @@
 interface Props {
-  status: 'active' | 'inactive' | 'draft' | 'retired';
+  status: 'active' | 'inactive' | 'draft';
 }
 
 export default function AgentStatusLabel({ status }: Props) {
@@ -9,9 +9,6 @@ export default function AgentStatusLabel({ status }: Props) {
   }
   if (status === 'draft') {
     return <span className={`${base} bg-yellow-100 text-yellow-800`}>Draft</span>;
-  }
-  if (status === 'retired') {
-    return <span className={`${base} bg-gray-200 text-gray-800`}>Retired</span>;
   }
   return <span className={`${base} bg-gray-200 text-gray-800`}>Inactive</span>;
 }
