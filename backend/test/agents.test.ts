@@ -8,6 +8,7 @@ import { setAgentStatus } from './repos/agents.js';
 
 vi.mock('../src/jobs/review-portfolio.js', () => ({
   reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
+  removeAgentFromSchedule: vi.fn(),
 }));
 
 async function addUser(id: string) {
@@ -151,6 +152,16 @@ describe('agent routes', () => {
       headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(200);
+    const deleted = await getAgent(id);
+    expect(deleted?.status).toBe('retired');
+    expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
+
+    res = await app.inject({
+      method: 'GET',
+      url: '/api/agents/paginated?page=1&pageSize=10',
+      headers: { 'x-user-id': userId },
+    });
+    expect(res.json().items).toHaveLength(0);
 
     res = await app.inject({
       method: 'GET',

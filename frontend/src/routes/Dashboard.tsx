@@ -19,7 +19,7 @@ interface Agent {
   id: string;
   userId: string;
   model: string;
-  status: 'active' | 'inactive' | 'draft';
+  status: 'active' | 'inactive' | 'draft' | 'retired';
   tokenA?: string;
   tokenB?: string;
   startBalanceUsd?: number | null;

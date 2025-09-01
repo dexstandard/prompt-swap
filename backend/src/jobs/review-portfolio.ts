@@ -32,6 +32,10 @@ type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
  */
 const runningAgents = new Set<string>();
 
+export function removeAgentFromSchedule(id: string) {
+  runningAgents.delete(id);
+}
+
 type PromptCache = {
   pairData: Map<string, { currentPrice: number }>;
   indicators: Map<string, TokenIndicators>;

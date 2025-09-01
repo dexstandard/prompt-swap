@@ -16,6 +16,7 @@ export enum AgentStatus {
   Active = 'active',
   Inactive = 'inactive',
   Draft = 'draft',
+  Retired = 'retired',
 }
 
 export interface AgentInput {

@@ -12,7 +12,10 @@ import {
 } from '../repos/agents.js';
 import { getAgentExecResults } from '../repos/agent-exec-result.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
-import { reviewAgentPortfolio } from '../jobs/review-portfolio.js';
+import {
+  reviewAgentPortfolio,
+  removeAgentFromSchedule,
+} from '../jobs/review-portfolio.js';
 import { requireUserId } from '../util/auth.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import {
@@ -34,7 +37,7 @@ async function getAgentForRequest(
   const id = (req.params as any).id as string;
   const log = req.log.child({ userId, agentId: id }) as unknown as Logger;
   const agent = await getAgent(id);
-  if (!agent) {
+  if (!agent || agent.status === AgentStatus.Retired) {
     log.error('agent not found');
     reply.code(404).send(errorResponse(ERROR_MESSAGES.notFound));
     return;
@@ -215,6 +218,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       if (!ctx) return;
       const { id, log } = ctx;
       await repoDeleteAgent(id);
+      removeAgentFromSchedule(id);
       log.info('deleted agent');
       return { ok: true };
     }
