@@ -6,11 +6,19 @@ import { db } from '../src/db/index.js';
 import { insertUser } from './repos/users.js';
 import { setAiKey, setBinanceKey } from '../src/repos/api-keys.js';
 import { setAgentStatus } from './repos/agents.js';
+import { cancelOpenOrders } from '../src/services/binance.js';
 
 vi.mock('../src/jobs/review-portfolio.js', () => ({
   reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
   removeAgentFromSchedule: vi.fn(),
 }));
+
+vi.mock('../src/services/binance.js', async () => {
+  const actual = await vi.importActual<typeof import('../src/services/binance.js')>(
+    '../src/services/binance.js',
+  );
+  return { ...actual, cancelOpenOrders: vi.fn().mockResolvedValue(undefined) };
+});
 
 async function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
@@ -147,6 +155,15 @@ describe('agent routes', () => {
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
     expect(res.json().items).toHaveLength(1);
 
+    const execRes = await db.query(
+      "INSERT INTO agent_exec_result (agent_id, log) VALUES ($1, '') RETURNING id",
+      [id],
+    );
+    await db.query(
+      'INSERT INTO executions (user_id, planned_json, status, exec_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
+      [userId, '{}', 'pending', execRes.rows[0].id, '123'],
+    );
+
     res = await app.inject({
       method: 'DELETE',
       url: `/api/agents/${id}`,
@@ -159,6 +176,12 @@ describe('agent routes', () => {
     expect(deletedRow.rows[0].status).toBe('retired');
     expect(await getAgent(id)).toBeUndefined();
     expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
+    expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
+    const execRow = await db.query(
+      'SELECT status FROM executions WHERE exec_result_id = $1',
+      [execRes.rows[0].id],
+    );
+    expect(execRow.rows[0].status).toBe('canceled');
 
     res = await app.inject({
       method: 'GET',

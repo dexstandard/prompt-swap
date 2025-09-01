@@ -18,3 +18,17 @@ export async function insertExecution(entry: ExecutionEntry): Promise<void> {
     ],
   );
 }
+
+export async function cancelPendingExecutionsByAgent(
+  agentId: string,
+): Promise<void> {
+  await db.query(
+    `UPDATE executions e
+        SET status = 'canceled'
+      WHERE status = 'pending'
+        AND exec_result_id IN (
+          SELECT id FROM agent_exec_result WHERE agent_id = $1
+        )`,
+    [agentId],
+  );
+}

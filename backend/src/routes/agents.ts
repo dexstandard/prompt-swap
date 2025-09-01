@@ -26,6 +26,8 @@ import {
   ensureApiKeys,
   getStartBalance,
 } from '../util/agents.js';
+import { cancelOpenOrders } from '../services/binance.js';
+import { cancelPendingExecutionsByAgent } from '../repos/executions.js';
 
 
 async function getAgentForRequest(
@@ -216,9 +218,17 @@ export default async function agentRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
-      const { id, log } = ctx;
+      const { userId, id, log, agent } = ctx;
       await repoDeleteAgent(id);
       removeAgentFromSchedule(id);
+      try {
+        await cancelOpenOrders(userId, {
+          symbol: `${agent.token_a}${agent.token_b}`,
+        });
+      } catch (err) {
+        log.error({ err }, 'failed to cancel open orders');
+      }
+      await cancelPendingExecutionsByAgent(id);
       log.info('deleted agent');
       return { ok: true };
     }
