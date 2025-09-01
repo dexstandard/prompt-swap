@@ -182,7 +182,7 @@ async function buildPrompt(
       tsA,
       tsB,
     } = await fetchPromptData(row, cache);
-    const { floors, positions, weights } = computePortfolioValues(
+    const { floorPercents, positions, weights } = computePortfolioValues(
       row,
       balances,
       priceA,
@@ -191,7 +191,7 @@ async function buildPrompt(
     return {
       instructions: row.agent_instructions,
       config: {
-        policy: { floors },
+        policy: { floorPercents },
         portfolio: {
           ts: new Date().toISOString(),
           positions,
@@ -284,9 +284,9 @@ function computePortfolioValues(
   const valueA = balances.tokenABalance * priceA;
   const valueB = balances.tokenBBalance * priceB;
   const totalValue = valueA + valueB;
-  const floors: Record<string, number> = {
-    [row.token_a]: row.min_a_allocation / 100,
-    [row.token_b]: row.min_b_allocation / 100,
+  const floorPercents: Record<string, number> = {
+    [row.token_a]: row.min_a_allocation,
+    [row.token_b]: row.min_b_allocation,
   };
   const positions = [
     {
@@ -306,7 +306,7 @@ function computePortfolioValues(
     [row.token_a]: totalValue ? valueA / totalValue : 0,
     [row.token_b]: totalValue ? valueB / totalValue : 0,
   };
-  return { floors, positions, weights };
+  return { floorPercents, positions, weights };
 }
 
 function assembleMarketData(
