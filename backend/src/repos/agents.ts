@@ -45,7 +45,10 @@ const baseSelect =
   'agent_instructions, manual_rebalance FROM agents';
 
 export async function getAgent(id: string): Promise<AgentRow | undefined> {
-  const { rows } = await db.query(`${baseSelect} WHERE id = $1`, [id]);
+  const { rows } = await db.query(`${baseSelect} WHERE id = $1 AND status != $2`, [
+    id,
+    AgentStatus.Retired,
+  ]);
   return rows[0] as AgentRow | undefined;
 }
 
@@ -55,14 +58,28 @@ export async function getAgentsPaginated(
   limit: number,
   offset: number,
 ) {
-  const where = 'WHERE user_id = $1 AND ($2::text IS NULL OR status = $2)';
+  if (status) {
+    if (status === AgentStatus.Retired)
+      return { rows: [], total: 0 };
+    const where = 'WHERE user_id = $1 AND status = $2';
+    const totalRes = await db.query(
+      `SELECT COUNT(*) as count FROM agents ${where}`,
+      [userId, status],
+    );
+    const { rows } = await db.query(
+      `${baseSelect} ${where} LIMIT $3 OFFSET $4`,
+      [userId, status, limit, offset],
+    );
+    return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
+  }
+  const where = 'WHERE user_id = $1 AND status != $2';
   const totalRes = await db.query(
     `SELECT COUNT(*) as count FROM agents ${where}`,
-    [userId, status ?? null],
+    [userId, AgentStatus.Retired],
   );
   const { rows } = await db.query(
     `${baseSelect} ${where} LIMIT $3 OFFSET $4`,
-    [userId, status ?? null, limit, offset],
+    [userId, AgentStatus.Retired, limit, offset],
   );
   return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
 }
@@ -213,7 +230,10 @@ export async function updateAgent(data: {
 }
 
 export async function deleteAgent(id: string): Promise<void> {
-  await db.query('DELETE FROM agents WHERE id = $1', [id]);
+  await db.query(
+    'UPDATE agents SET status = $1, start_balance = NULL WHERE id = $2',
+    [AgentStatus.Retired, id],
+  );
 }
 
 export async function startAgent(id: string, startBalance: number): Promise<void> {

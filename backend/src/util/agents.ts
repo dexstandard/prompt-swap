@@ -16,6 +16,7 @@ export enum AgentStatus {
   Active = 'active',
   Inactive = 'inactive',
   Draft = 'draft',
+  Retired = 'retired',
 }
 
 export interface AgentInput {
@@ -69,6 +70,10 @@ async function validateAgentInput(
   if (body.userId !== userId) {
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
+  }
+  if (body.status === AgentStatus.Retired) {
+    log.error('invalid status');
+    return { code: 400, body: errorResponse('invalid status') };
   }
   if (!body.model) {
     if (body.status !== AgentStatus.Draft) {
