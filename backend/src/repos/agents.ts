@@ -286,3 +286,32 @@ export async function getActiveAgents(options?: {
   ]);
   return rows as ActiveAgentRow[];
 }
+
+export async function getActiveAgentsByUser(
+  userId: string,
+): Promise<ActiveAgentRow[]> {
+  const sql = `SELECT a.id, a.user_id, a.model,
+                      a.token_a, a.token_b,
+                      a.min_a_allocation, a.min_b_allocation,
+                      a.risk, a.review_interval, a.agent_instructions,
+                      u.ai_api_key_enc, a.manual_rebalance
+                 FROM agents a
+                 JOIN users u ON u.id = a.user_id
+                WHERE a.status = 'active' AND a.user_id = $1`;
+  const { rows } = await db.query(sql, [userId]);
+  return rows as ActiveAgentRow[];
+}
+
+export async function deactivateAgentsByUser(userId: string): Promise<void> {
+  await db.query(
+    `UPDATE agents SET status = $1, start_balance = NULL WHERE user_id = $2 AND status = $3`,
+    [AgentStatus.Inactive, userId, AgentStatus.Active],
+  );
+}
+
+export async function draftAgentsByUser(userId: string): Promise<void> {
+  await db.query(
+    `UPDATE agents SET status = $1, model = NULL, start_balance = NULL WHERE user_id = $2 AND status = $3`,
+    [AgentStatus.Draft, userId, AgentStatus.Active],
+  );
+}
