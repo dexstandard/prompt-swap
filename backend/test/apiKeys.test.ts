@@ -1,7 +1,29 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../src/jobs/review-portfolio.js', () => ({
+  removeAgentFromSchedule: vi.fn(),
+}));
+
+vi.mock('../src/services/binance.js', async () => {
+  const actual = await vi.importActual<typeof import('../src/services/binance.js')>(
+    '../src/services/binance.js',
+  );
+  return { ...actual, cancelOpenOrders: vi.fn().mockResolvedValue(undefined) };
+});
+
 import buildServer from '../src/server.js';
 import { insertUser } from './repos/users.js';
-import { getAiKeyRow, getBinanceKeyRow } from '../src/repos/api-keys.js';
+import {
+  getAiKeyRow,
+  getBinanceKeyRow,
+  setAiKey,
+  setBinanceKey,
+} from '../src/repos/api-keys.js';
+import { insertAgent } from './repos/agents.js';
+import { db } from '../src/db/index.js';
+import { encrypt } from '../src/util/crypto.js';
+import { removeAgentFromSchedule } from '../src/jobs/review-portfolio.js';
+import { cancelOpenOrders } from '../src/services/binance.js';
 
 describe('AI API key routes', () => {
   it('performs CRUD operations', async () => {
@@ -168,5 +190,88 @@ describe('Binance API key routes', () => {
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
+  });
+});
+
+describe('key deletion effects on agents', () => {
+  beforeEach(() => {
+    (removeAgentFromSchedule as any).mockClear();
+    (cancelOpenOrders as any).mockClear();
+  });
+  it('stops agents when binance key is deleted', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('3');
+    const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
+    const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
+    const bs = encrypt('skey', process.env.KEY_PASSWORD!);
+    await setAiKey(userId, ai);
+    await setBinanceKey(userId, bk, bs);
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt-5',
+      status: 'active',
+      startBalance: 100,
+      name: 'A1',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      manualRebalance: false,
+    });
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/users/${userId}/binance-key`,
+    });
+    expect(res.statusCode).toBe(200);
+    const row = await db.query('SELECT status FROM agents WHERE id = $1', [
+      agent.id,
+    ]);
+    expect(row.rows[0].status).toBe('inactive');
+    expect(removeAgentFromSchedule).toHaveBeenCalledWith(agent.id);
+    expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
+    await app.close();
+  });
+
+  it('sets agents to draft when ai key is deleted', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('4');
+    const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
+    const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
+    const bs = encrypt('skey', process.env.KEY_PASSWORD!);
+    await setAiKey(userId, ai);
+    await setBinanceKey(userId, bk, bs);
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt-5',
+      status: 'active',
+      startBalance: 100,
+      name: 'A2',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      manualRebalance: false,
+    });
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/users/${userId}/ai-key`,
+    });
+    expect(res.statusCode).toBe(200);
+    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+      agent.id,
+    ]);
+    expect(row.rows[0].status).toBe('draft');
+    expect(row.rows[0].model).toBeNull();
+    expect(removeAgentFromSchedule).toHaveBeenCalledWith(agent.id);
+    expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
+    await app.close();
   });
 });

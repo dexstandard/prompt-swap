@@ -197,7 +197,15 @@ export default function ApiKeySection({
             <Button
               type="button"
               variant="danger"
-              onClick={() => delMut.mutate()}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Deleting this key will stop all active agents. Continue?',
+                  )
+                ) {
+                  delMut.mutate();
+                }
+              }}
               disabled={delMut.isPending}
             >
               Delete

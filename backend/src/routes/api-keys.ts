@@ -8,6 +8,13 @@ import {
   setBinanceKey,
   clearBinanceKey,
 } from '../repos/api-keys.js';
+import {
+  getActiveAgentsByUser,
+  deactivateAgentsByUser,
+  draftAgentsByUser,
+} from '../repos/agents.js';
+import { removeAgentFromSchedule } from '../jobs/review-portfolio.js';
+import { cancelOpenOrders } from '../services/binance.js';
 import { redactKey } from '../util/redact.js';
 import {
   ApiKeyType,
@@ -77,6 +84,18 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const row = await getAiKeyRow(id);
       const err = ensureKeyPresent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
+      const agents = await getActiveAgentsByUser(id);
+      for (const agent of agents) {
+        removeAgentFromSchedule(agent.id);
+        try {
+          await cancelOpenOrders(id, {
+            symbol: `${agent.token_a}${agent.token_b}`,
+          });
+        } catch (err) {
+          req.log.error({ err, agentId: agent.id }, 'failed to cancel open orders');
+        }
+      }
+      await draftAgentsByUser(id);
       await clearAiKey(id);
       return { ok: true };
     },
@@ -151,6 +170,18 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         'binance_api_secret_enc',
       ]);
       if (err) return reply.code(err.code).send(err.body);
+      const agents = await getActiveAgentsByUser(id);
+      for (const agent of agents) {
+        removeAgentFromSchedule(agent.id);
+        try {
+          await cancelOpenOrders(id, {
+            symbol: `${agent.token_a}${agent.token_b}`,
+          });
+        } catch (err) {
+          req.log.error({ err, agentId: agent.id }, 'failed to cancel open orders');
+        }
+      }
+      await deactivateAgentsByUser(id);
       await clearBinanceKey(id);
       return { ok: true };
     },
