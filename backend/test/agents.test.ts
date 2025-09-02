@@ -156,12 +156,12 @@ describe('agent routes', () => {
     expect(res.json().items).toHaveLength(1);
 
     const execRes = await db.query(
-      "INSERT INTO agent_exec_result (agent_id, log) VALUES ($1, '') RETURNING id",
+      "INSERT INTO agent_review_result (agent_id, log) VALUES ($1, '') RETURNING id",
       [id],
     );
     await db.query(
-      'INSERT INTO executions (user_id, planned_json, status, exec_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
-      [userId, '{}', 'pending', execRes.rows[0].id, '123'],
+      'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
+      [userId, '{}', 'open', execRes.rows[0].id, '123'],
     );
 
     res = await app.inject({
@@ -178,7 +178,7 @@ describe('agent routes', () => {
     expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
     expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
     const execRow = await db.query(
-      'SELECT status FROM executions WHERE exec_result_id = $1',
+      'SELECT status FROM limit_order WHERE review_result_id = $1',
       [execRes.rows[0].id],
     );
     expect(execRow.rows[0].status).toBe('canceled');

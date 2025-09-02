@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS agents(
   manual_rebalance BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TABLE IF NOT EXISTS agent_exec_result(
+CREATE TABLE IF NOT EXISTS agent_review_result(
   id BIGSERIAL PRIMARY KEY,
   agent_id BIGINT NOT NULL REFERENCES agents(id),
   log TEXT,
@@ -46,18 +46,17 @@ CREATE TABLE IF NOT EXISTS agent_exec_result(
   error TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
-
-CREATE TABLE IF NOT EXISTS executions(
+CREATE TABLE IF NOT EXISTS limit_order(
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id),
   planned_json TEXT NOT NULL,
   status TEXT NOT NULL,
-  exec_result_id BIGINT REFERENCES agent_exec_result(id),
-  order_id TEXT,
+  review_result_id BIGINT REFERENCES agent_review_result(id),
+  order_id TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
-CREATE TABLE IF NOT EXISTS agent_exec_log(
+CREATE TABLE IF NOT EXISTS agent_review_raw_log(
   id BIGSERIAL PRIMARY KEY,
   agent_id BIGINT NOT NULL REFERENCES agents(id),
   prompt TEXT,
@@ -65,8 +64,8 @@ CREATE TABLE IF NOT EXISTS agent_exec_log(
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
-CREATE INDEX IF NOT EXISTS idx_agent_exec_result_agent_id_created_at
-  ON agent_exec_result(agent_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_agent_review_result_agent_id_created_at
+  ON agent_review_result(agent_id, created_at);
 
 -- Indexes to optimize duplicate detection queries
 CREATE INDEX IF NOT EXISTS idx_agents_draft_all_fields

@@ -124,7 +124,11 @@ export default function AgentView() {
                               <FormattedDate date={log.createdAt} />
                             </td>
                             <td className="w-full">
-                              <ExecLogItem log={log} />
+                              <ExecLogItem
+                                log={log}
+                                agentId={id!}
+                                manualRebalance={data.manualRebalance}
+                              />
                             </td>
                           </tr>
                         ))}
@@ -136,7 +140,11 @@ export default function AgentView() {
                           <div className="text-xs text-gray-500 mb-1">
                             <FormattedDate date={log.createdAt} />
                           </div>
-                          <ExecLogItem log={log} />
+                          <ExecLogItem
+                            log={log}
+                            agentId={id!}
+                            manualRebalance={data.manualRebalance}
+                          />
                         </div>
                       ))}
                     </div>

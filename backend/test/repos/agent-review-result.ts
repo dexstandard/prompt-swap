@@ -1,8 +1,8 @@
 import { db } from '../../src/db/index.js';
-import { insertExecResult as insertExecResultProd } from '../../src/repos/agent-exec-result.js';
+import { insertReviewResult as insertReviewResultProd } from '../../src/repos/agent-review-result.js';
 
-export function insertExecResult(entry: any) {
-  return insertExecResultProd({
+export function insertReviewResult(entry: any) {
+  return insertReviewResultProd({
     agentId: entry.agentId,
     log: entry.log,
     rebalance: entry.rebalance,

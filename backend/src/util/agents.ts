@@ -1,4 +1,4 @@
-import type { Logger } from 'pino';
+import type { FastifyBaseLogger } from 'fastify';
 import {
   getUserApiKeys,
   findIdenticalDraftAgent,
@@ -40,7 +40,7 @@ export interface ValidationErr {
 }
 
 export async function validateTokenConflicts(
-  log: Logger,
+  log: FastifyBaseLogger,
   userId: string,
   tokenA: string,
   tokenB: string,
@@ -62,7 +62,7 @@ export async function validateTokenConflicts(
 }
 
 async function validateAgentInput(
-  log: Logger,
+  log: FastifyBaseLogger,
   userId: string,
   body: AgentInput,
   id?: string,
@@ -124,7 +124,7 @@ async function validateAgentInput(
 }
 
 export async function ensureApiKeys(
-  log: Logger,
+  log: FastifyBaseLogger,
   userId: string,
 ): Promise<ValidationErr | null> {
   const userRow = await getUserApiKeys(userId);
@@ -140,7 +140,7 @@ export async function ensureApiKeys(
 }
 
 export async function getStartBalance(
-  log: Logger,
+  log: FastifyBaseLogger,
   userId: string,
   tokenA: string,
   tokenB: string,
@@ -159,7 +159,7 @@ export async function getStartBalance(
 }
 
 export async function prepareAgentForUpsert(
-  log: Logger,
+  log: FastifyBaseLogger,
   userId: string,
   body: AgentInput,
   id?: string,

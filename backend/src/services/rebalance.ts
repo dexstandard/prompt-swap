@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { insertExecution } from '../repos/executions.js';
+import { insertLimitOrder, type LimitOrderStatus } from '../repos/limit-orders.js';
 import { fetchPairData, createLimitOrder } from './binance.js';
 
 export async function createRebalanceLimitOrder(opts: {
@@ -8,10 +8,10 @@ export async function createRebalanceLimitOrder(opts: {
   tokenB: string;
   positions: { sym: string; value_usdt: number }[];
   newAllocation: number;
-  execResultId: string;
+  reviewResultId: string;
   log: FastifyBaseLogger;
 }) {
-  const { userId, tokenA, tokenB, positions, newAllocation, execResultId, log } = opts;
+  const { userId, tokenA, tokenB, positions, newAllocation, reviewResultId, log } = opts;
   const posA = positions.find((p) => p.sym === tokenA);
   const posB = positions.find((p) => p.sym === tokenB);
   if (!posA || !posB) {
@@ -34,12 +34,22 @@ export async function createRebalanceLimitOrder(opts: {
     quantity,
     price: currentPrice,
   } as const;
-  await insertExecution({
-    userId,
-    planned: params,
-    status: 'pending',
-    execResultId,
-  });
   log.info({ order: params }, 'creating limit order');
-  await createLimitOrder(userId, params);
+  try {
+    const res = await createLimitOrder(userId, params);
+    if (!res || res.orderId === undefined || res.orderId === null) {
+      log.error('failed to create limit order');
+      return;
+    }
+    await insertLimitOrder({
+      userId,
+      planned: params,
+      status: 'open' as LimitOrderStatus,
+      reviewResultId,
+      orderId: String(res.orderId),
+    });
+  } catch (err) {
+    log.error({ err }, 'failed to create limit order');
+    throw err;
+  }
 }
