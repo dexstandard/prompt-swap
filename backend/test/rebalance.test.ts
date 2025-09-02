@@ -7,7 +7,7 @@ import { insertReviewResult } from './repos/agent-review-result.js';
 
 vi.mock('../src/services/binance.js', () => ({
   fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
-  createLimitOrder: vi.fn().mockResolvedValue(undefined),
+  createLimitOrder: vi.fn().mockResolvedValue({ orderId: 1 }),
 }));
 
 import { createRebalanceLimitOrder } from '../src/services/rebalance.js';
@@ -57,6 +57,7 @@ describe('createRebalanceLimitOrder', () => {
     });
     expect(row.status).toBe('open');
     expect(row.review_result_id).toBe(reviewResultId);
+    expect(row.order_id).toBe('1');
     expect(createLimitOrder).toHaveBeenCalledWith(userId, {
       symbol: 'BTCETH',
       side: 'BUY',

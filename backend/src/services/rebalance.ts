@@ -34,12 +34,22 @@ export async function createRebalanceLimitOrder(opts: {
     quantity,
     price: currentPrice,
   } as const;
-  await insertLimitOrder({
-    userId,
-    planned: params,
-    status: 'open' as LimitOrderStatus,
-    reviewResultId,
-  });
   log.info({ order: params }, 'creating limit order');
-  await createLimitOrder(userId, params);
+  try {
+    const res = await createLimitOrder(userId, params);
+    if (!res || res.orderId === undefined || res.orderId === null) {
+      log.error('failed to create limit order');
+      return;
+    }
+    await insertLimitOrder({
+      userId,
+      planned: params,
+      status: 'open' as LimitOrderStatus,
+      reviewResultId,
+      orderId: String(res.orderId),
+    });
+  } catch (err) {
+    log.error({ err }, 'failed to create limit order');
+    throw err;
+  }
 }

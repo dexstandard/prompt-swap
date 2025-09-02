@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS limit_order(
   planned_json TEXT NOT NULL,
   status TEXT NOT NULL,
   review_result_id BIGINT REFERENCES agent_review_result(id),
-  order_id TEXT,
+  order_id TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 

@@ -7,16 +7,18 @@ export interface LimitOrderEntry {
   planned: Record<string, unknown>;
   status: LimitOrderStatus;
   reviewResultId: string;
+  orderId: string;
 }
 
 export async function insertLimitOrder(entry: LimitOrderEntry): Promise<void> {
   await db.query(
-    'INSERT INTO limit_order (user_id, planned_json, status, review_result_id) VALUES ($1, $2, $3, $4)',
+    'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
     [
       entry.userId,
       JSON.stringify(entry.planned),
       entry.status,
       entry.reviewResultId,
+      entry.orderId,
     ],
   );
 }

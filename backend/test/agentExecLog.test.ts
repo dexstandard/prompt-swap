@@ -32,12 +32,13 @@ describe('agent exec log routes', () => {
     });
     const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
     await db.query(
-      'INSERT INTO limit_order (user_id, planned_json, status, review_result_id) VALUES ($1, $2, $3, $4)',
+      'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
       [
         user1Id,
         JSON.stringify({ side: 'BUY', quantity: 1, price: 100 }),
         'open',
         reviewResultId,
+        '1',
       ],
     );
     let res = await app.inject({
@@ -259,7 +260,7 @@ describe('agent exec log routes', () => {
     vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
       currentPrice: 100,
     } as any);
-    vi.spyOn(binance, 'createLimitOrder').mockResolvedValue({} as any);
+    vi.spyOn(binance, 'createLimitOrder').mockResolvedValue({ orderId: 1 } as any);
     let res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
