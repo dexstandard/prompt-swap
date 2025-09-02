@@ -5,11 +5,11 @@ import {
   getActiveAgents,
   type ActiveAgentRow,
 } from '../repos/agents.js';
-import { insertExecLog } from '../repos/agent-exec-log.js';
+import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import {
-  insertExecResult,
-  getRecentExecResults,
-} from '../repos/agent-exec-result.js';
+  insertReviewResult,
+  getRecentReviewResults,
+} from '../repos/agent-review-result.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
 import { callRebalancingAgent } from '../util/ai.js';
 import {
@@ -128,7 +128,7 @@ async function prepareAgents(
       continue;
     }
 
-    const prevRows = await getRecentExecResults(row.id, 5);
+    const prevRows = await getRecentReviewResults(row.id, 5);
     prompt.previous_responses = prevRows.map((r: any) => {
       const str = JSON.stringify(r);
       return str === '{}' ? '' : str;
@@ -346,13 +346,13 @@ async function executeAgent(
 ) {
   try {
     const text = await callRebalancingAgent(row.model, prompt, key);
-    const logId = await insertExecLog({
+    const logId = await insertReviewRawLog({
       agentId: row.id,
       prompt,
       response: text,
     });
     const parsed = parseExecLog(text);
-    const resultId = await insertExecResult({
+    const resultId = await insertReviewResult({
       agentId: row.id,
       log: parsed.text,
       ...(parsed.response
@@ -376,7 +376,7 @@ async function executeAgent(
         positions: prompt.config.portfolio.positions,
         newAllocation: parsed.response.newAllocation,
         log,
-        execResultId: resultId,
+        reviewResultId: resultId,
       });
     }
     log.info('agent run complete');
@@ -391,13 +391,13 @@ async function saveFailure(
   message: string,
   prompt?: RebalancePrompt,
 ) {
-  await insertExecLog({
+  await insertReviewRawLog({
     agentId: row.id,
     ...(prompt ? { prompt } : {}),
     response: { error: message },
   });
   const parsed = parseExecLog({ error: message });
-  await insertExecResult({
+  await insertReviewResult({
     agentId: row.id,
     log: parsed.text,
     ...(parsed.response

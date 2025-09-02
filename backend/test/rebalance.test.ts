@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { getExecutions } from './repos/executions.js';
+import { getLimitOrders } from './repos/limit-orders.js';
 import { insertUser } from './repos/users.js';
 import { insertAgent } from './repos/agents.js';
-import { insertExecResult } from './repos/agent-exec-result.js';
+import { insertReviewResult } from './repos/agent-review-result.js';
 
 vi.mock('../src/services/binance.js', () => ({
   fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
@@ -32,7 +32,7 @@ describe('createRebalanceLimitOrder', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const execResultId = await insertExecResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
     await createRebalanceLimitOrder({
       userId,
       tokenA: 'BTC',
@@ -43,10 +43,10 @@ describe('createRebalanceLimitOrder', () => {
       ],
       newAllocation: 50,
       log,
-      execResultId,
+      reviewResultId,
     });
 
-    const row = (await getExecutions())[0];
+    const row = (await getLimitOrders())[0];
 
     expect(row.user_id).toBe(userId);
     expect(JSON.parse(row.planned_json)).toMatchObject({
@@ -55,8 +55,8 @@ describe('createRebalanceLimitOrder', () => {
       quantity: 0.5,
       price: 100,
     });
-    expect(row.status).toBe('pending');
-    expect(row.exec_result_id).toBe(execResultId);
+    expect(row.status).toBe('open');
+    expect(row.review_result_id).toBe(reviewResultId);
     expect(createLimitOrder).toHaveBeenCalledWith(userId, {
       symbol: 'BTCETH',
       side: 'BUY',

@@ -11,7 +11,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.query(
-    'TRUNCATE TABLE agent_exec_log, agent_exec_result, executions, agents, user_identities, users RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE agent_review_raw_log, agent_review_result, limit_order, agents, user_identities, users RESTART IDENTITY CASCADE',
   );
 });
 

@@ -24,10 +24,10 @@ Only allowlisted token pairs are traded.
 ### Data Model
 Tables:
 - `users` — accounts and encrypted API keys.
-- `executions` — records of performed trades.
+- `limit_order` — records of performed trades.
 - `agents` — user-configured trading bots.
-- `agent_exec_log` — prompt/response history per agent.
-- `agent_exec_result` — outcomes and rebalances.
+- `agent_review_raw_log` — prompt/response history per agent.
+- `agent_review_result` — outcomes and rebalances.
 
 ### Config
 Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.

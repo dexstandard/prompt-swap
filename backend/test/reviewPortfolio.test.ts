@@ -84,7 +84,7 @@ describe('reviewPortfolio', () => {
     const base = new Date('2023-01-01T00:00:00Z');
     for (let i = 0; i < 6; i++) {
       await db.query(
-        'INSERT INTO agent_exec_result (agent_id, log, rebalance, new_allocation, short_report, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
+        'INSERT INTO agent_review_result (agent_id, log, rebalance, new_allocation, short_report, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
         ['1', 'ignore', 1, i, `short-${i}`, new Date(base.getTime() + i * 1000)],
       );
     }
@@ -135,7 +135,7 @@ describe('reviewPortfolio', () => {
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewAgentPortfolio(log, '4');
     const { rows } = await db.query(
-      'SELECT prompt, response FROM agent_exec_log WHERE agent_id = $1',
+      'SELECT prompt, response FROM agent_review_raw_log WHERE agent_id = $1',
       ['4'],
     );
     const rowsTyped = rows as { prompt: string | null; response: string | null }[];
@@ -156,7 +156,7 @@ describe('reviewPortfolio', () => {
     expect(typeof respEntry).toBe('string');
 
     const { rows: parsedRowsRaw } = await db.query(
-      'SELECT log, rebalance, new_allocation, short_report, error FROM agent_exec_result WHERE agent_id = $1',
+      'SELECT log, rebalance, new_allocation, short_report, error FROM agent_review_result WHERE agent_id = $1',
       ['4'],
     );
     const parsedRows = parsedRowsRaw as {
@@ -209,7 +209,7 @@ describe('reviewPortfolio', () => {
     expect(args.tokenA).toBe('BTC');
     expect(args.tokenB).toBe('ETH');
     expect(args.newAllocation).toBe(60);
-    expect(args.execResultId).toBeTruthy();
+    expect(args.reviewResultId).toBeTruthy();
   });
 
   it('skips createRebalanceLimitOrder when manualRebalance is enabled', async () => {
@@ -298,7 +298,7 @@ describe('reviewPortfolio', () => {
     await reviewAgentPortfolio(log, '2');
     expect(callRebalancingAgent).not.toHaveBeenCalled();
     const { rows } = await db.query(
-      'SELECT response FROM agent_exec_log WHERE agent_id = $1',
+      'SELECT response FROM agent_review_raw_log WHERE agent_id = $1',
       ['2'],
     );
     const rowsTyped = rows as { response: string | null }[];
@@ -306,7 +306,7 @@ describe('reviewPortfolio', () => {
     const entry = JSON.parse(rowsTyped[0].response!);
     expect(entry.error).toContain('failed to fetch token balances');
     const { rows: parsedRowsRaw } = await db.query(
-      'SELECT log, error FROM agent_exec_result WHERE agent_id = $1',
+      'SELECT log, error FROM agent_review_result WHERE agent_id = $1',
       ['2'],
     );
     const parsedRows = parsedRowsRaw as { log: string; error: string | null }[];
@@ -336,7 +336,7 @@ describe('reviewPortfolio', () => {
     await reviewAgentPortfolio(log, '3');
     expect(callRebalancingAgent).not.toHaveBeenCalled();
     const { rows } = await db.query(
-      'SELECT response FROM agent_exec_log WHERE agent_id = $1',
+      'SELECT response FROM agent_review_raw_log WHERE agent_id = $1',
       ['3'],
     );
     const rowsTyped = rows as { response: string | null }[];
@@ -344,7 +344,7 @@ describe('reviewPortfolio', () => {
     const entry2 = JSON.parse(rowsTyped[0].response!);
     expect(entry2.error).toContain('failed to fetch market data');
     const { rows: parsedRowsRaw } = await db.query(
-      'SELECT log, error FROM agent_exec_result WHERE agent_id = $1',
+      'SELECT log, error FROM agent_review_result WHERE agent_id = $1',
       ['3'],
     );
     const parsedRows = parsedRowsRaw as { log: string; error: string | null }[];
@@ -398,7 +398,7 @@ describe('reviewPortfolio', () => {
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolios(log, '3h');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
-    const { rows } = await db.query('SELECT agent_id FROM agent_exec_log');
+    const { rows } = await db.query('SELECT agent_id FROM agent_review_raw_log');
     const rowsTyped = rows as { agent_id: string }[];
     expect(rowsTyped).toHaveLength(1);
     expect(rowsTyped[0].agent_id).toBe('10');
