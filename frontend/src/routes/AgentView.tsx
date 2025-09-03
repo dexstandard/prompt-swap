@@ -14,6 +14,7 @@ import FormattedDate from '../components/ui/FormattedDate';
 import AgentUpdateModal from '../components/AgentUpdateModal';
 import AgentDetailsDesktop from '../components/AgentDetailsDesktop';
 import AgentDetailsMobile from '../components/AgentDetailsMobile';
+import Toggle from '../components/ui/Toggle';
 
 export default function AgentView() {
   const { id } = useParams();
@@ -41,11 +42,12 @@ export default function AgentView() {
   const [showUpdate, setShowUpdate] = useState(false);
 
   const [logPage, setLogPage] = useState(1);
+  const [onlyRebalance, setOnlyRebalance] = useState(false);
   const { data: logData } = useQuery({
-    queryKey: ['agent-log', id, logPage, user?.id],
+    queryKey: ['agent-log', id, logPage, user?.id, onlyRebalance],
     queryFn: async () => {
       const res = await api.get(`/agents/${id}/exec-log`, {
-        params: { page: logPage, pageSize: 10 },
+        params: { page: logPage, pageSize: 10, rebalanceOnly: onlyRebalance },
       });
       return res.data as {
         items: ExecLog[];
@@ -101,7 +103,14 @@ export default function AgentView() {
         )}
         {logData && (
             <div className="mt-6">
-              <h2 className="text-xl font-bold mb-2">Execution Log</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-bold">Execution Log</h2>
+                <Toggle
+                  label="Only Rebalances"
+                  checked={onlyRebalance}
+                  onChange={setOnlyRebalance}
+                />
+              </div>
               {logData.items.length === 0 ? (
                   <p>No logs yet.</p>
               ) : (

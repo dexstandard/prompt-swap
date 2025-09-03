@@ -281,4 +281,37 @@ describe('agent exec log routes', () => {
     vi.restoreAllMocks();
     await app.close();
   });
+
+  it('filters exec log by rebalanceOnly', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('9');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokenA: 'BTC',
+      tokenB: 'ETH',
+      minTokenAAllocation: 10,
+      minTokenBAllocation: 20,
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    await insertReviewResult({ agentId: agent.id, log: 'no', rebalance: false });
+    await insertReviewResult({ agentId: agent.id, log: 'yes', rebalance: true });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agent.id}/exec-log?rebalanceOnly=true`,
+      headers: { 'x-user-id': userId },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.total).toBe(1);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].response.rebalance).toBe(true);
+    await app.close();
+  });
 });

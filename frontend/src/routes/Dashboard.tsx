@@ -14,6 +14,7 @@ import CreateAgentForm from '../components/forms/CreateAgentForm';
 import PriceChart from '../components/forms/PriceChart';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useToast } from '../lib/useToast';
+import Toggle from '../components/ui/Toggle';
 
 interface Agent {
   id: string;
@@ -271,16 +272,11 @@ export default function Dashboard() {
         <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">My Agents</h2>
-            <label className="flex items-center gap-1 text-sm cursor-pointer">
-              <span>Only Active</span>
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={onlyActive}
-                onChange={(e) => setOnlyActive(e.target.checked)}
-              />
-              <div className="ml-2 relative w-10 h-5 bg-gray-200 rounded-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 peer-checked:after:border-white" />
-            </label>
+            <Toggle
+              label="Only Active"
+              checked={onlyActive}
+              onChange={setOnlyActive}
+            />
           </div>
           {!user ? (
             <p>Please log in to view your agents.</p>
