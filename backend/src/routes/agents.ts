@@ -127,14 +127,16 @@ export default async function agentRoutes(app: FastifyInstance) {
       const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
       const { id, log } = ctx;
-      const { page = '1', pageSize = '10' } = req.query as {
+      const { page = '1', pageSize = '10', rebalanceOnly } = req.query as {
         page?: string;
         pageSize?: string;
+        rebalanceOnly?: string;
       };
       const p = Math.max(parseInt(page, 10), 1);
       const ps = Math.max(parseInt(pageSize, 10), 1);
       const offset = (p - 1) * ps;
-      const { rows, total } = await getAgentReviewResults(id, ps, offset);
+      const ro = rebalanceOnly === 'true';
+      const { rows, total } = await getAgentReviewResults(id, ps, offset, ro);
       log.info('fetched exec log');
       return {
         items: rows.map((r) => {

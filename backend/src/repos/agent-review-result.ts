@@ -42,13 +42,19 @@ export async function getRecentReviewResults(agentId: string, limit: number) {
   }));
 }
 
-export async function getAgentReviewResults(agentId: string, limit: number, offset: number) {
+export async function getAgentReviewResults(
+  agentId: string,
+  limit: number,
+  offset: number,
+  rebalanceOnly = false,
+) {
+  const filter = rebalanceOnly ? ' AND rebalance IS TRUE' : '';
   const totalRes = await db.query(
-    'SELECT COUNT(*) as count FROM agent_review_result WHERE agent_id = $1',
+    `SELECT COUNT(*) as count FROM agent_review_result WHERE agent_id = $1${filter}`,
     [agentId],
   );
   const { rows } = await db.query(
-    'SELECT id, log, rebalance, new_allocation, short_report, error, created_at FROM agent_review_result WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+    `SELECT id, log, rebalance, new_allocation, short_report, error, created_at FROM agent_review_result WHERE agent_id = $1${filter} ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
     [agentId, limit, offset],
   );
   return { rows: rows as any[], total: Number(totalRes.rows[0].count) };
