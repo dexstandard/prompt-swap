@@ -102,10 +102,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           status,
           startBalance,
           name: validated.name,
-          tokenA: validated.tokenA,
-          tokenB: validated.tokenB,
-          minTokenAAllocation: validated.minTokenAAllocation,
-          minTokenBAllocation: validated.minTokenBAllocation,
+          tokens: validated.tokens,
           risk: validated.risk,
           reviewInterval: validated.reviewInterval,
           agentInstructions: validated.agentInstructions,
@@ -215,41 +212,42 @@ export default async function agentRoutes(app: FastifyInstance) {
         log.error({ execLogId: logId }, 'no rebalance info');
         return reply.code(400).send(errorResponse('no rebalance info'));
       }
+      const tokenA = agent.tokens[0].token;
+      const tokenB = agent.tokens[1].token;
       const account = await binance.fetchAccount(userId);
       if (!account) {
         log.error('missing api keys');
         return reply.code(400).send(errorResponse('missing api keys'));
       }
-      const balA = account.balances.find((b) => b.asset === agent.token_a);
-      const balB = account.balances.find((b) => b.asset === agent.token_b);
+      const balA = account.balances.find((b) => b.asset === tokenA);
+      const balB = account.balances.find((b) => b.asset === tokenB);
       if (!balA || !balB) {
         log.error('missing balances');
         return reply.code(400).send(errorResponse('failed to fetch balances'));
       }
       const [priceAData, priceBData] = await Promise.all([
-        agent.token_a === 'USDT'
+        tokenA === 'USDT'
           ? Promise.resolve({ currentPrice: 1 })
-          : binance.fetchPairData(agent.token_a, 'USDT'),
-        agent.token_b === 'USDT'
+          : binance.fetchPairData(tokenA, 'USDT'),
+        tokenB === 'USDT'
           ? Promise.resolve({ currentPrice: 1 })
-          : binance.fetchPairData(agent.token_b, 'USDT'),
+          : binance.fetchPairData(tokenB, 'USDT'),
       ]);
       const positions = [
         {
-          sym: agent.token_a,
+          sym: tokenA,
           value_usdt:
             (Number(balA.free) + Number(balA.locked)) * priceAData.currentPrice,
         },
         {
-          sym: agent.token_b,
+          sym: tokenB,
           value_usdt:
             (Number(balB.free) + Number(balB.locked)) * priceBData.currentPrice,
         },
       ];
       await createRebalanceLimitOrder({
         userId,
-        tokenA: agent.token_a,
-        tokenB: agent.token_b,
+        tokens: [tokenA, tokenB],
         positions,
         newAllocation: result.newAllocation,
         reviewResultId: logId,
@@ -295,10 +293,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           model: validated.model,
           status,
           name: validated.name,
-          tokenA: validated.tokenA,
-          tokenB: validated.tokenB,
-          minTokenAAllocation: validated.minTokenAAllocation,
-          minTokenBAllocation: validated.minTokenBAllocation,
+          tokens: validated.tokens,
           risk: validated.risk,
           reviewInterval: validated.reviewInterval,
           agentInstructions: validated.agentInstructions,
@@ -322,9 +317,11 @@ export default async function agentRoutes(app: FastifyInstance) {
       const { userId, id, log, agent } = ctx;
       await repoDeleteAgent(id);
       removeAgentFromSchedule(id);
+      const tokenA = agent.tokens[0].token;
+      const tokenB = agent.tokens[1].token;
       try {
         await binance.cancelOpenOrders(userId, {
-          symbol: `${agent.token_a}${agent.token_b}`,
+          symbol: `${tokenA}${tokenB}`,
         });
       } catch (err) {
         log.error({ err }, 'failed to cancel open orders');
@@ -346,22 +343,17 @@ export default async function agentRoutes(app: FastifyInstance) {
         log.error('missing model');
         return reply.code(400).send(errorResponse('model required'));
       }
+      const tokens = existing.tokens.map((t: { token: string }) => t.token);
       const conflict = await validateTokenConflicts(
         log,
         userId,
-        existing.token_a,
-        existing.token_b,
+        tokens,
         id,
       );
       if (conflict) return reply.code(conflict.code).send(conflict.body);
       const keyErr = await ensureApiKeys(log, userId);
       if (keyErr) return reply.code(keyErr.code).send(keyErr.body);
-      const bal = await getStartBalance(
-        log,
-        userId,
-        existing.token_a,
-        existing.token_b,
-      );
+      const bal = await getStartBalance(log, userId, tokens);
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
       await repoStartAgent(id, bal);
       reviewAgentPortfolio(req.log, id).catch((err) =>

@@ -80,10 +80,10 @@ describe('agent routes', () => {
       userId,
       model: 'gpt-5',
       name: 'A1',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
@@ -224,10 +224,10 @@ describe('agent routes', () => {
       userId: starterId,
       model: 'm',
       name: 'Draft',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
@@ -346,10 +346,10 @@ describe('agent routes', () => {
       userId: updateUserId,
       model: 'm',
       name: 'A',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
@@ -365,7 +365,13 @@ describe('agent routes', () => {
     expect(resCreate.statusCode).toBe(200);
     const id = resCreate.json().id as string;
 
-    const updatePayload = { ...createPayload, minTokenAAllocation: 15 };
+    const updatePayload = {
+      ...createPayload,
+      tokens: [
+        { token: 'BTC', minAllocation: 15 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+    };
     const resUpdate = await app.inject({
       method: 'PUT',
       url: `/api/agents/${id}`,
@@ -389,10 +395,10 @@ describe('agent routes', () => {
       userId: u1Id,
       model: 'm',
       name: 'Draft1',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
@@ -504,10 +510,10 @@ describe('agent routes', () => {
       userId: dupId,
       model: 'm',
       name: 'A1',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
@@ -526,7 +532,14 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/agents',
       headers: { 'x-user-id': dupId },
-      payload: { ...base, name: 'B1', tokenA: 'BTC', tokenB: 'SOL' },
+      payload: {
+        ...base,
+        name: 'B1',
+        tokens: [
+          { token: 'BTC', minAllocation: 10 },
+          { token: 'SOL', minAllocation: 20 },
+        ],
+      },
     });
     expect(resDup.statusCode).toBe(400);
     expect(resDup.json().error).toContain('BTC');
@@ -539,7 +552,14 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/agents',
       headers: { 'x-user-id': dupId },
-      payload: { ...base, name: 'B2', tokenA: 'BTC', tokenB: 'SOL' },
+      payload: {
+        ...base,
+        name: 'B2',
+        tokens: [
+          { token: 'BTC', minAllocation: 10 },
+          { token: 'SOL', minAllocation: 20 },
+        ],
+      },
     });
     expect(resOk.statusCode).toBe(200);
 
@@ -555,10 +575,10 @@ describe('agent routes', () => {
       userId: draftUserId,
       model: 'm',
       name: 'Draft',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
@@ -602,10 +622,10 @@ describe('agent routes', () => {
       userId: updId,
       model: 'm1',
       name: 'Draft1',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
@@ -624,7 +644,14 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/agents',
       headers: { 'x-user-id': updId },
-      payload: { ...base, name: 'Draft2', tokenB: 'SOL' },
+      payload: {
+        ...base,
+        name: 'Draft2',
+        tokens: [
+          { token: 'BTC', minAllocation: 10 },
+          { token: 'SOL', minAllocation: 20 },
+        ],
+      },
     });
     const draft2 = res2.json().id as string;
 
@@ -648,10 +675,10 @@ describe('agent routes', () => {
       userId: nomodelId,
       model: '',
       name: 'Draft',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
@@ -681,10 +708,10 @@ describe('agent routes', () => {
       userId: allocId,
       model: 'm',
       name: 'Bad',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 60,
-      minTokenBAllocation: 40,
+      tokens: [
+        { token: 'BTC', minAllocation: 60 },
+        { token: 'ETH', minAllocation: 40 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',

@@ -23,10 +23,7 @@ export interface AgentInput {
   userId: string;
   model: string;
   name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
@@ -42,20 +39,13 @@ export interface ValidationErr {
 export async function validateTokenConflicts(
   log: FastifyBaseLogger,
   userId: string,
-  tokenA: string,
-  tokenB: string,
+  tokens: string[],
   id?: string,
 ): Promise<ValidationErr | null> {
-  const dupRows = await findActiveTokenConflicts(userId, tokenA, tokenB, id);
+  const dupRows = await findActiveTokenConflicts(userId, tokens, id);
   if (!dupRows.length) return null;
-  const conflicts: { token: string; id: string; name: string }[] = [];
-  for (const row of dupRows) {
-    if (row.token_a === tokenA || row.token_b === tokenA)
-      conflicts.push({ token: tokenA, id: row.id, name: row.name });
-    if (row.token_a === tokenB || row.token_b === tokenB)
-      conflicts.push({ token: tokenB, id: row.id, name: row.name });
-  }
-  const parts = conflicts.map((c) => `${c.token} used by ${c.name} (${c.id})`);
+  const conflicts = dupRows.map((r) => `${r.token} used by ${r.name} (${r.id})`);
+  const parts = conflicts;
   const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
   log.error('token conflict');
   return { code: 400, body: errorResponse(msg) };
@@ -70,6 +60,10 @@ async function validateAgentInput(
   if (body.userId !== userId) {
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
+  }
+  if (body.tokens.length !== 2) {
+    log.error('invalid tokens');
+    return { code: 400, body: errorResponse('exactly two tokens required') };
   }
   if (body.status === AgentStatus.Retired) {
     log.error('invalid status');
@@ -90,10 +84,7 @@ async function validateAgentInput(
         userId: body.userId,
         model: body.model,
         name: body.name,
-        tokenA: body.tokenA,
-        tokenB: body.tokenB,
-        minTokenAAllocation: body.minTokenAAllocation,
-        minTokenBAllocation: body.minTokenBAllocation,
+        tokens: body.tokens,
         risk: body.risk,
         reviewInterval: body.reviewInterval,
         agentInstructions: body.agentInstructions,
@@ -114,8 +105,7 @@ async function validateAgentInput(
     const conflict = await validateTokenConflicts(
       log,
       body.userId,
-      body.tokenA,
-      body.tokenB,
+      body.tokens.map((t) => t.token),
       id,
     );
     if (conflict) return conflict;
@@ -142,11 +132,10 @@ export async function ensureApiKeys(
 export async function getStartBalance(
   log: FastifyBaseLogger,
   userId: string,
-  tokenA: string,
-  tokenB: string,
+  tokens: string[],
 ): Promise<number | ValidationErr> {
   try {
-    const startBalance = await fetchTokensBalanceUsd(userId, [tokenA, tokenB]);
+    const startBalance = await fetchTokensBalanceUsd(userId, tokens);
     if (startBalance === null) {
       log.error('failed to fetch balance');
       return { code: 500, body: errorResponse('failed to fetch balance') };
@@ -164,29 +153,24 @@ export async function prepareAgentForUpsert(
   body: AgentInput,
   id?: string,
 ): Promise<{ body: AgentInput; startBalance: number | null } | ValidationErr> {
-  let norm;
   try {
     body.manualRebalance = !!body.manualRebalance;
-    norm = validateAllocations(
-      body.minTokenAAllocation,
-      body.minTokenBAllocation,
-    );
+    body.tokens = validateAllocations(body.tokens);
   } catch {
     log.error('invalid allocations');
-    return {
-      code: 400,
-      body: errorResponse('invalid minimum allocations'),
-    };
+    return { code: 400, body: errorResponse('invalid minimum allocations') };
   }
-  body.minTokenAAllocation = norm.minTokenAAllocation;
-  body.minTokenBAllocation = norm.minTokenBAllocation;
   const err = await validateAgentInput(log, userId, body, id);
   if (err) return err;
   let startBalance: number | null = null;
   if (body.status === AgentStatus.Active) {
     const keyErr = await ensureApiKeys(log, body.userId);
     if (keyErr) return keyErr;
-    const bal = await getStartBalance(log, userId, body.tokenA, body.tokenB);
+    const bal = await getStartBalance(
+      log,
+      userId,
+      body.tokens.map((t) => t.token),
+    );
     if (typeof bal === 'number') startBalance = bal;
     else return bal;
   }

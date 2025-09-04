@@ -4,14 +4,14 @@ import { fetchPairData, createLimitOrder } from './binance.js';
 
 export async function createRebalanceLimitOrder(opts: {
   userId: string;
-  tokenA: string;
-  tokenB: string;
+  tokens: string[];
   positions: { sym: string; value_usdt: number }[];
   newAllocation: number;
   reviewResultId: string;
   log: FastifyBaseLogger;
 }) {
-  const { userId, tokenA, tokenB, positions, newAllocation, reviewResultId, log } = opts;
+  const { userId, tokens, positions, newAllocation, reviewResultId, log } = opts;
+  const [tokenA, tokenB] = tokens;
   const posA = positions.find((p) => p.sym === tokenA);
   const posB = positions.find((p) => p.sym === tokenB);
   if (!posA || !posB) {

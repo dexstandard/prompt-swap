@@ -144,14 +144,16 @@ async function fetchBalances(
   row: ActiveAgentRow,
   log: FastifyBaseLogger,
 ): Promise<{ tokenABalance: number; tokenBBalance: number } | undefined> {
+  const tokenA = row.tokens[0].token;
+  const tokenB = row.tokens[1].token;
   let tokenABalance: number | undefined;
   let tokenBBalance: number | undefined;
   try {
     const account = await fetchAccount(row.user_id);
     if (account) {
-      const balA = account.balances.find((b) => b.asset === row.token_a);
+      const balA = account.balances.find((b) => b.asset === tokenA);
       if (balA) tokenABalance = Number(balA.free) + Number(balA.locked);
-      const balB = account.balances.find((b) => b.asset === row.token_b);
+      const balB = account.balances.find((b) => b.asset === tokenB);
       if (balB) tokenBBalance = Number(balB.free) + Number(balB.locked);
     }
   } catch (err) {
@@ -220,10 +222,12 @@ async function fetchPromptData(
   tsA?: MarketTimeseries;
   tsB?: MarketTimeseries;
 }> {
-  const pairKey = `${row.token_a}-${row.token_b}`;
+  const tokenA = row.tokens[0].token;
+  const tokenB = row.tokens[1].token;
+  const pairKey = `${tokenA}-${tokenB}`;
   let pairData = cache.pairData.get(pairKey);
   if (!pairData) {
-    pairData = await fetchPairData(row.token_a, row.token_b);
+    pairData = await fetchPairData(tokenA, tokenB);
     cache.pairData.set(pairKey, pairData);
   }
 
@@ -256,12 +260,12 @@ async function fetchPromptData(
   }
 
   const [priceAData, priceBData, indA, indB, tsA, tsB] = await Promise.all([
-    getPrice(row.token_a),
-    getPrice(row.token_b),
-    getIndicators(row.token_a),
-    getIndicators(row.token_b),
-    getTimeseries(row.token_a),
-    getTimeseries(row.token_b),
+    getPrice(tokenA),
+    getPrice(tokenB),
+    getIndicators(tokenA),
+    getIndicators(tokenB),
+    getTimeseries(tokenA),
+    getTimeseries(tokenB),
   ]);
 
   return {
@@ -281,30 +285,34 @@ function computePortfolioValues(
   priceA: number,
   priceB: number,
 ) {
+  const tokenA = row.tokens[0].token;
+  const tokenB = row.tokens[1].token;
+  const minA = row.tokens[0].min_allocation;
+  const minB = row.tokens[1].min_allocation;
   const valueA = balances.tokenABalance * priceA;
   const valueB = balances.tokenBBalance * priceB;
   const totalValue = valueA + valueB;
   const floorPercents: Record<string, number> = {
-    [row.token_a]: row.min_a_allocation,
-    [row.token_b]: row.min_b_allocation,
+    [tokenA]: minA,
+    [tokenB]: minB,
   };
   const positions = [
     {
-      sym: row.token_a,
+      sym: tokenA,
       qty: balances.tokenABalance,
       price_usdt: priceA,
       value_usdt: valueA,
     },
     {
-      sym: row.token_b,
+      sym: tokenB,
       qty: balances.tokenBBalance,
       price_usdt: priceB,
       value_usdt: valueB,
     },
   ];
   const weights: Record<string, number> = {
-    [row.token_a]: totalValue ? valueA / totalValue : 0,
-    [row.token_b]: totalValue ? valueB / totalValue : 0,
+    [tokenA]: totalValue ? valueA / totalValue : 0,
+    [tokenB]: totalValue ? valueB / totalValue : 0,
   };
   return { floorPercents, positions, weights };
 }
@@ -317,21 +325,23 @@ function assembleMarketData(
   tsA?: MarketTimeseries,
   tsB?: MarketTimeseries,
 ) {
+  const tokenA = row.tokens[0].token;
+  const tokenB = row.tokens[1].token;
   return {
     currentPrice: pairData.currentPrice,
     ...(indA || indB
       ? {
           indicators: {
-            ...(indA ? { [row.token_a]: indA } : {}),
-            ...(indB ? { [row.token_b]: indB } : {}),
+            ...(indA ? { [tokenA]: indA } : {}),
+            ...(indB ? { [tokenB]: indB } : {}),
           },
         }
       : {}),
     ...(tsA || tsB
       ? {
           market_timeseries: {
-            ...(tsA ? { [`${row.token_a}USDT`]: tsA } : {}),
-            ...(tsB ? { [`${row.token_b}USDT`]: tsB } : {}),
+            ...(tsA ? { [`${tokenA}USDT`]: tsA } : {}),
+            ...(tsB ? { [`${tokenB}USDT`]: tsB } : {}),
           },
         }
       : {}),
@@ -371,8 +381,7 @@ async function executeAgent(
     ) {
       await createRebalanceLimitOrder({
         userId: row.user_id,
-        tokenA: row.token_a,
-        tokenB: row.token_b,
+        tokens: row.tokens.map((t) => t.token),
         positions: prompt.config.portfolio.positions,
         newAllocation: parsed.response.newAllocation,
         log,

@@ -1,18 +1,12 @@
 export function validateAllocations(
-  minTokenAAllocation: number,
-  minTokenBAllocation: number,
+  tokens: { token: string; minAllocation: number }[],
 ) {
-  if (
-    minTokenAAllocation < 0 ||
-    minTokenBAllocation < 0 ||
-    minTokenAAllocation > 95 ||
-    minTokenBAllocation > 95 ||
-    minTokenAAllocation + minTokenBAllocation > 95
-  ) {
-    throw new Error('invalid minimum allocations');
+  let total = 0;
+  for (const t of tokens) {
+    if (t.minAllocation < 0 || t.minAllocation > 95)
+      throw new Error('invalid minimum allocations');
+    total += t.minAllocation;
   }
-  return {
-    minTokenAAllocation,
-    minTokenBAllocation,
-  };
+  if (total > 95) throw new Error('invalid minimum allocations');
+  return tokens;
 }
