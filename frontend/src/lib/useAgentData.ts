@@ -9,10 +9,7 @@ export interface Agent {
   status: 'active' | 'inactive' | 'draft';
   createdAt: number;
   name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
   agentInstructions: string;

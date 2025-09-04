@@ -18,10 +18,7 @@ import AgentStartButton from '../components/AgentStartButton';
 
 interface AgentPreviewDetails {
   name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
@@ -49,7 +46,7 @@ export default function AgentPreview({ draft }: Props) {
   useEffect(() => {
     if (data) setAgentData(data);
   }, [data]);
-  const tokens = agentData ? [agentData.tokenA, agentData.tokenB] : [];
+  const tokens = agentData ? agentData.tokens.map((t) => t.token) : [];
   const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
   const [model, setModel] = useState(draft?.model || '');
   useEffect(() => {
@@ -93,11 +90,15 @@ export default function AgentPreview({ draft }: Props) {
             setAgentData((d) => {
               if (!d) return d;
               const updated = { ...d, [key]: value } as AgentPreviewDetails;
-              const normalized = normalizeAllocations(
-                updated.minTokenAAllocation,
-                updated.minTokenBAllocation,
+              const norm = normalizeAllocations(
+                updated.tokens[0].minAllocation,
+                updated.tokens[1].minAllocation,
               );
-              return { ...updated, ...normalized };
+              const tokens = [
+                { ...updated.tokens[0], minAllocation: norm.minTokenAAllocation },
+                { ...updated.tokens[1], minAllocation: norm.minTokenBAllocation },
+              ];
+              return { ...updated, tokens };
             })
           }
         />
@@ -141,7 +142,7 @@ export default function AgentPreview({ draft }: Props) {
       <div className="mt-4">
         <WalletBalances balances={balances} hasBinanceKey={hasBinanceKey} />
         <WarningSign>
-          Trading agent will use all available balance for {agentData.tokenA.toUpperCase()} and {agentData.tokenB.toUpperCase()} in
+          Trading agent will use all available balance for {agentData.tokens.map((t) => t.token.toUpperCase()).join(' and ')} in
           your Binance Spot wallet. Move excess funds to futures wallet before trading.
           <br />
           <strong>DON'T MOVE FUNDS ON SPOT WALLET DURING TRADING!</strong> It will confuse the trading agent and may
@@ -175,10 +176,10 @@ export default function AgentPreview({ draft }: Props) {
                     userId: draft!.userId,
                     model,
                     name: agentData.name,
-                    tokenA: agentData.tokenA,
-                    tokenB: agentData.tokenB,
-                    minTokenAAllocation: agentData.minTokenAAllocation,
-                    minTokenBAllocation: agentData.minTokenBAllocation,
+                    tokens: agentData.tokens.map((t) => ({
+                      token: t.token.toUpperCase(),
+                      minAllocation: t.minAllocation,
+                    })),
                     risk: agentData.risk,
                     reviewInterval: agentData.reviewInterval,
                     agentInstructions: agentData.agentInstructions,
@@ -190,10 +191,10 @@ export default function AgentPreview({ draft }: Props) {
                     userId: user.id,
                     model,
                     name: agentData.name,
-                    tokenA: agentData.tokenA,
-                    tokenB: agentData.tokenB,
-                    minTokenAAllocation: agentData.minTokenAAllocation,
-                    minTokenBAllocation: agentData.minTokenBAllocation,
+                    tokens: agentData.tokens.map((t) => ({
+                      token: t.token.toUpperCase(),
+                      minAllocation: t.minAllocation,
+                    })),
                     risk: agentData.risk,
                     reviewInterval: agentData.reviewInterval,
                     agentInstructions: agentData.agentInstructions,

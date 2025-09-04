@@ -33,13 +33,8 @@ async function fetchHistory(token: string): Promise<PricePoint[]> {
   }));
 }
 
-export default function PriceChart({
-  tokenA,
-  tokenB,
-}: {
-  tokenA: string;
-  tokenB: string;
-}) {
+export default function PriceChart({ tokens }: { tokens: string[] }) {
+  const [tokenA, tokenB] = tokens;
   const containerRef = useRef<HTMLDivElement>(null);
   const seriesARef = useRef<ISeriesApi<'Line'> | null>(null);
   const seriesBRef = useRef<ISeriesApi<'Line'> | null>(null);
