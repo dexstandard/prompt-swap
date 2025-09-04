@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS agents(
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id),
   exchange_key_id BIGINT REFERENCES exchange_keys(id),
-  ai_key_id BIGINT REFERENCES ai_api_keys(id),
+  ai_api_key_id BIGINT REFERENCES ai_api_keys(id),
   model TEXT,
   status TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS agents(
 );
 
 CREATE TABLE IF NOT EXISTS agent_tokens(
-  agent_id BIGINT NOT NULL REFERENCES agents(id),
+  agent_id BIGINT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   token VARCHAR(20) NOT NULL,
   min_allocation INTEGER,
   position SMALLINT NOT NULL,
