@@ -4,6 +4,7 @@ import { encrypt } from '../src/util/crypto.js';
 import { env } from '../src/util/env.js';
 import { insertAdminUser, insertUser } from './repos/users.js';
 import { getUser } from '../src/repos/users.js';
+import { authCookies } from './helpers.js';
 
 describe('admin user routes', () => {
   it('lists users for admin only', async () => {
@@ -14,14 +15,14 @@ describe('admin user routes', () => {
     const resForbidden = await app.inject({
       method: 'GET',
       url: '/api/users',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(resForbidden.statusCode).toBe(403);
 
     const res = await app.inject({
       method: 'GET',
       url: '/api/users',
-      headers: { 'x-user-id': adminId },
+      cookies: authCookies(adminId),
     });
     expect(res.statusCode).toBe(200);
     const body = res.json() as any[];
@@ -39,7 +40,7 @@ describe('admin user routes', () => {
     const resDisable = await app.inject({
       method: 'POST',
       url: `/api/users/${userId}/disable`,
-      headers: { 'x-user-id': adminId },
+      cookies: authCookies(adminId),
     });
     expect(resDisable.statusCode).toBe(200);
     let row = await getUser(userId);
@@ -48,7 +49,7 @@ describe('admin user routes', () => {
     const resEnable = await app.inject({
       method: 'POST',
       url: `/api/users/${userId}/enable`,
-      headers: { 'x-user-id': adminId },
+      cookies: authCookies(adminId),
     });
     expect(resEnable.statusCode).toBe(200);
     row = await getUser(userId);

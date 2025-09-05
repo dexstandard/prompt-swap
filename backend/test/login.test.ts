@@ -20,6 +20,7 @@ describe('login route', () => {
       payload: { token: 'test-token' },
     });
     expect(res.statusCode).toBe(200);
+    expect(res.headers['set-cookie']).toBeDefined();
     const body = res.json() as any;
     expect(body.role).toBe('user');
     const row = await getUserEmailEnc(body.id);

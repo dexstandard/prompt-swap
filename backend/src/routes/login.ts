@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 import { authenticator } from 'otplib';
@@ -11,6 +11,7 @@ import {
 } from '../repos/user-identities.js';
 import { encrypt } from '../util/crypto.js';
 import { errorResponse, type ErrorResponse } from '../util/errorMessages.js';
+import jwt from 'jsonwebtoken';
 
 interface ValidationErr {
   code: number;
@@ -25,6 +26,16 @@ async function verifyToken(token: string) {
     audience: env.GOOGLE_CLIENT_ID,
   });
   return ticket.getPayload();
+}
+
+function setSessionCookie(reply: FastifyReply, id: string) {
+  const token = jwt.sign({ id }, env.KEY_PASSWORD);
+  reply.setCookie('session', token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+  });
 }
 
 export default async function loginRoutes(app: FastifyInstance) {
@@ -46,6 +57,7 @@ export default async function loginRoutes(app: FastifyInstance) {
       if (!row) {
         id = await insertUser(emailEnc);
         await insertUserIdentity(id, 'google', payload.sub);
+        setSessionCookie(reply, id);
         return { id, email: payload.email, role: 'user' };
       }
       id = row.id;
@@ -55,6 +67,7 @@ export default async function loginRoutes(app: FastifyInstance) {
       }
       const err = validateOtp(row, body.otp);
       if (err) return reply.code(err.code).send(err.body);
+      setSessionCookie(reply, id);
       return { id, email: payload.email, role: row.role };
     }
   );

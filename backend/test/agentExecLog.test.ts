@@ -9,6 +9,7 @@ import { insertAgent } from './repos/agents.js';
 import { insertReviewRawLog } from './repos/agent-review-raw-log.js';
 import { db } from '../src/db/index.js';
 import * as binance from '../src/services/binance.js';
+import { authCookies } from './helpers.js';
 
 describe('agent exec log routes', () => {
   it('returns orders for log and enforces ownership', async () => {
@@ -44,7 +45,7 @@ describe('agent exec log routes', () => {
     let res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders`,
-      headers: { 'x-user-id': user1Id },
+      cookies: authCookies(user1Id),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
@@ -55,7 +56,7 @@ describe('agent exec log routes', () => {
     res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders`,
-      headers: { 'x-user-id': user2Id },
+      cookies: authCookies(user2Id),
     });
     expect(res.statusCode).toBe(403);
     await app.close();
@@ -102,7 +103,7 @@ describe('agent exec log routes', () => {
     let res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=2`,
-      headers: { 'x-user-id': user1Id },
+      cookies: authCookies(user1Id),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 3, page: 1, pageSize: 2 });
@@ -111,7 +112,7 @@ describe('agent exec log routes', () => {
     res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=2`,
-      headers: { 'x-user-id': user2Id },
+      cookies: authCookies(user2Id),
     });
     expect(res.statusCode).toBe(403);
 
@@ -162,7 +163,7 @@ describe('agent exec log routes', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
 
     expect(res.statusCode).toBe(200);
@@ -219,7 +220,7 @@ describe('agent exec log routes', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -264,7 +265,7 @@ describe('agent exec log routes', () => {
     let res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(201);
     const { rows } = await db.query(
@@ -276,7 +277,7 @@ describe('agent exec log routes', () => {
     res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
     vi.restoreAllMocks();
@@ -322,7 +323,7 @@ describe('agent exec log routes', () => {
     const res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
     const { rows } = await db.query(
@@ -371,7 +372,7 @@ describe('agent exec log routes', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance/preview`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -425,7 +426,7 @@ describe('agent exec log routes', () => {
     const res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({
@@ -458,7 +459,7 @@ describe('agent exec log routes', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agent.id}/exec-log?rebalanceOnly=true`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();

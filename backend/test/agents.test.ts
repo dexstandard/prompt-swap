@@ -7,6 +7,7 @@ import { insertUser } from './repos/users.js';
 import { setAiKey, setBinanceKey } from '../src/repos/api-keys.js';
 import { setAgentStatus } from './repos/agents.js';
 import { cancelOpenOrders } from '../src/services/binance.js';
+import { authCookies } from './helpers.js';
 
 vi.mock('../src/jobs/review-portfolio.js', () => ({
   reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
@@ -93,7 +94,7 @@ describe('agent routes', () => {
     let res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
       payload,
     });
     expect(res.statusCode).toBe(200);
@@ -104,7 +105,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
       expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
@@ -112,7 +113,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
@@ -121,7 +122,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10&status=active',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
@@ -131,7 +132,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'PUT',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
       payload: update,
     });
     expect(res.statusCode).toBe(200);
@@ -140,7 +141,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10&status=active',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 0, page: 1, pageSize: 10 });
@@ -149,7 +150,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10&status=draft',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 1, page: 1, pageSize: 10 });
@@ -167,7 +168,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'DELETE',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     const deletedRow = await db.query('SELECT status FROM agents WHERE id = $1', [
@@ -186,14 +187,14 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.json().items).toHaveLength(0);
 
     res = await app.inject({
       method: 'GET',
       url: '/api/agents/paginated?page=1&pageSize=10&status=retired',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().items).toHaveLength(0);
@@ -201,14 +202,14 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'GET',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(404);
 
     res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': '999' },
+      cookies: authCookies('999'),
       payload: { ...payload, userId, name: 'A2' },
     });
     expect(res.statusCode).toBe(403);
@@ -236,7 +237,7 @@ describe('agent routes', () => {
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': starterId },
+      cookies: authCookies(starterId),
       payload: draftPayload,
     });
     const id = resCreate.json().id as string;
@@ -271,7 +272,7 @@ describe('agent routes', () => {
     let res = await app.inject({
       method: 'POST',
       url: `/api/agents/${id}/start`,
-      headers: { 'x-user-id': starterId },
+      cookies: authCookies(starterId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'active' });
@@ -281,7 +282,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'POST',
       url: `/api/agents/${id}/stop`,
-      headers: { 'x-user-id': starterId },
+      cookies: authCookies(starterId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'inactive' });
@@ -359,7 +360,7 @@ describe('agent routes', () => {
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': updateUserId },
+      cookies: authCookies(updateUserId),
       payload: createPayload,
     });
     expect(resCreate.statusCode).toBe(200);
@@ -375,7 +376,7 @@ describe('agent routes', () => {
     const resUpdate = await app.inject({
       method: 'PUT',
       url: `/api/agents/${id}`,
-      headers: { 'x-user-id': updateUserId },
+      cookies: authCookies(updateUserId),
       payload: updatePayload,
     });
     expect(resUpdate.statusCode).toBe(200);
@@ -407,7 +408,7 @@ describe('agent routes', () => {
     let res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': u1Id },
+      cookies: authCookies(u1Id),
       payload: { ...basePayload, status: 'active' },
     });
     expect(res.statusCode).toBe(400);
@@ -415,7 +416,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': u1Id },
+      cookies: authCookies(u1Id),
       payload: { ...basePayload, status: 'draft' },
     });
     expect(res.statusCode).toBe(200);
@@ -452,7 +453,7 @@ describe('agent routes', () => {
     res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': u2Id },
+      cookies: authCookies(u2Id),
       payload: { ...basePayload, userId: u2Id, name: 'Active', status: 'active' },
     });
     expect(res.statusCode).toBe(200);
@@ -461,7 +462,7 @@ describe('agent routes', () => {
     const resDraft2 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': u2Id },
+      cookies: authCookies(u2Id),
       payload: { ...basePayload, userId: u2Id, name: 'Draft2', status: 'draft' },
     });
     const draft2Id = resDraft2.json().id as string;
@@ -523,7 +524,7 @@ describe('agent routes', () => {
     const res1 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': dupId },
+      cookies: authCookies(dupId),
       payload: base,
     });
     const existingId = res1.json().id as string;
@@ -531,7 +532,7 @@ describe('agent routes', () => {
     const resDup = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': dupId },
+      cookies: authCookies(dupId),
       payload: {
         ...base,
         name: 'B1',
@@ -551,7 +552,7 @@ describe('agent routes', () => {
     const resOk = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': dupId },
+      cookies: authCookies(dupId),
       payload: {
         ...base,
         name: 'B2',
@@ -588,7 +589,7 @@ describe('agent routes', () => {
     const res1 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': draftUserId },
+      cookies: authCookies(draftUserId),
       payload: draftPayload,
     });
     const draftId = res1.json().id as string;
@@ -596,7 +597,7 @@ describe('agent routes', () => {
     const resDup = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': draftUserId },
+      cookies: authCookies(draftUserId),
       payload: draftPayload,
     });
     expect(resDup.statusCode).toBe(400);
@@ -606,7 +607,7 @@ describe('agent routes', () => {
     const resOk = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': draftUserId },
+      cookies: authCookies(draftUserId),
       payload: { ...draftPayload, name: 'Draft2' },
     });
     expect(resOk.statusCode).toBe(200);
@@ -635,7 +636,7 @@ describe('agent routes', () => {
     const res1 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': updId },
+      cookies: authCookies(updId),
       payload: base,
     });
     const draft1 = res1.json().id as string;
@@ -643,7 +644,7 @@ describe('agent routes', () => {
     const res2 = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': updId },
+      cookies: authCookies(updId),
       payload: {
         ...base,
         name: 'Draft2',
@@ -658,7 +659,7 @@ describe('agent routes', () => {
     const resUpd = await app.inject({
       method: 'PUT',
       url: `/api/agents/${draft2}`,
-      headers: { 'x-user-id': updId },
+      cookies: authCookies(updId),
       payload: { ...base },
     });
     expect(resUpd.statusCode).toBe(400);
@@ -687,14 +688,14 @@ describe('agent routes', () => {
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': nomodelId },
+      cookies: authCookies(nomodelId),
       payload,
     });
     const id = resCreate.json().id as string;
     const resStart = await app.inject({
       method: 'POST',
       url: `/api/agents/${id}/start`,
-      headers: { 'x-user-id': nomodelId },
+      cookies: authCookies(nomodelId),
     });
     expect(resStart.statusCode).toBe(400);
     expect(resStart.json().error).toContain('model');
@@ -720,7 +721,7 @@ describe('agent routes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': allocId },
+      cookies: authCookies(allocId),
       payload,
     });
     expect(res.statusCode).toBe(400);

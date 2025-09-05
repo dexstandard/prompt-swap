@@ -11,6 +11,7 @@ vi.mock('../src/jobs/review-portfolio.js', () => ({
 
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
+import { authCookies } from './helpers.js';
 
 async function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
@@ -65,7 +66,7 @@ describe('agent creation', () => {
     const createPromise = app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
       payload,
     });
     const res = await Promise.race([
