@@ -2,6 +2,8 @@ import type { FastifyBaseLogger } from 'fastify';
 import { insertLimitOrder, type LimitOrderStatus } from '../repos/limit-orders.js';
 import { fetchPairData, createLimitOrder } from './binance.js';
 
+export const MIN_LIMIT_ORDER_USD = 0.02;
+
 export async function calcRebalanceOrder(opts: {
   tokens: string[];
   positions: { sym: string; value_usdt: number }[];
@@ -16,7 +18,7 @@ export async function calcRebalanceOrder(opts: {
   const total = pos1.value_usdt + pos2.value_usdt;
   const target1 = (newAllocation / 100) * total;
   const diff = target1 - pos1.value_usdt;
-  if (!diff) return null;
+  if (!diff || Math.abs(diff) < MIN_LIMIT_ORDER_USD) return null;
   const side = diff > 0 ? 'BUY' : 'SELL';
   const quantity = Math.abs(diff) / currentPrice;
   const better = side === 'BUY' ? 0.999 : 1.001;
