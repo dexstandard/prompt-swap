@@ -112,4 +112,40 @@ describe('createRebalanceLimitOrder', () => {
       manuallyEdited: true,
     });
   });
+
+  it('skips orders below minimum value', async () => {
+    const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    const userId = await insertUser('3');
+    const agent = await insertAgent({
+      userId,
+      model: 'm',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    vi.mocked(createLimitOrder).mockClear();
+    await createRebalanceLimitOrder({
+      userId,
+      tokens: ['BTC', 'ETH'],
+      positions: [
+        { sym: 'BTC', value_usdt: 100 },
+        { sym: 'ETH', value_usdt: 99.99 },
+      ],
+      newAllocation: 50,
+      log,
+      reviewResultId,
+    });
+    const rows = await getLimitOrders();
+    expect(rows).toHaveLength(0);
+    expect(createLimitOrder).not.toHaveBeenCalled();
+  });
 });

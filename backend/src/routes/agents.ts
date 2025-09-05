@@ -30,7 +30,11 @@ import {
   cancelOpenLimitOrdersByAgent,
   getLimitOrdersByReviewResult,
 } from '../repos/limit-orders.js';
-import { createRebalanceLimitOrder, calcRebalanceOrder } from '../services/rebalance.js';
+import {
+  createRebalanceLimitOrder,
+  calcRebalanceOrder,
+  MIN_LIMIT_ORDER_USD,
+} from '../services/rebalance.js';
 import { getRebalanceInfo } from '../repos/agent-review-result.js';
 
 
@@ -248,6 +252,29 @@ export default async function agentRoutes(app: FastifyInstance) {
       const body = req.body as
         | { price?: number; quantity?: number; manuallyEdited?: boolean }
         | undefined;
+      const order = await calcRebalanceOrder({
+        tokens: [token1, token2],
+        positions,
+        newAllocation: result.newAllocation,
+      });
+      if (!order) {
+        log.error({ execLogId: logId }, 'order below minimum');
+        return reply
+          .code(400)
+          .send(errorResponse('order value below minimum'));
+      }
+      const finalPrice = body?.price ?? order.price;
+      const finalQuantity = body?.quantity ?? order.quantity;
+      const usdValue =
+        order.side === 'BUY'
+          ? finalPrice * finalQuantity * price2Data.currentPrice
+          : finalQuantity * price1Data.currentPrice;
+      if (usdValue < MIN_LIMIT_ORDER_USD) {
+        log.error({ execLogId: logId }, 'order below minimum');
+        return reply
+          .code(400)
+          .send(errorResponse('order value below minimum'));
+      }
       try {
         await createRebalanceLimitOrder({
           userId,
