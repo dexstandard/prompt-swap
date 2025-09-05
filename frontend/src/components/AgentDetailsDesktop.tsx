@@ -16,10 +16,7 @@ export default function AgentDetailsDesktop({ agent }: Props) {
   const [showPrompt, setShowPrompt] = useState(false);
 
   const strategyData = {
-    tokenA: agent.tokenA,
-    tokenB: agent.tokenB,
-    minTokenAAllocation: agent.minTokenAAllocation,
-    minTokenBAllocation: agent.minTokenBAllocation,
+    tokens: agent.tokens,
     risk: agent.risk,
     reviewInterval: agent.reviewInterval,
   };
@@ -37,9 +34,12 @@ export default function AgentDetailsDesktop({ agent }: Props) {
       </p>
       <p className="flex items-center gap-1 mt-2">
         <strong>Tokens:</strong>
-        <TokenDisplay token={agent.tokenA} />
-        <span>/</span>
-        <TokenDisplay token={agent.tokenB} />
+        {agent.tokens.map((t, i) => (
+          <span key={i} className="flex items-center gap-1">
+            {i > 0 && <span>/</span>}
+            <TokenDisplay token={t.token} />
+          </span>
+        ))}
       </p>
       <div className="mt-2">
         <div
@@ -81,8 +81,7 @@ export default function AgentDetailsDesktop({ agent }: Props) {
         )}
       </div>
       <AgentPnl
-        tokenA={agent.tokenA}
-        tokenB={agent.tokenB}
+        tokens={agent.tokens.map((t) => t.token)}
         startBalanceUsd={agent.startBalanceUsd}
       />
     </div>

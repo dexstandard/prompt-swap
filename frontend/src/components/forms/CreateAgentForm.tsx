@@ -22,7 +22,7 @@ import Button from '../ui/Button';
 export default function CreateAgentForm({
                                       onTokensChange,
                                   }: {
-    onTokensChange?: (tokenA: string, tokenB: string) => void;
+    onTokensChange?: (tokens: string[]) => void;
 }) {
     const {user} = useUser();
     const {
@@ -36,21 +36,22 @@ export default function CreateAgentForm({
         defaultValues: createAgentDefaults,
     });
 
-    const tokenA = watch('tokenA');
-    const tokenB = watch('tokenB');
-    const minTokenAAllocation = watch('minTokenAAllocation');
-    const minTokenBAllocation = watch('minTokenBAllocation');
+    const token1 = watch('tokens.0.token');
+    const token2 = watch('tokens.1.token');
+    const minToken1Allocation = watch('tokens.0.minAllocation');
+    const minToken2Allocation = watch('tokens.1.minAllocation');
 
     useEffect(() => {
-        onTokensChange?.(tokenA, tokenB);
+        onTokensChange?.([token1, token2]);
         // onTokensChange is stable via useCallback in parent
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tokenA, tokenB]);
+    }, [token1, token2]);
 
     useAllocationNormalization(
-        minTokenAAllocation,
-        minTokenBAllocation,
-        setValue
+        minToken1Allocation,
+        minToken2Allocation,
+        (index, value) =>
+            setValue(`tokens.${index}.minAllocation` as const, value)
     );
 
     const navigate = useNavigate();
@@ -59,11 +60,11 @@ export default function CreateAgentForm({
     const onSubmit = handleSubmit(async (values) => {
         if (!user) return;
         const previewData = {
-            name: `${values.tokenA.toUpperCase()} / ${values.tokenB.toUpperCase()}`,
-            tokenA: values.tokenA.toUpperCase(),
-            tokenB: values.tokenB.toUpperCase(),
-            minTokenAAllocation: values.minTokenAAllocation,
-            minTokenBAllocation: values.minTokenBAllocation,
+            name: values.tokens.map((t) => t.token.toUpperCase()).join(' / '),
+            tokens: values.tokens.map((t) => ({
+                token: t.token.toUpperCase(),
+                minAllocation: t.minAllocation,
+            })),
             risk: values.risk,
             reviewInterval: values.reviewInterval,
             agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
@@ -89,33 +90,33 @@ export default function CreateAgentForm({
             >
                 <h2 className="text-lg md:text-xl font-bold">Create Agent</h2>
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField label="Token A" htmlFor="tokenA">
+                    <FormField label="Token 1" htmlFor="token1">
                         <Controller
-                            name="tokenA"
+                            name="tokens.0.token"
                             control={control}
                             render={({field}) => (
                                 <TokenSelect
-                                    id="tokenA"
+                                    id="token1"
                                     value={field.value}
                                     onChange={field.onChange}
                                     options={tokens.filter(
-                                        (t) => t.value === tokenA || t.value !== tokenB
+                                        (t) => t.value === token1 || t.value !== token2
                                     )}
                                 />
                             )}
                         />
                     </FormField>
-                    <FormField label="Token B" htmlFor="tokenB">
+                    <FormField label="Token 2" htmlFor="token2">
                         <Controller
-                            name="tokenB"
+                            name="tokens.1.token"
                             control={control}
                             render={({field}) => (
                                 <TokenSelect
-                                    id="tokenB"
+                                    id="token2"
                                     value={field.value}
                                     onChange={field.onChange}
                                     options={tokens.filter(
-                                        (t) => t.value === tokenB || t.value !== tokenA
+                                        (t) => t.value === token2 || t.value !== token1
                                     )}
                                 />
                             )}
@@ -124,15 +125,15 @@ export default function CreateAgentForm({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
-                        label={`Min ${tokenA.toUpperCase()} allocation`}
-                        htmlFor="minTokenAAllocation"
+                        label={`Min ${token1.toUpperCase()} allocation`}
+                        htmlFor="minToken1Allocation"
                     >
                         <Controller
-                            name="minTokenAAllocation"
+                            name="tokens.0.minAllocation"
                             control={control}
                             render={({field}) => (
                                 <TextInput
-                                    id="minTokenAAllocation"
+                                    id="minToken1Allocation"
                                     type="number"
                                     min={0}
                                     max={95}
@@ -149,15 +150,15 @@ export default function CreateAgentForm({
                         />
                     </FormField>
                     <FormField
-                        label={`Min ${tokenB.toUpperCase()} allocation`}
-                        htmlFor="minTokenBAllocation"
+                        label={`Min ${token2.toUpperCase()} allocation`}
+                        htmlFor="minToken2Allocation"
                     >
                         <Controller
-                            name="minTokenBAllocation"
+                            name="tokens.1.minAllocation"
                             control={control}
                             render={({field}) => (
                                 <TextInput
-                                    id="minTokenBAllocation"
+                                    id="minToken2Allocation"
                                     type="number"
                                     min={0}
                                     max={95}

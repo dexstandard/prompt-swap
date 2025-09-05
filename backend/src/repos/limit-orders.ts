@@ -29,10 +29,10 @@ export async function cancelOpenLimitOrdersByAgent(
   await db.query(
     `UPDATE limit_order e
         SET status = 'canceled'
-      WHERE status = 'open'
-        AND review_result_id IN (
-          SELECT id FROM agent_review_result WHERE agent_id = $1
-        )`,
+       FROM agent_review_result r
+      WHERE e.status = 'open'
+        AND e.review_result_id = r.id
+        AND r.agent_id = $1`,
     [agentId],
   );
 }
@@ -45,7 +45,7 @@ export async function getLimitOrdersByReviewResult(
     `SELECT e.planned_json, e.status
        FROM limit_order e
        JOIN agent_review_result r ON e.review_result_id = r.id
-      WHERE r.agent_id = $1 AND r.id = $2`,
+      WHERE r.agent_id = $1 AND e.review_result_id = $2`,
     [agentId, reviewResultId],
   );
   return rows as { planned_json: string; status: LimitOrderStatus }[];

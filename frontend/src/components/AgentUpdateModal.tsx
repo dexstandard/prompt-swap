@@ -21,10 +21,7 @@ interface Props {
 export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Props) {
   const toast = useToast();
   const [data, setData] = useState({
-    tokenA: agent.tokenA,
-    tokenB: agent.tokenB,
-    minTokenAAllocation: agent.minTokenAAllocation,
-    minTokenBAllocation: agent.minTokenBAllocation,
+    tokens: agent.tokens,
     risk: agent.risk,
     reviewInterval: agent.reviewInterval,
     agentInstructions: agent.agentInstructions,
@@ -33,10 +30,7 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
   useEffect(() => {
     if (open) {
       setData({
-        tokenA: agent.tokenA,
-        tokenB: agent.tokenB,
-        minTokenAAllocation: agent.minTokenAAllocation,
-        minTokenBAllocation: agent.minTokenBAllocation,
+        tokens: agent.tokens,
         risk: agent.risk,
         reviewInterval: agent.reviewInterval,
         agentInstructions: agent.agentInstructions,
@@ -51,7 +45,13 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
         model: agent.model,
         status: agent.status,
         name: agent.name,
-        ...data,
+        tokens: data.tokens.map((t) => ({
+          token: t.token.toUpperCase(),
+          minAllocation: t.minAllocation,
+        })),
+        risk: data.risk,
+        reviewInterval: data.reviewInterval,
+        agentInstructions: data.agentInstructions,
         manualRebalance: agent.manualRebalance,
       });
     },
@@ -79,11 +79,15 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
           onChange={(key, value) =>
             setData((d) => {
               const updated = { ...d, [key]: value } as typeof data;
-              const normalized = normalizeAllocations(
-                updated.minTokenAAllocation,
-                updated.minTokenBAllocation
+              const norm = normalizeAllocations(
+                updated.tokens[0].minAllocation,
+                updated.tokens[1].minAllocation,
               );
-              return { ...updated, ...normalized };
+              const tokens = [
+                { ...updated.tokens[0], minAllocation: norm.minTokenAAllocation },
+                { ...updated.tokens[1], minAllocation: norm.minTokenBAllocation },
+              ];
+              return { ...updated, tokens };
             })
           }
         />

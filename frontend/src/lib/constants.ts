@@ -30,38 +30,40 @@ export const DEFAULT_AGENT_INSTRUCTIONS =
 
 export const createAgentSchema = z
     .object({
-        tokenA: z.string().min(1, 'Token A is required'),
-        tokenB: z.string().min(1, 'Token B is required'),
-        minTokenAAllocation: z
-            .number()
-            .min(0, 'Must be at least 0')
-            .max(95, 'Must be 95 or less'),
-        minTokenBAllocation: z
-            .number()
-            .min(0, 'Must be at least 0')
-            .max(95, 'Must be 95 or less'),
+        tokens: z
+            .array(
+                z.object({
+                    token: z.string().min(1, 'Token is required'),
+                    minAllocation: z
+                        .number()
+                        .min(0, 'Must be at least 0')
+                        .max(95, 'Must be 95 or less'),
+                })
+            )
+            .length(2),
         risk: z.enum(['low', 'medium', 'high']),
         reviewInterval: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
     })
-    .refine((data) => data.tokenA !== data.tokenB, {
+    .refine((data) => data.tokens[0].token !== data.tokens[1].token, {
         message: 'Tokens must be different',
-        path: ['tokenB'],
+        path: ['tokens', 1, 'token'],
     })
     .refine(
-        (data) => data.minTokenAAllocation + data.minTokenBAllocation <= 95,
+        (data) =>
+            data.tokens[0].minAllocation + data.tokens[1].minAllocation <= 95,
         {
             message: 'Min allocations must leave at least 5% unallocated',
-            path: ['minTokenBAllocation'],
+            path: ['tokens', 1, 'minAllocation'],
         }
     );
 
 export type CreateAgentFormValues = z.infer<typeof createAgentSchema>;
 
 export const createAgentDefaults: CreateAgentFormValues = {
-    tokenA: 'USDT',
-    tokenB: 'SOL',
-    minTokenAAllocation: 0,
-    minTokenBAllocation: 30,
+    tokens: [
+        {token: 'USDT', minAllocation: 0},
+        {token: 'SOL', minAllocation: 30},
+    ],
     risk: 'low',
     reviewInterval: '1h',
 };

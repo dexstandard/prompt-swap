@@ -33,25 +33,20 @@ async function fetchHistory(token: string): Promise<PricePoint[]> {
   }));
 }
 
-export default function PriceChart({
-  tokenA,
-  tokenB,
-}: {
-  tokenA: string;
-  tokenB: string;
-}) {
+export default function PriceChart({ tokens }: { tokens: string[] }) {
+  const [token1, token2] = tokens;
   const containerRef = useRef<HTMLDivElement>(null);
   const seriesARef = useRef<ISeriesApi<'Line'> | null>(null);
   const seriesBRef = useRef<ISeriesApi<'Line'> | null>(null);
 
   const query = useQuery<{ [key: string]: PricePoint[] }>({
-    queryKey: ['price-history', tokenA, tokenB],
+    queryKey: ['price-history', token1, token2],
     queryFn: async () => {
-      const dataA =
-        tokenA === 'USDT' ? generateStablecoinData() : await fetchHistory(tokenA);
-      const dataB =
-        tokenB === 'USDT' ? generateStablecoinData() : await fetchHistory(tokenB);
-      return { [tokenA]: dataA, [tokenB]: dataB };
+      const data1 =
+        token1 === 'USDT' ? generateStablecoinData() : await fetchHistory(token1);
+      const data2 =
+        token2 === 'USDT' ? generateStablecoinData() : await fetchHistory(token2);
+      return { [token1]: data1, [token2]: data2 };
     },
   });
 
@@ -93,18 +88,18 @@ export default function PriceChart({
     if (!query.data || !seriesARef.current || !seriesBRef.current) return;
 
     seriesARef.current.setData(
-      query.data[tokenA].map((d) => ({
+      query.data[token1].map((d) => ({
         time: (d.time / 1000) as UTCTimestamp,
         value: d.close,
       }))
     );
     seriesBRef.current.setData(
-      query.data[tokenB].map((d) => ({
+      query.data[token2].map((d) => ({
         time: (d.time / 1000) as UTCTimestamp,
         value: d.close,
       }))
     );
-  }, [query.data, tokenA, tokenB]);
+  }, [query.data, token1, token2]);
 
   return (
     <div className="bg-white shadow-md border border-gray-200 rounded p-6 flex-1 min-w-0 flex flex-col">

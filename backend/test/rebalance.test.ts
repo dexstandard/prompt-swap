@@ -23,10 +23,10 @@ describe('createRebalanceLimitOrder', () => {
       status: 'active',
       startBalance: null,
       name: 'A',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'inst',
@@ -35,8 +35,7 @@ describe('createRebalanceLimitOrder', () => {
     const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
     await createRebalanceLimitOrder({
       userId,
-      tokenA: 'BTC',
-      tokenB: 'ETH',
+      tokens: ['BTC', 'ETH'],
       positions: [
         { sym: 'BTC', value_usdt: 50 },
         { sym: 'ETH', value_usdt: 150 },

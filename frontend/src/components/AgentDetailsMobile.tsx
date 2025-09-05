@@ -19,13 +19,15 @@ export default function AgentDetailsMobile({ agent }: Props) {
         <FormattedDate date={agent.createdAt} />
       </p>
       <p className="flex items-center gap-1 mt-2">
-        <TokenDisplay token={agent.tokenA} />
-        <span>/</span>
-        <TokenDisplay token={agent.tokenB} />
+        {agent.tokens.map((t, i) => (
+          <span key={i} className="flex items-center gap-1">
+            {i > 0 && <span>/</span>}
+            <TokenDisplay token={t.token} />
+          </span>
+        ))}
       </p>
       <AgentPnlMobile
-        tokenA={agent.tokenA}
-        tokenB={agent.tokenB}
+        tokens={agent.tokens.map((t) => t.token)}
         startBalanceUsd={agent.startBalanceUsd}
       />
     </div>

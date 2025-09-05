@@ -205,10 +205,10 @@ async function fetchSymbolData(symbol: string) {
   };
 }
 
-export async function fetchPairData(tokenA: string, tokenB: string) {
+export async function fetchPairData(token1: string, token2: string) {
   const symbols = [
-    `${tokenA}${tokenB}`.toUpperCase(),
-    `${tokenB}${tokenA}`.toUpperCase(),
+    `${token1}${token2}`.toUpperCase(),
+    `${token2}${token1}`.toUpperCase(),
   ];
   let lastErr: unknown;
   for (const symbol of symbols) {

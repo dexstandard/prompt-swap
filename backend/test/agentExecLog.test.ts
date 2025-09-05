@@ -21,10 +21,10 @@ describe('agent exec log routes', () => {
       status: 'active',
       startBalance: null,
       name: 'A',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'inst',
@@ -71,10 +71,10 @@ describe('agent exec log routes', () => {
       status: 'active',
       startBalance: null,
       name: 'A',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'inst',
@@ -83,7 +83,7 @@ describe('agent exec log routes', () => {
     const agentId = agent.id;
 
     for (let i = 0; i < 3; i++) {
-      await insertReviewRawLog({ agentId, response: `log-${i}` });
+      await insertReviewRawLog({ agentId, prompt: `prompt-${i}`, response: `log-${i}` });
       const parsed = parseExecLog(`log-${i}`);
       await insertReviewResult({
         agentId,
@@ -128,10 +128,10 @@ describe('agent exec log routes', () => {
       status: 'active',
       startBalance: null,
       name: 'A',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'inst',
@@ -144,7 +144,7 @@ describe('agent exec log routes', () => {
       'utf8',
     );
 
-      await insertReviewRawLog({ agentId, response: aiLog });
+      await insertReviewRawLog({ agentId, prompt: 'p', response: aiLog });
     const parsedAi = parseExecLog(aiLog);
     await insertReviewResult({
       agentId,
@@ -191,10 +191,10 @@ describe('agent exec log routes', () => {
       status: 'active',
       startBalance: null,
       name: 'A',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'inst',
@@ -202,7 +202,7 @@ describe('agent exec log routes', () => {
     });
     const agentId = agent.id;
     const entry = JSON.stringify({ prompt: { instructions: 'inst' }, response: 'ok' });
-    await insertReviewRawLog({ agentId, response: entry });
+    await insertReviewRawLog({ agentId, prompt: 'p', response: entry });
     const parsedP = parseExecLog(entry);
     await insertReviewResult({
       agentId,
@@ -236,10 +236,10 @@ describe('agent exec log routes', () => {
       status: 'active',
       startBalance: null,
       name: 'A',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'inst',
@@ -291,10 +291,10 @@ describe('agent exec log routes', () => {
       status: 'active',
       startBalance: null,
       name: 'A',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'inst',

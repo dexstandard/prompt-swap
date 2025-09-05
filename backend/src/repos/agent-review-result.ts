@@ -15,7 +15,7 @@ export async function insertReviewResult(entry: ReviewResultInsert): Promise<str
     [
       entry.agentId,
       entry.log,
-      entry.rebalance === undefined ? null : entry.rebalance,
+      entry.rebalance ?? false,
       entry.newAllocation ?? null,
       entry.shortReport ?? null,
       entry.error ? JSON.stringify(entry.error) : null,

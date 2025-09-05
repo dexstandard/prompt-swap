@@ -1,12 +1,11 @@
 import { useAgentBalanceUsd } from '../lib/useAgentBalanceUsd';
 
 interface Props {
-  tokenA: string;
-  tokenB: string;
+  tokens: string[];
 }
 
-export default function AgentBalance({ tokenA, tokenB }: Props) {
-  const { balance, isLoading } = useAgentBalanceUsd(tokenA, tokenB);
+export default function AgentBalance({ tokens }: Props) {
+  const { balance, isLoading } = useAgentBalanceUsd(tokens);
   if (balance === null) return <span>-</span>;
   return <span>{isLoading ? 'Loading...' : `$${balance.toFixed(2)}`}</span>;
 }
