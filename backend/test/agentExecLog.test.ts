@@ -384,6 +384,57 @@ describe('agent exec log routes', () => {
     await app.close();
   });
 
+  it('returns binance error message when limit order fails', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('31');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: true,
+    });
+    const reviewResultId = await insertReviewResult({
+      agentId: agent.id,
+      log: '',
+      rebalance: true,
+      newAllocation: 60,
+    });
+    vi.spyOn(binance, 'fetchAccount').mockResolvedValue({
+      balances: [
+        { asset: 'BTC', free: '1', locked: '0' },
+        { asset: 'ETH', free: '1', locked: '0' },
+      ],
+    } as any);
+    vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
+      currentPrice: 100,
+    } as any);
+    vi.spyOn(binance, 'createLimitOrder').mockRejectedValue(
+      new Error(
+        'failed to create order: 401 {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}',
+      ),
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      headers: { 'x-user-id': userId },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({
+      error: 'Invalid API-key, IP, or permissions for action.',
+    });
+    vi.restoreAllMocks();
+    await app.close();
+  });
+
   it('filters exec log by rebalanceOnly', async () => {
     const app = await buildServer();
     const userId = await insertUser('9');
