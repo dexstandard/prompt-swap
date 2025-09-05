@@ -1,4 +1,3 @@
-import React from 'react';
 import type { LimitOrder } from '../lib/types';
 
 interface Props {
