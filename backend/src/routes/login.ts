@@ -10,10 +10,11 @@ import {
   insertUserIdentity,
 } from '../repos/user-identities.js';
 import { encrypt } from '../util/crypto.js';
+import { errorResponse, type ErrorResponse } from '../util/errorMessages.js';
 
 interface ValidationErr {
   code: number;
-  body: unknown;
+  body: ErrorResponse;
 }
 
 const client = new OAuth2Client();
@@ -36,7 +37,7 @@ export default async function loginRoutes(app: FastifyInstance) {
         .parse(req.body);
       const payload = await verifyToken(body.token);
       if (!payload?.sub)
-        return reply.code(400).send({ error: 'invalid token' });
+        return reply.code(400).send(errorResponse('invalid token'));
       const emailEnc = payload.email
         ? encrypt(payload.email, env.KEY_PASSWORD)
         : null;
@@ -50,7 +51,7 @@ export default async function loginRoutes(app: FastifyInstance) {
       id = row.id;
       if (emailEnc) await setUserEmail(id, emailEnc);
       if (!row.is_enabled) {
-        return reply.code(403).send({ error: 'user disabled' });
+        return reply.code(403).send(errorResponse('user disabled'));
       }
       const err = validateOtp(row, body.otp);
       if (err) return reply.code(err.code).send(err.body);
@@ -64,9 +65,9 @@ function validateOtp(
   otp: string | undefined,
 ): ValidationErr | null {
   if (row.is_totp_enabled && row.totp_secret) {
-    if (!otp) return { code: 401, body: { error: 'otp required' } };
+    if (!otp) return { code: 401, body: errorResponse('otp required') };
     const valid = authenticator.verify({ token: otp, secret: row.totp_secret });
-    if (!valid) return { code: 401, body: { error: 'invalid otp' } };
+    if (!valid) return { code: 401, body: errorResponse('invalid otp') };
   }
   return null;
 }

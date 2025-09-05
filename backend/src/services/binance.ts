@@ -13,6 +13,19 @@ async function getUserCreds(id: string): Promise<UserCreds | null> {
   return { key, secret };
 }
 
+export function parseBinanceError(err: unknown): string | null {
+  if (err instanceof Error) {
+    const match = err.message.match(/\{.+\}$/);
+    if (match) {
+      try {
+        const body = JSON.parse(match[0]);
+        if (typeof body.msg === 'string') return body.msg;
+      } catch {}
+    }
+  }
+  return null;
+}
+
 export async function fetchAccount(id: string) {
   const creds = await getUserCreds(id);
   if (!creds) return null;

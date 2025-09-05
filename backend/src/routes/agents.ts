@@ -35,6 +35,7 @@ import {
   calcRebalanceOrder,
   MIN_LIMIT_ORDER_USD,
 } from '../services/rebalance.js';
+import { parseBinanceError } from '../services/binance.js';
 import { getRebalanceInfo } from '../repos/agent-review-result.js';
 
 
@@ -287,10 +288,9 @@ export default async function agentRoutes(app: FastifyInstance) {
           ...(body?.quantity ? { quantity: body.quantity } : {}),
           ...(body?.manuallyEdited ? { manuallyEdited: body.manuallyEdited } : {}),
         });
-      } catch {
-        return reply
-          .code(400)
-          .send(errorResponse('failed to create limit order'));
+      } catch (err) {
+        const msg = parseBinanceError(err) || 'failed to create limit order';
+        return reply.code(400).send(errorResponse(msg));
       }
       log.info({ execLogId: logId }, 'created manual order');
       return reply.code(201).send({ ok: true });

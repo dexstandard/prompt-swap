@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, Eye, ChevronDown, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import api from '../lib/axios';
 import type { LimitOrder } from '../lib/types';
 import Modal from './ui/Modal';
@@ -81,8 +82,12 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
       setOrder(ord);
       setManuallyEdited(false);
       setShowPreview(true);
-    } catch {
-      setErrorMsg('Failed to fetch order preview');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        setErrorMsg(err.response.data.error);
+      } else {
+        setErrorMsg('Failed to fetch order preview');
+      }
     } finally {
       setCreating(false);
     }
@@ -99,17 +104,11 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
       setShowPreview(false);
       await refetchOrders();
     } catch (err: unknown) {
-      type ErrResp = {
-        response?: { data?: { error?: { message?: string } } };
-        message?: string;
-      };
-      const e = err as ErrResp;
-      const msg =
-        e.response?.data?.error?.message ||
-        (isErrorWithMessage(e as Record<string, unknown>)
-          ? e.message!
-          : 'failed to create order');
-      setErrorMsg(msg);
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        setErrorMsg(err.response.data.error);
+      } else {
+        setErrorMsg('failed to create order');
+      }
     } finally {
       setCreating(false);
     }

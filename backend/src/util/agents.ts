@@ -8,6 +8,7 @@ import {
   errorResponse,
   lengthMessage,
   ERROR_MESSAGES,
+  type ErrorResponse,
 } from './errorMessages.js';
 import { fetchTokensBalanceUsd } from '../services/binance.js';
 import { validateAllocations } from './allocations.js';
@@ -33,7 +34,7 @@ export interface AgentInput {
 
 export interface ValidationErr {
   code: number;
-  body: unknown;
+  body: ErrorResponse;
 }
 
 export async function validateTokenConflicts(

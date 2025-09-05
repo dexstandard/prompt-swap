@@ -25,6 +25,7 @@ import {
   ensureKeyAbsent,
   ensureKeyPresent,
 } from '../util/api-keys.js';
+import { errorResponse } from '../util/errorMessages.js';
 
 export default async function apiKeyRoutes(app: FastifyInstance) {
   app.post(
@@ -39,7 +40,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       err = ensureKeyAbsent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
       if (!(await verifyApiKey(ApiKeyType.Ai, key)))
-        return reply.code(400).send({ error: 'verification failed' });
+        return reply.code(400).send(errorResponse('verification failed'));
       const enc = encryptKey(key);
       await setAiKey(id, enc);
       return { key: redactKey(key) };
@@ -69,7 +70,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const err = ensureKeyPresent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
       if (!(await verifyApiKey(ApiKeyType.Ai, key)))
-        return reply.code(400).send({ error: 'verification failed' });
+        return reply.code(400).send(errorResponse('verification failed'));
       const enc = encryptKey(key);
       await setAiKey(id, enc);
       return { key: redactKey(key) };
@@ -115,7 +116,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       err = ensureKeyAbsent(row, ['binance_api_key_enc', 'binance_api_secret_enc']);
       if (err) return reply.code(err.code).send(err.body);
       if (!(await verifyApiKey(ApiKeyType.Binance, key, secret)))
-        return reply.code(400).send({ error: 'verification failed' });
+        return reply.code(400).send(errorResponse('verification failed'));
       const encKey = encryptKey(key);
       const encSecret = encryptKey(secret);
       await setBinanceKey(id, encKey, encSecret);
@@ -153,7 +154,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       ]);
       if (err) return reply.code(err.code).send(err.body);
       if (!(await verifyApiKey(ApiKeyType.Binance, key, secret)))
-        return reply.code(400).send({ error: 'verification failed' });
+        return reply.code(400).send(errorResponse('verification failed'));
       const encKey = encryptKey(key);
       const encSecret = encryptKey(secret);
       await setBinanceKey(id, encKey, encSecret);
