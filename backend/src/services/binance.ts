@@ -103,7 +103,14 @@ export async function createLimitOrder(
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`failed to create order: ${res.status} ${body}`);
+    let msg = body;
+    try {
+      const parsed = JSON.parse(body) as { msg?: string };
+      if (parsed.msg) msg = parsed.msg;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(`failed to create order: ${res.status} ${msg}`);
   }
   return res.json();
 }

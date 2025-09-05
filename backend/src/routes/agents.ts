@@ -260,10 +260,13 @@ export default async function agentRoutes(app: FastifyInstance) {
           ...(body?.quantity ? { quantity: body.quantity } : {}),
           ...(body?.manuallyEdited ? { manuallyEdited: body.manuallyEdited } : {}),
         });
-      } catch {
-        return reply
-          .code(400)
-          .send(errorResponse('failed to create limit order'));
+      } catch (err) {
+        let msg = 'failed to create limit order';
+        if (err instanceof Error) {
+          const match = err.message.match(/failed to create order:\s\d+\s(.+)/);
+          msg = match ? match[1] : err.message;
+        }
+        return reply.code(400).send(errorResponse(msg));
       }
       log.info({ execLogId: logId }, 'created manual order');
       return reply.code(201).send({ ok: true });

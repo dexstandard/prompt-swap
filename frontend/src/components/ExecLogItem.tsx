@@ -100,15 +100,18 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
       await refetchOrders();
     } catch (err: unknown) {
       type ErrResp = {
-        response?: { data?: { error?: { message?: string } } };
+        response?: { data?: { error?: unknown } };
         message?: string;
       };
       const e = err as ErrResp;
+      const errData = e.response?.data?.error;
       const msg =
-        e.response?.data?.error?.message ||
-        (isErrorWithMessage(e as Record<string, unknown>)
-          ? e.message!
-          : 'failed to create order');
+        typeof errData === 'string'
+          ? errData
+          : (errData as { message?: string } | undefined)?.message ||
+            (isErrorWithMessage(e as Record<string, unknown>)
+              ? e.message!
+              : 'failed to create order');
       setErrorMsg(msg);
     } finally {
       setCreating(false);
