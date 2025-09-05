@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { RATE_LIMITS } from './rate-limit.js';
+import { errorResponse } from './util/errorMessages.js';
 
 export default async function buildServer(
   routesDir: string = path.join(process.cwd(), 'src/routes'),
@@ -13,11 +14,8 @@ export default async function buildServer(
   await app.register(rateLimit, {
     global: false,
     ...RATE_LIMITS.LAX,
-    errorResponseBuilder: (_req, context) => ({
-      statusCode: 429,
-      error: 'Too Many Requests',
-      message: `Too many requests, please try again in ${context.after}.`,
-    }),
+    errorResponseBuilder: (_req, context) =>
+      errorResponse(`too many requests, retry in ${context.after}`),
   });
 
   for (const file of fs.readdirSync(routesDir)) {

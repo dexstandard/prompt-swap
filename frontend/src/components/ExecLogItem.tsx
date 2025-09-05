@@ -81,8 +81,11 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
       setOrder(ord);
       setManuallyEdited(false);
       setShowPreview(true);
-    } catch {
-      setErrorMsg('Failed to fetch order preview');
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
+        'Failed to fetch order preview';
+      setErrorMsg(msg);
     } finally {
       setCreating(false);
     }
@@ -99,19 +102,9 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
       setShowPreview(false);
       await refetchOrders();
     } catch (err: unknown) {
-      type ErrResp = {
-        response?: { data?: { error?: unknown } };
-        message?: string;
-      };
-      const e = err as ErrResp;
-      const errData = e.response?.data?.error;
       const msg =
-        typeof errData === 'string'
-          ? errData
-          : (errData as { message?: string } | undefined)?.message ||
-            (isErrorWithMessage(e as Record<string, unknown>)
-              ? e.message!
-              : 'failed to create order');
+        (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
+        'failed to create order';
       setErrorMsg(msg);
     } finally {
       setCreating(false);

@@ -47,6 +47,7 @@ Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
 - New API endpoints should use the `RATE_LIMITS` presets for rate limiting.
 - Use structured logging and include `userId`, `agentId`, and `execLogId` when available.
 - Break down complex functions into reusable utilities and check for existing helpers before adding new ones.
+- Return errors in the unified shape `{ error: string }` using the `errorResponse` helper and `ErrorResponse` type.
 
 ## Frontend
 
@@ -70,3 +71,4 @@ Environment variables:
 ### Guidelines
 - Reuse existing components (forms, tables, etc.) for consistent UI and validation.
 - Break down complex components into smaller pieces and extract helper functions when needed.
+- Assume backend error responses contain an `error` string; avoid probing for other formats.

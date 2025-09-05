@@ -6,3 +6,7 @@ export interface LimitOrder {
   price: number;
   status: LimitOrderStatus;
 }
+
+export interface ApiError {
+  error: string;
+}
