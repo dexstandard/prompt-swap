@@ -11,7 +11,7 @@ export async function insertReviewRawLog(entry: ReviewRawLogInsert): Promise<str
     'INSERT INTO agent_review_raw_log (agent_id, prompt, response) VALUES ($1, $2, $3) RETURNING id',
     [
       entry.agentId,
-      entry.prompt === undefined ? null : JSON.stringify(entry.prompt),
+      entry.prompt === undefined ? '' : JSON.stringify(entry.prompt),
       JSON.stringify(entry.response),
     ],
   );
