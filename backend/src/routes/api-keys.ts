@@ -16,6 +16,7 @@ import {
 import { removeAgentFromSchedule } from '../jobs/review-portfolio.js';
 import { cancelOpenOrders } from '../services/binance.js';
 import { redactKey } from '../util/redact.js';
+import { requireUserIdMatch } from '../util/auth.js';
 import {
   ApiKeyType,
   verifyApiKey,
@@ -33,6 +34,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id as string;
+      if (!requireUserIdMatch(req, reply, id)) return;
       const { key } = req.body as { key: string };
       const row = await getAiKeyRow(id);
       let err = ensureUser(row);
@@ -52,6 +54,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
       const id = (req.params as any).id as string;
+      if (!requireUserIdMatch(req, reply, id)) return;
       const row = await getAiKeyRow(id);
       const err = ensureKeyPresent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
@@ -65,6 +68,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id as string;
+      if (!requireUserIdMatch(req, reply, id)) return;
       const { key } = req.body as { key: string };
       const row = await getAiKeyRow(id);
       const err = ensureKeyPresent(row, ['ai_api_key_enc']);
@@ -82,6 +86,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id as string;
+      if (!requireUserIdMatch(req, reply, id)) return;
       const row = await getAiKeyRow(id);
       const err = ensureKeyPresent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
@@ -109,6 +114,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id as string;
+      if (!requireUserIdMatch(req, reply, id)) return;
       const { key, secret } = req.body as { key: string; secret: string };
       const row = await getBinanceKeyRow(id);
       let err = ensureUser(row);
@@ -129,6 +135,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
       const id = (req.params as any).id as string;
+      if (!requireUserIdMatch(req, reply, id)) return;
       const row = await getBinanceKeyRow(id);
       const err = ensureKeyPresent(row, [
         'binance_api_key_enc',
@@ -146,6 +153,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id as string;
+      if (!requireUserIdMatch(req, reply, id)) return;
       const { key, secret } = req.body as { key: string; secret: string };
       const row = await getBinanceKeyRow(id);
       const err = ensureKeyPresent(row, [
@@ -167,6 +175,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const id = (req.params as any).id as string;
+      if (!requireUserIdMatch(req, reply, id)) return;
       const row = await getBinanceKeyRow(id);
       const err = ensureKeyPresent(row, [
         'binance_api_key_enc',
