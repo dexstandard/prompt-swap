@@ -87,11 +87,11 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const agents = await getActiveAgentsByUser(id);
       for (const agent of agents) {
         removeAgentFromSchedule(agent.id);
-        const tokenA = agent.tokens[0].token;
-        const tokenB = agent.tokens[1].token;
+        const token1 = agent.tokens[0].token;
+        const token2 = agent.tokens[1].token;
         try {
           await cancelOpenOrders(id, {
-            symbol: `${tokenA}${tokenB}`,
+            symbol: `${token1}${token2}`,
           });
         } catch (err) {
           req.log.error({ err, agentId: agent.id }, 'failed to cancel open orders');
@@ -175,11 +175,11 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const agents = await getActiveAgentsByUser(id);
       for (const agent of agents) {
         removeAgentFromSchedule(agent.id);
-        const tokenA = agent.tokens[0].token;
-        const tokenB = agent.tokens[1].token;
+        const token1 = agent.tokens[0].token;
+        const token2 = agent.tokens[1].token;
         try {
           await cancelOpenOrders(id, {
-            symbol: `${tokenA}${tokenB}`,
+            symbol: `${token1}${token2}`,
           });
         } catch (err) {
           req.log.error({ err, agentId: agent.id }, 'failed to cancel open orders');

@@ -36,20 +36,20 @@ export default function CreateAgentForm({
         defaultValues: createAgentDefaults,
     });
 
-    const tokenA = watch('tokens.0.token');
-    const tokenB = watch('tokens.1.token');
-    const minTokenAAllocation = watch('tokens.0.minAllocation');
-    const minTokenBAllocation = watch('tokens.1.minAllocation');
+    const token1 = watch('tokens.0.token');
+    const token2 = watch('tokens.1.token');
+    const minToken1Allocation = watch('tokens.0.minAllocation');
+    const minToken2Allocation = watch('tokens.1.minAllocation');
 
     useEffect(() => {
-        onTokensChange?.([tokenA, tokenB]);
+        onTokensChange?.([token1, token2]);
         // onTokensChange is stable via useCallback in parent
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tokenA, tokenB]);
+    }, [token1, token2]);
 
     useAllocationNormalization(
-        minTokenAAllocation,
-        minTokenBAllocation,
+        minToken1Allocation,
+        minToken2Allocation,
         (index, value) =>
             setValue(`tokens.${index}.minAllocation` as const, value)
     );
@@ -100,7 +100,7 @@ export default function CreateAgentForm({
                                     value={field.value}
                                     onChange={field.onChange}
                                     options={tokens.filter(
-                                        (t) => t.value === tokenA || t.value !== tokenB
+                                        (t) => t.value === token1 || t.value !== token2
                                     )}
                                 />
                             )}
@@ -116,7 +116,7 @@ export default function CreateAgentForm({
                                     value={field.value}
                                     onChange={field.onChange}
                                     options={tokens.filter(
-                                        (t) => t.value === tokenB || t.value !== tokenA
+                                        (t) => t.value === token2 || t.value !== token1
                                     )}
                                 />
                             )}
@@ -125,7 +125,7 @@ export default function CreateAgentForm({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
-                        label={`Min ${tokenA.toUpperCase()} allocation`}
+                        label={`Min ${token1.toUpperCase()} allocation`}
                         htmlFor="minToken1Allocation"
                     >
                         <Controller
@@ -150,7 +150,7 @@ export default function CreateAgentForm({
                         />
                     </FormField>
                     <FormField
-                        label={`Min ${tokenB.toUpperCase()} allocation`}
+                        label={`Min ${token2.toUpperCase()} allocation`}
                         htmlFor="minToken2Allocation"
                     >
                         <Controller

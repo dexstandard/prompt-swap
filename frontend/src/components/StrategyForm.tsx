@@ -19,8 +19,8 @@ interface Props {
 
 export default function StrategyForm({ data, onChange, disabled = false }: Props) {
   const { tokens: tokenData, risk, reviewInterval } = data;
-  const tokenA = tokenData[0];
-  const tokenB = tokenData[1];
+  const token1 = tokenData[0];
+  const token2 = tokenData[1];
 
   return (
     <div className="space-y-4">
@@ -28,15 +28,15 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
         <FormField label="Token 1" htmlFor="token1">
           <TokenSelect
             id="token1"
-            value={tokenA.token}
+            value={token1.token}
             onChange={(v) =>
               onChange('tokens', [
-                { ...tokenA, token: v },
-                tokenB,
+                { ...token1, token: v },
+                token2,
               ])
             }
             options={tokens.filter(
-              (t) => t.value === tokenA.token || t.value !== tokenB.token,
+              (t) => t.value === token1.token || t.value !== token2.token,
             )}
             disabled={disabled}
           />
@@ -44,15 +44,15 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
         <FormField label="Token 2" htmlFor="token2">
           <TokenSelect
             id="token2"
-            value={tokenB.token}
+            value={token2.token}
             onChange={(v) =>
               onChange('tokens', [
-                tokenA,
-                { ...tokenB, token: v },
+                token1,
+                { ...token2, token: v },
               ])
             }
             options={tokens.filter(
-              (t) => t.value === tokenB.token || t.value !== tokenA.token,
+              (t) => t.value === token2.token || t.value !== token1.token,
             )}
             disabled={disabled}
           />
@@ -60,7 +60,7 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
       </div>
       <div className="grid grid-cols-2 gap-4">
         <FormField
-          label={`Min ${tokenA.token.toUpperCase()} allocation`}
+          label={`Min ${token1.token.toUpperCase()} allocation`}
           htmlFor="minToken1Allocation"
         >
           <TextInput
@@ -68,18 +68,18 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
             type="number"
             min={0}
             max={95}
-            value={tokenA.minAllocation}
+            value={token1.minAllocation}
             onChange={(e) =>
               onChange('tokens', [
-                { ...tokenA, minAllocation: Number(e.target.value) },
-                tokenB,
+                { ...token1, minAllocation: Number(e.target.value) },
+                token2,
               ])
             }
             disabled={disabled}
           />
         </FormField>
         <FormField
-          label={`Min ${tokenB.token.toUpperCase()} allocation`}
+          label={`Min ${token2.token.toUpperCase()} allocation`}
           htmlFor="minToken2Allocation"
         >
           <TextInput
@@ -87,11 +87,11 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
             type="number"
             min={0}
             max={95}
-            value={tokenB.minAllocation}
+            value={token2.minAllocation}
             onChange={(e) =>
               onChange('tokens', [
-                tokenA,
-                { ...tokenB, minAllocation: Number(e.target.value) },
+                token1,
+                { ...token2, minAllocation: Number(e.target.value) },
               ])
             }
             disabled={disabled}

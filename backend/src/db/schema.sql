@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS agents(
 CREATE TABLE IF NOT EXISTS agent_tokens(
   agent_id BIGINT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   token VARCHAR(20) NOT NULL,
-  min_allocation INTEGER,
+  min_allocation INTEGER NOT NULL DEFAULT 0,
   position SMALLINT NOT NULL,
   PRIMARY KEY(agent_id, position),
   UNIQUE(agent_id, token)
@@ -62,8 +62,8 @@ CREATE TABLE IF NOT EXISTS agent_tokens(
 CREATE TABLE IF NOT EXISTS agent_review_result(
   id BIGSERIAL PRIMARY KEY,
   agent_id BIGINT NOT NULL REFERENCES agents(id),
-  log TEXT,
-  rebalance BOOLEAN,
+  log TEXT NOT NULL,
+  rebalance BOOLEAN NOT NULL DEFAULT FALSE,
   new_allocation REAL,
   short_report TEXT,
   error TEXT,
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS limit_order(
   user_id BIGINT NOT NULL REFERENCES users(id),
   planned_json TEXT NOT NULL,
   status TEXT NOT NULL,
-  review_result_id BIGINT REFERENCES agent_review_result(id),
+  review_result_id BIGINT NOT NULL REFERENCES agent_review_result(id),
   order_id TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS limit_order(
 CREATE TABLE IF NOT EXISTS agent_review_raw_log(
   id BIGSERIAL PRIMARY KEY,
   agent_id BIGINT NOT NULL REFERENCES agents(id),
-  prompt TEXT,
+  prompt TEXT NOT NULL,
   response TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
 );

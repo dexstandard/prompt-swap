@@ -11,17 +11,17 @@ export async function createRebalanceLimitOrder(opts: {
   log: FastifyBaseLogger;
 }) {
   const { userId, tokens, positions, newAllocation, reviewResultId, log } = opts;
-  const [tokenA, tokenB] = tokens;
-  const posA = positions.find((p) => p.sym === tokenA);
-  const posB = positions.find((p) => p.sym === tokenB);
-  if (!posA || !posB) {
+  const [token1, token2] = tokens;
+  const pos1 = positions.find((p) => p.sym === token1);
+  const pos2 = positions.find((p) => p.sym === token2);
+  if (!pos1 || !pos2) {
     log.error('missing position data');
     return;
   }
-  const { currentPrice } = await fetchPairData(tokenA, tokenB);
-  const total = posA.value_usdt + posB.value_usdt;
-  const targetA = (newAllocation / 100) * total;
-  const diff = targetA - posA.value_usdt;
+  const { currentPrice } = await fetchPairData(token1, token2);
+  const total = pos1.value_usdt + pos2.value_usdt;
+  const target1 = (newAllocation / 100) * total;
+  const diff = target1 - pos1.value_usdt;
   if (!diff) {
     log.info('no rebalance needed');
     return;
@@ -29,7 +29,7 @@ export async function createRebalanceLimitOrder(opts: {
   const side = diff > 0 ? 'BUY' : 'SELL';
   const quantity = Math.abs(diff) / currentPrice;
   const params = {
-    symbol: `${tokenA}${tokenB}`.toUpperCase(),
+    symbol: `${token1}${token2}`.toUpperCase(),
     side,
     quantity,
     price: currentPrice,

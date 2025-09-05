@@ -212,42 +212,42 @@ export default async function agentRoutes(app: FastifyInstance) {
         log.error({ execLogId: logId }, 'no rebalance info');
         return reply.code(400).send(errorResponse('no rebalance info'));
       }
-      const tokenA = agent.tokens[0].token;
-      const tokenB = agent.tokens[1].token;
+      const token1 = agent.tokens[0].token;
+      const token2 = agent.tokens[1].token;
       const account = await binance.fetchAccount(userId);
       if (!account) {
         log.error('missing api keys');
         return reply.code(400).send(errorResponse('missing api keys'));
       }
-      const balA = account.balances.find((b) => b.asset === tokenA);
-      const balB = account.balances.find((b) => b.asset === tokenB);
-      if (!balA || !balB) {
+      const bal1 = account.balances.find((b) => b.asset === token1);
+      const bal2 = account.balances.find((b) => b.asset === token2);
+      if (!bal1 || !bal2) {
         log.error('missing balances');
         return reply.code(400).send(errorResponse('failed to fetch balances'));
       }
-      const [priceAData, priceBData] = await Promise.all([
-        tokenA === 'USDT'
+      const [price1Data, price2Data] = await Promise.all([
+        token1 === 'USDT'
           ? Promise.resolve({ currentPrice: 1 })
-          : binance.fetchPairData(tokenA, 'USDT'),
-        tokenB === 'USDT'
+          : binance.fetchPairData(token1, 'USDT'),
+        token2 === 'USDT'
           ? Promise.resolve({ currentPrice: 1 })
-          : binance.fetchPairData(tokenB, 'USDT'),
+          : binance.fetchPairData(token2, 'USDT'),
       ]);
       const positions = [
         {
-          sym: tokenA,
+          sym: token1,
           value_usdt:
-            (Number(balA.free) + Number(balA.locked)) * priceAData.currentPrice,
+            (Number(bal1.free) + Number(bal1.locked)) * price1Data.currentPrice,
         },
         {
-          sym: tokenB,
+          sym: token2,
           value_usdt:
-            (Number(balB.free) + Number(balB.locked)) * priceBData.currentPrice,
+            (Number(bal2.free) + Number(bal2.locked)) * price2Data.currentPrice,
         },
       ];
       await createRebalanceLimitOrder({
         userId,
-        tokens: [tokenA, tokenB],
+        tokens: [token1, token2],
         positions,
         newAllocation: result.newAllocation,
         reviewResultId: logId,
@@ -317,11 +317,11 @@ export default async function agentRoutes(app: FastifyInstance) {
       const { userId, id, log, agent } = ctx;
       await repoDeleteAgent(id);
       removeAgentFromSchedule(id);
-      const tokenA = agent.tokens[0].token;
-      const tokenB = agent.tokens[1].token;
+      const token1 = agent.tokens[0].token;
+      const token2 = agent.tokens[1].token;
       try {
         await binance.cancelOpenOrders(userId, {
-          symbol: `${tokenA}${tokenB}`,
+          symbol: `${token1}${token2}`,
         });
       } catch (err) {
         log.error({ err }, 'failed to cancel open orders');
