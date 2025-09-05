@@ -47,7 +47,7 @@ Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
 - New API endpoints should use the `RATE_LIMITS` presets for rate limiting.
 - Use structured logging and include `userId`, `agentId`, and `execLogId` when available.
 - Break down complex functions into reusable utilities and check for existing helpers before adding new ones.
-- All API errors must use `errorResponse` and return `{ "error": "message" }`. Parse upstream service errors (e.g. Binance) into user-friendly messages.
+- All API errors must use `errorResponse` and return `{ "error": "message" }`. Parse upstream service errors (e.g. Binance) into user-friendly messages. Rate limiter responses must also follow this format and return HTTP 429.
 
 ## Frontend
 
