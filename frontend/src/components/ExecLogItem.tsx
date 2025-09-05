@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertCircle, Eye, ChevronDown, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import type { LimitOrder } from '../lib/types';
 import Modal from './ui/Modal';
+import TextInput from './forms/TextInput';
 import ExecSuccessItem from './ExecSuccessItem';
 import ExecTxCard from './ExecTxCard';
 import Button from './ui/Button';
@@ -35,9 +36,10 @@ interface Props {
   log: ExecLog;
   agentId: string;
   manualRebalance: boolean;
+  tokens: string[];
 }
 
-export default function ExecLogItem({ log, agentId, manualRebalance }: Props) {
+export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: Props) {
   const [showJson, setShowJson] = useState(false);
   const [showTx, setShowTx] = useState(false);
   const { log: text, error, response } = log;
@@ -57,11 +59,57 @@ export default function ExecLogItem({ log, agentId, manualRebalance }: Props) {
   const hasOrders = !!orders && orders.length > 0;
   const txEnabled = !!response?.rebalance && (!manualRebalance || hasOrders);
   const [creating, setCreating] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [order, setOrder] = useState<{ quantity: number; price: number; side: string } | null>(null);
+  const [quantity, setQuantity] = useState('');
+  const [price, setPrice] = useState('');
+  const [manuallyEdited, setManuallyEdited] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showPreview && order) {
+      setQuantity(order.quantity.toString());
+      setPrice(order.price.toString());
+    }
+  }, [showPreview, order]);
+
   async function handleRebalance() {
     setCreating(true);
     try {
-      await api.post(`/agents/${agentId}/exec-log/${log.id}/rebalance`);
+      const res = await api.get(`/agents/${agentId}/exec-log/${log.id}/rebalance/preview`);
+      const ord = res.data.order as { quantity: number; price: number; side: string };
+      setOrder(ord);
+      setManuallyEdited(false);
+      setShowPreview(true);
+    } catch {
+      setErrorMsg('Failed to fetch order preview');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function confirmRebalance() {
+    setCreating(true);
+    try {
+      await api.post(`/agents/${agentId}/exec-log/${log.id}/rebalance`, {
+        quantity: Number(quantity),
+        price: Number(price),
+        ...(manuallyEdited ? { manuallyEdited: true } : {}),
+      });
+      setShowPreview(false);
       await refetchOrders();
+    } catch (err: unknown) {
+      type ErrResp = {
+        response?: { data?: { error?: { message?: string } } };
+        message?: string;
+      };
+      const e = err as ErrResp;
+      const msg =
+        e.response?.data?.error?.message ||
+        (isErrorWithMessage(e as Record<string, unknown>)
+          ? e.message!
+          : 'failed to create order');
+      setErrorMsg(msg);
     } finally {
       setCreating(false);
     }
@@ -102,7 +150,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance }: Props) {
         {manualRebalance && !!response?.rebalance && !hasOrders && (
           <Button
             variant="secondary"
-            className="ml-2"
+            className="ml-2 self-center"
             onClick={handleRebalance}
             loading={creating}
           >
@@ -124,6 +172,52 @@ export default function ExecLogItem({ log, agentId, manualRebalance }: Props) {
         )}
       </div>
       {showTx && orders && <ExecTxCard orders={orders} />}
+      {showPreview && order && (
+        <Modal open={showPreview} onClose={() => setShowPreview(false)}>
+          <h3 className="mb-2 text-lg font-bold">Confirm Rebalance</h3>
+          <div className="mb-2 text-sm">
+            Side: {order.side}
+          </div>
+          <div className="mb-2">
+            <label className="mb-1 block text-sm">Quantity ({tokens[0]})</label>
+            <TextInput
+              type="number"
+              value={quantity}
+              onChange={(e) => {
+                setQuantity(e.target.value);
+                setManuallyEdited(true);
+              }}
+            />
+          </div>
+          <div className="mb-4">
+            <label className="mb-1 block text-sm">Price ({tokens[1]})</label>
+            <TextInput
+              type="number"
+              value={price}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                setManuallyEdited(true);
+              }}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowPreview(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmRebalance} loading={creating}>
+              Confirm
+            </Button>
+          </div>
+        </Modal>
+      )}
+      {errorMsg && (
+        <Modal open onClose={() => setErrorMsg(null)}>
+          <p className="mb-4">{errorMsg}</p>
+          <div className="flex justify-end">
+            <Button onClick={() => setErrorMsg(null)}>Close</Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

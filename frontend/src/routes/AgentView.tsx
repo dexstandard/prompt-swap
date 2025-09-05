@@ -137,6 +137,7 @@ export default function AgentView() {
                                 log={log}
                                 agentId={id!}
                                 manualRebalance={data.manualRebalance}
+                                tokens={data.tokens.map((t) => t.token)}
                               />
                             </td>
                           </tr>
@@ -153,6 +154,7 @@ export default function AgentView() {
                             log={log}
                             agentId={id!}
                             manualRebalance={data.manualRebalance}
+                            tokens={data.tokens.map((t) => t.token)}
                           />
                         </div>
                       ))}
