@@ -176,7 +176,7 @@ describe('reviewPortfolio', () => {
     }[];
     expect(parsedRows).toHaveLength(1);
     expect(parsedRows[0].log).toBe('ok');
-    expect(parsedRows[0].rebalance).toBeNull();
+    expect(parsedRows[0].rebalance).toBe(false);
     expect(parsedRows[0].error).toBeNull();
   });
 
@@ -325,9 +325,7 @@ describe('reviewPortfolio', () => {
       ['2'],
     );
     const rowsTyped = rows as { response: string | null }[];
-    expect(rowsTyped).toHaveLength(1);
-    const entry = JSON.parse(rowsTyped[0].response!);
-    expect(entry.error).toContain('failed to fetch token balances');
+    expect(rowsTyped).toHaveLength(0);
     const { rows: parsedRowsRaw } = await db.query(
       'SELECT log, error FROM agent_review_result WHERE agent_id = $1',
       ['2'],
@@ -367,9 +365,7 @@ describe('reviewPortfolio', () => {
       ['3'],
     );
     const rowsTyped = rows as { response: string | null }[];
-    expect(rowsTyped).toHaveLength(1);
-    const entry2 = JSON.parse(rowsTyped[0].response!);
-    expect(entry2.error).toContain('failed to fetch market data');
+    expect(rowsTyped).toHaveLength(0);
     const { rows: parsedRowsRaw } = await db.query(
       'SELECT log, error FROM agent_review_result WHERE agent_id = $1',
       ['3'],

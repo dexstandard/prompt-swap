@@ -400,11 +400,13 @@ async function saveFailure(
   message: string,
   prompt?: RebalancePrompt,
 ) {
-  await insertReviewRawLog({
-    agentId: row.id,
-    ...(prompt ? { prompt } : {}),
-    response: { error: message },
-  });
+  if (prompt) {
+    await insertReviewRawLog({
+      agentId: row.id,
+      prompt,
+      response: { error: message },
+    });
+  }
   const parsed = parseExecLog({ error: message });
   await insertReviewResult({
     agentId: row.id,
