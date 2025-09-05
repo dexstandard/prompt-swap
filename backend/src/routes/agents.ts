@@ -30,7 +30,7 @@ import {
   cancelOpenLimitOrdersByAgent,
   getLimitOrdersByReviewResult,
 } from '../repos/limit-orders.js';
-import { createRebalanceLimitOrder } from '../services/rebalance.js';
+import { createRebalanceLimitOrder, calcRebalanceOrder } from '../services/rebalance.js';
 import { getRebalanceInfo } from '../repos/agent-review-result.js';
 
 
@@ -245,16 +245,101 @@ export default async function agentRoutes(app: FastifyInstance) {
             (Number(bal2.free) + Number(bal2.locked)) * price2Data.currentPrice,
         },
       ];
-      await createRebalanceLimitOrder({
-        userId,
+      const body = req.body as
+        | { price?: number; quantity?: number; manuallyEdited?: boolean }
+        | undefined;
+      try {
+        await createRebalanceLimitOrder({
+          userId,
+          tokens: [token1, token2],
+          positions,
+          newAllocation: result.newAllocation,
+          reviewResultId: logId,
+          log,
+          ...(body?.price ? { price: body.price } : {}),
+          ...(body?.quantity ? { quantity: body.quantity } : {}),
+          ...(body?.manuallyEdited ? { manuallyEdited: body.manuallyEdited } : {}),
+        });
+      } catch {
+        return reply
+          .code(400)
+          .send(errorResponse('failed to create limit order'));
+      }
+      log.info({ execLogId: logId }, 'created manual order');
+      return reply.code(201).send({ ok: true });
+    },
+  );
+
+  app.get(
+    '/agents/:id/exec-log/:logId/rebalance/preview',
+    { config: { rateLimit: RATE_LIMITS.RELAXED } },
+    async (req, reply) => {
+      const ctx = await getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { id, userId, log, agent } = ctx;
+      if (!agent.manual_rebalance) {
+        log.error('agent not in manual mode');
+        return reply
+          .code(400)
+          .send(errorResponse('manual rebalance disabled'));
+      }
+      const { logId } = req.params as { id: string; logId: string };
+      const existing = await getLimitOrdersByReviewResult(id, logId);
+      if (existing.length) {
+        log.error({ execLogId: logId }, 'manual order exists');
+        return reply
+          .code(400)
+          .send(errorResponse('order already exists for log'));
+      }
+      const result = await getRebalanceInfo(id, logId);
+      if (!result || !result.rebalance || result.newAllocation === null) {
+        log.error({ execLogId: logId }, 'no rebalance info');
+        return reply.code(400).send(errorResponse('no rebalance info'));
+      }
+      const token1 = agent.tokens[0].token;
+      const token2 = agent.tokens[1].token;
+      const account = await binance.fetchAccount(userId);
+      if (!account) {
+        log.error('missing api keys');
+        return reply.code(400).send(errorResponse('missing api keys'));
+      }
+      const bal1 = account.balances.find((b) => b.asset === token1);
+      const bal2 = account.balances.find((b) => b.asset === token2);
+      if (!bal1 || !bal2) {
+        log.error('missing balances');
+        return reply.code(400).send(errorResponse('failed to fetch balances'));
+      }
+      const [price1Data, price2Data] = await Promise.all([
+        token1 === 'USDT'
+          ? Promise.resolve({ currentPrice: 1 })
+          : binance.fetchPairData(token1, 'USDT'),
+        token2 === 'USDT'
+          ? Promise.resolve({ currentPrice: 1 })
+          : binance.fetchPairData(token2, 'USDT'),
+      ]);
+      const positions = [
+        {
+          sym: token1,
+          value_usdt:
+            (Number(bal1.free) + Number(bal1.locked)) * price1Data.currentPrice,
+        },
+        {
+          sym: token2,
+          value_usdt:
+            (Number(bal2.free) + Number(bal2.locked)) * price2Data.currentPrice,
+        },
+      ];
+      const order = await calcRebalanceOrder({
         tokens: [token1, token2],
         positions,
         newAllocation: result.newAllocation,
-        reviewResultId: logId,
-        log,
       });
-      log.info({ execLogId: logId }, 'created manual order');
-      return reply.code(201).send({ ok: true });
+      if (!order) {
+        log.error({ execLogId: logId }, 'no rebalance needed');
+        return reply.code(400).send(errorResponse('no rebalance needed'));
+      }
+      log.info({ execLogId: logId }, 'previewed manual order');
+      return { order };
     },
   );
 

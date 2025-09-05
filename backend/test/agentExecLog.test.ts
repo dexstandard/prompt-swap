@@ -272,12 +272,62 @@ describe('agent exec log routes', () => {
       [reviewResultId],
     );
     expect(rows).toHaveLength(1);
+    expect(JSON.parse(rows[0].planned_json)).toMatchObject({ price: 99.9 });
     res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
       headers: { 'x-user-id': userId },
     });
     expect(res.statusCode).toBe(400);
+    vi.restoreAllMocks();
+    await app.close();
+  });
+
+  it('previews manual rebalance order', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('21');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: true,
+    });
+    const reviewResultId = await insertReviewResult({
+      agentId: agent.id,
+      log: '',
+      rebalance: true,
+      newAllocation: 60,
+    });
+    vi.spyOn(binance, 'fetchAccount').mockResolvedValue({
+      balances: [
+        { asset: 'BTC', free: '1', locked: '0' },
+        { asset: 'ETH', free: '1', locked: '0' },
+      ],
+    } as any);
+    vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
+      currentPrice: 100,
+    } as any);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance/preview`,
+      headers: { 'x-user-id': userId },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.order).toMatchObject({
+      side: 'BUY',
+      quantity: 0.2,
+      price: 99.9,
+    });
     vi.restoreAllMocks();
     await app.close();
   });
