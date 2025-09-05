@@ -11,6 +11,7 @@ vi.mock('../src/jobs/review-portfolio.js', () => ({
 
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
+import { authCookies } from './helpers.js';
 
 async function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
@@ -42,7 +43,7 @@ describe('agent start', () => {
     const resCreate = await app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
       payload,
     });
     const id = resCreate.json().id as string;
@@ -72,7 +73,7 @@ describe('agent start', () => {
     const startPromise = app.inject({
       method: 'POST',
       url: `/api/agents/${id}/start`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     const res = await Promise.race([
       startPromise,

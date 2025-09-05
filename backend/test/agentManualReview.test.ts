@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import buildServer from '../src/server.js';
 import { insertUser } from './repos/users.js';
 import { insertAgent } from './repos/agents.js';
+import { authCookies } from './helpers.js';
 
 const reviewAgentPortfolioMock = vi.fn<(
   log: unknown,
@@ -35,7 +36,7 @@ describe('manual review endpoint', () => {
     const res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agentId}/review`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ok: true });
@@ -69,7 +70,7 @@ describe('manual review endpoint', () => {
     const res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agentId}/review`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: 'Agent is already reviewing portfolio' });

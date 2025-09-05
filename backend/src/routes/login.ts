@@ -11,6 +11,7 @@ import {
 } from '../repos/user-identities.js';
 import { encrypt } from '../util/crypto.js';
 import { errorResponse, type ErrorResponse } from '../util/errorMessages.js';
+import jwt from 'jsonwebtoken';
 
 interface ValidationErr {
   code: number;
@@ -46,6 +47,13 @@ export default async function loginRoutes(app: FastifyInstance) {
       if (!row) {
         id = await insertUser(emailEnc);
         await insertUserIdentity(id, 'google', payload.sub);
+        const token = jwt.sign({ id }, env.KEY_PASSWORD);
+        reply.setCookie('session', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          path: '/',
+        });
         return { id, email: payload.email, role: 'user' };
       }
       id = row.id;
@@ -55,6 +63,13 @@ export default async function loginRoutes(app: FastifyInstance) {
       }
       const err = validateOtp(row, body.otp);
       if (err) return reply.code(err.code).send(err.body);
+      const token = jwt.sign({ id }, env.KEY_PASSWORD);
+      reply.setCookie('session', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+      });
       return { id, email: payload.email, role: row.role };
     }
   );

@@ -3,6 +3,7 @@ import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
 import { insertUser } from './repos/users.js';
 import { setBinanceKey } from '../src/repos/api-keys.js';
+import { authCookies } from './helpers.js';
 
 describe('binance balance route', () => {
   it('returns aggregated balance for user', async () => {
@@ -34,7 +35,7 @@ describe('binance balance route', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/users/${userId}/binance-balance`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ totalUsd: 20100 });
@@ -65,7 +66,7 @@ describe('binance balance route', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/users/${userId}/binance-balance/BTC`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ asset: 'BTC', free: 1.5, locked: 0.5 });
@@ -79,7 +80,7 @@ describe('binance balance route', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/users/999/binance-balance',
-      headers: { 'x-user-id': '1' },
+      cookies: authCookies('1'),
     });
     expect(res.statusCode).toBe(403);
     await app.close();

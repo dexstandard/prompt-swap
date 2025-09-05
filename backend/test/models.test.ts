@@ -3,6 +3,7 @@ import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
 import { insertUser } from './repos/users.js';
 import { setAiKey } from '../src/repos/api-keys.js';
+import { authCookies } from './helpers.js';
 
 describe('model routes', () => {
   it('returns filtered models', async () => {
@@ -30,7 +31,7 @@ describe('model routes', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/users/${userId}/models`,
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ models: ['foo-search', 'o3-mini', 'gpt-5'] });
@@ -45,7 +46,7 @@ describe('model routes', () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/users/${userId2}/models`,
-      headers: { 'x-user-id': userId2 },
+      cookies: authCookies(userId2),
     });
     expect(res.statusCode).toBe(404);
     await app.close();
@@ -69,7 +70,7 @@ describe('model routes', () => {
     let res = await app.inject({
       method: 'GET',
       url: `/api/users/${userId3}/models`,
-      headers: { 'x-user-id': userId3 },
+      cookies: authCookies(userId3),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ models: ['gpt-5'] });
@@ -78,7 +79,7 @@ describe('model routes', () => {
     res = await app.inject({
       method: 'GET',
       url: `/api/users/${userId3}/models`,
-      headers: { 'x-user-id': userId3 },
+      cookies: authCookies(userId3),
     });
     expect(res.statusCode).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -93,7 +94,7 @@ describe('model routes', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/users/999/models',
-      headers: { 'x-user-id': userId },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(403);
     await app.close();

@@ -1,17 +1,25 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { errorResponse, ERROR_MESSAGES } from './errorMessages.js';
 import { getUser } from '../repos/users.js';
+import jwt from 'jsonwebtoken';
+import { env } from './env.js';
 
 export function requireUserId(
   req: FastifyRequest,
   reply: FastifyReply,
 ): string | null {
-  const userIdHeader = req.headers['x-user-id'] as string | undefined;
-  if (!userIdHeader) {
+  const token = req.cookies?.session as string | undefined;
+  if (!token) {
     reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
     return null;
   }
-  return userIdHeader;
+  try {
+    const payload = jwt.verify(token, env.KEY_PASSWORD) as { id: string };
+    return payload.id;
+  } catch {
+    reply.code(403).send(errorResponse(ERROR_MESSAGES.forbidden));
+    return null;
+  }
 }
 
 export async function requireAdmin(

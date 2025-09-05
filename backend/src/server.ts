@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
+import cookie from '@fastify/cookie';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -10,6 +11,8 @@ export default async function buildServer(
   routesDir: string = path.join(process.cwd(), 'src/routes'),
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
+
+  await app.register(cookie);
 
   await app.register(rateLimit, {
     global: false,
