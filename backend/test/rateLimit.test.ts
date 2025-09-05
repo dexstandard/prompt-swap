@@ -59,8 +59,9 @@ describe('rate limiting', () => {
 
       expect(res.statusCode).toBe(429);
       const body = res.json();
-      expect(body).toMatchObject({ error: 'Too Many Requests' });
-      expect(body.message).toContain('Too many requests');
+      expect(body).toMatchObject({
+        error: expect.stringMatching(/too many requests/i),
+      });
 
       await app.close();
     });

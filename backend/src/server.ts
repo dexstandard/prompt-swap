@@ -11,11 +11,19 @@ export default async function buildServer(
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
 
+  app.setErrorHandler((error, _req, reply) => {
+    const status = (error as any).statusCode ?? 500;
+    reply.status(status).send(errorResponse(error.message));
+  });
+
   await app.register(rateLimit, {
     global: false,
     ...RATE_LIMITS.LAX,
-    errorResponseBuilder: (_req, context) =>
-      errorResponse(`too many requests, retry in ${context.after}`),
+    errorResponseBuilder: (_req, context) => {
+      const err = new Error(`too many requests, retry in ${context.after}`);
+      (err as any).statusCode = 429;
+      return err;
+    },
   });
 
   for (const file of fs.readdirSync(routesDir)) {
