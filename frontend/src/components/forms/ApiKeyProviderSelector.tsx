@@ -60,10 +60,10 @@ export default function ApiKeyProviderSelector({
       enabled: !!user,
       queryFn: async () => {
         try {
-          await api.get(cfg.getKeyPath(user!.id));
-          return true;
+          const res = await api.get(cfg.getKeyPath(user!.id));
+          return res.data.key as string;
         } catch (err) {
-          if (axios.isAxiosError(err) && err.response?.status === 404) return false;
+          if (axios.isAxiosError(err) && err.response?.status === 404) return null;
           throw err;
         }
       },
@@ -77,7 +77,7 @@ export default function ApiKeyProviderSelector({
     0,
   );
   const selectedConfig = configs[selectedIndex];
-  const hasKey = queries[selectedIndex]?.data;
+  const hasKey = !!queries[selectedIndex]?.data;
 
   return (
     <div>
