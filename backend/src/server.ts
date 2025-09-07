@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -13,6 +14,24 @@ export default async function buildServer(
   const app = Fastify({ logger: true });
 
   await app.register(cookie);
+
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://accounts.google.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
+        imgSrc: ["'self'", 'data:', 'https://accounts.google.com'],
+        connectSrc: ["'self'", 'https://api.binance.com', 'https://accounts.google.com'],
+        fontSrc: ["'self'", 'data:'],
+        frameSrc: ['https://accounts.google.com'],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    frameguard: { action: 'deny' },
+    referrerPolicy: { policy: 'no-referrer' },
+  });
 
   await app.register(rateLimit, {
     global: false,
