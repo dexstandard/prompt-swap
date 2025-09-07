@@ -6,4 +6,6 @@ EXPOSE 3000
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY dist ./dist
+RUN mkdir -p /data && chown -R node:node /app /data
+USER node
 CMD ["npm", "start"]
