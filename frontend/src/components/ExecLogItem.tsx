@@ -116,14 +116,14 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
   return (
     <div className="w-full">
       <div className="flex items-start">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {!hasError && !hasResponse && text && (
             <div className="whitespace-pre-wrap break-words">{truncate(text)}</div>
           )}
           {hasError && (
             <div className="mt-1 flex items-center gap-2 rounded border border-red-300 bg-red-50 p-2 text-red-800">
               <AlertCircle className="h-4 w-4" />
-              <div className="flex-1 break-words">
+              <div className="flex-1 min-w-0 break-words">
                 <span className="font-bold mr-1">ERROR</span>
                 <span>
                   {truncate(
