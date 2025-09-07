@@ -45,6 +45,14 @@ jobs:
           wait
         shell: bash
 
+      - &audit_deps
+        name: Audit dependencies
+        run: |
+          npm --prefix backend audit --audit-level=high &
+          npm --prefix frontend audit --audit-level=high &
+          wait
+        shell: bash
+
       - &lint_test
         name: Lint frontend and test backend
         run: |
@@ -82,6 +90,8 @@ jobs:
       - *setup_node
 
       - *install_deps
+
+      - *audit_deps
 
       - *lint_test
 
