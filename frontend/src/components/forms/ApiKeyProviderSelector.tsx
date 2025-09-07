@@ -78,17 +78,26 @@ export default function ApiKeyProviderSelector({
   );
   const selectedConfig = configs[selectedIndex];
   const hasKey = queries[selectedIndex]?.data;
+  const allKeysMissing = queries.every((q) => q.data === false);
 
   return (
     <div>
       <h2 className="text-md font-bold">{label}</h2>
-      <SelectInput
-        id={`${type}-provider`}
-        value={value}
-        onChange={onChange}
-        options={configs.map((p) => ({ value: p.value, label: p.label }))}
-      />
-      {hasKey === false && <div className="mt-2">{selectedConfig.renderForm()}</div>}
+      {allKeysMissing && configs.length === 1 ? (
+        <div className="mt-2">{configs[0].renderForm()}</div>
+      ) : (
+        <>
+          <SelectInput
+            id={`${type}-provider`}
+            value={value}
+            onChange={onChange}
+            options={configs.map((p) => ({ value: p.value, label: p.label }))}
+          />
+          {hasKey === false && (
+            <div className="mt-2">{selectedConfig.renderForm()}</div>
+          )}
+        </>
+      )}
     </div>
   );
 }
