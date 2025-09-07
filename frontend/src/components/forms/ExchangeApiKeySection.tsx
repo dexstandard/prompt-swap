@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react';
 import ApiKeySection from './ApiKeySection';
 
 const videoGuideLinks: Record<string, string> = {
@@ -11,7 +12,7 @@ const exchangeFields = [
 
 interface Props {
   exchange: string;
-  label: string;
+  label: ReactNode;
 }
 
 export default function ExchangeApiKeySection({ exchange, label }: Props) {

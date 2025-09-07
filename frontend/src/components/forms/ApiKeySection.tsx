@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
@@ -15,7 +21,7 @@ interface Field {
 }
 
 interface ApiKeySectionProps {
-  label?: string;
+  label?: ReactNode;
   queryKey: string;
   getKeyPath: (id: string) => string;
   fields: Field[];
@@ -226,21 +232,23 @@ export default function ApiKeySection({
       </div>
     )}
       {whitelistHost && (
-        <p className="text-sm text-gray-600 flex items-center gap-2">
-          Whitelist IP:
-          <span className="font-mono">{whitelistHost}</span>
-          <button
-            type="button"
-            className="p-1 border rounded"
-            onClick={() => {
-              navigator.clipboard.writeText(whitelistHost);
-              toast.show('Copied to clipboard');
-            }}
-            aria-label="Copy IP"
-          >
-            <Copy className="w-4 h-4" />
-          </button>
-        </p>
+        <div className="text-sm text-gray-600 sm:flex sm:items-center sm:gap-2">
+          <span className="block sm:inline">Whitelist IP:</span>
+          <span className="flex items-center gap-2">
+            <span className="font-mono">{whitelistHost}</span>
+            <button
+              type="button"
+              className="p-1 border rounded"
+              onClick={() => {
+                navigator.clipboard.writeText(whitelistHost);
+                toast.show('Copied to clipboard');
+              }}
+              aria-label="Copy IP"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          </span>
+        </div>
       )}
     </div>
   );

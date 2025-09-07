@@ -1,8 +1,9 @@
+import { type ReactNode } from 'react';
 import ApiKeySection from './ApiKeySection';
 
 const aiFields = [{ name: 'key', placeholder: 'API key' }];
 
-export default function AiApiKeySection({ label }: { label: string }) {
+export default function AiApiKeySection({ label }: { label: ReactNode }) {
   return (
     <ApiKeySection
       label={label}

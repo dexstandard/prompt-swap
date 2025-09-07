@@ -12,7 +12,14 @@ export default function Keys() {
         decrypted solely when needed to call providers and are never shared.
       </div>
       <AiApiKeySection label="OpenAI API Key" />
-      <ExchangeApiKeySection exchange="binance" label="Binance API Credentials" />
+      <ExchangeApiKeySection
+        exchange="binance"
+        label={
+          <>
+            Binance API <span className="hidden sm:inline">Credentials</span>
+          </>
+        }
+      />
     </div>
   );
 }
