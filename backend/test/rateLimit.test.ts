@@ -51,6 +51,9 @@ describe('rate limiting', () => {
 
       const opts: any = { method: ep.method, url: ep.url };
       if (ep.payload) opts.payload = ep.payload;
+      if (ep.name === 'login') {
+        opts.headers = { 'sec-fetch-site': 'same-origin' };
+      }
 
       for (let i = 0; i < ep.limit; i++) {
         await app.inject(opts);

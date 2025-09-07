@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
+import csrf from '@fastify/csrf-protection';
 import helmet from '@fastify/helmet';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -14,6 +15,10 @@ export default async function buildServer(
   const app = Fastify({ logger: true });
 
   await app.register(cookie);
+  await app.register(csrf, {
+    getToken: (req) => req.headers['x-csrf-token'] as string,
+    cookieOpts: { sameSite: 'strict', path: '/', secure: true },
+  });
 
   await app.register(helmet, {
     contentSecurityPolicy: {
