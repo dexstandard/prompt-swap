@@ -26,10 +26,10 @@ jobs:
           --health-retries 5
     steps:
       - &checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
 
       - &setup_node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -111,7 +111,7 @@ jobs:
         shell: bash
 
       - name: Upload files to droplet
-        uses: appleboy/scp-action@v0.1.4
+        uses: appleboy/scp-action@8a92fcdb1eb4ffbf538b2fa286739760aac8a95b # v0.1.4
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
@@ -121,7 +121,7 @@ jobs:
           target: "~/prompt-swap"
 
       - name: Deploy with Docker Compose
-        uses: appleboy/ssh-action@v1.1.0
+        uses: appleboy/ssh-action@25ce8cbbcb08177468c7ff7ec5cbfa236f9341e1 # v1.1.0
         env:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
