@@ -78,7 +78,6 @@ export default function ApiKeyProviderSelector({
   );
   const selectedConfig = configs[selectedIndex];
   const hasKey = queries[selectedIndex]?.data;
-  const allKeysMissing = queries.every((q) => q.data === false);
 
   return (
     <div>
