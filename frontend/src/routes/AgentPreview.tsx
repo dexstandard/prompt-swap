@@ -8,8 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
-import AiApiKeySection from '../components/forms/AiApiKeySection';
-import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
+import ApiKeyProviderSelector from '../components/forms/ApiKeyProviderSelector';
 import WalletBalances from '../components/WalletBalances';
 import { useToast } from '../lib/useToast';
 import Button from '../components/ui/Button';
@@ -49,6 +48,8 @@ export default function AgentPreview({ draft }: Props) {
   const tokens = agentData ? agentData.tokens.map((t) => t.token) : [];
   const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
   const [model, setModel] = useState(draft?.model || '');
+  const [aiProvider, setAiProvider] = useState('openai');
+  const [exchangeProvider, setExchangeProvider] = useState('binance');
   useEffect(() => {
     setModel(draft?.model || '');
   }, [draft?.model]);
@@ -107,9 +108,20 @@ export default function AgentPreview({ draft }: Props) {
         value={agentData.agentInstructions}
         onChange={(v) => setAgentData((d) => (d ? { ...d, agentInstructions: v } : d))}
       />
-      {user && !hasOpenAIKey && (
-        <div className="mt-4">
-          <AiApiKeySection label="OpenAI API Key" />
+      {user && (
+        <div className="mt-4 space-y-4">
+          <ApiKeyProviderSelector
+            type="ai"
+            label="AI Provider"
+            value={aiProvider}
+            onChange={setAiProvider}
+          />
+          <ApiKeyProviderSelector
+            type="exchange"
+            label="Exchange"
+            value={exchangeProvider}
+            onChange={setExchangeProvider}
+          />
         </div>
       )}
       {user && hasOpenAIKey && (models.length || draft?.model) && (
@@ -131,11 +143,6 @@ export default function AgentPreview({ draft }: Props) {
               ))
             )}
           </select>
-        </div>
-      )}
-      {user && !hasBinanceKey && (
-        <div className="mt-4">
-          <ExchangeApiKeySection exchange="binance" label="Binance API Credentials" />
         </div>
       )}
 
