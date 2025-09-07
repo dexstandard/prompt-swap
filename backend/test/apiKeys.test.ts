@@ -162,6 +162,7 @@ describe('Binance API key routes', () => {
     expect(row!.binance_api_secret_enc).toBeNull();
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
+    fetchMock.mockResolvedValueOnce({ ok: true } as any);
     res = await app.inject({
       method: 'POST',
       url: `/api/users/${userId}/binance-key`,
@@ -215,6 +216,7 @@ describe('Binance API key routes', () => {
       secret: '<REDACTED>',
     });
 
+    fetchMock.mockResolvedValueOnce({ ok: true } as any);
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
     res = await app.inject({
       method: 'PUT',
