@@ -48,6 +48,8 @@ jobs:
           wait
 
       - name: Build frontend and backend
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
           npm --prefix frontend run build &
           npm --prefix backend run build &
