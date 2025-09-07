@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import AgentStatusLabel from './AgentStatusLabel';
 import TokenDisplay from './TokenDisplay';
 import StrategyForm from './StrategyForm';
@@ -12,7 +12,6 @@ interface Props {
 }
 
 export default function AgentDetailsDesktop({ agent }: Props) {
-  const [showStrategy, setShowStrategy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
 
   const strategyData = {
@@ -42,22 +41,10 @@ export default function AgentDetailsDesktop({ agent }: Props) {
         ))}
       </p>
       <div className="mt-2">
-        <div
-          className="flex items-center gap-1 cursor-pointer"
-          onClick={() => setShowStrategy((s) => !s)}
-        >
-          <h2 className="text-l font-bold">Strategy</h2>
-          {showStrategy ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
+        <h2 className="text-l font-bold">Strategy</h2>
+        <div className="mt-2 max-w-2xl">
+          <StrategyForm data={strategyData} onChange={() => {}} disabled />
         </div>
-        {showStrategy && (
-          <div className="mt-2 max-w-2xl">
-            <StrategyForm data={strategyData} onChange={() => {}} disabled />
-          </div>
-        )}
       </div>
       <div className="mt-2">
         <div className="flex items-center gap-1">

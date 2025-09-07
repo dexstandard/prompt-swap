@@ -1,4 +1,4 @@
-import { useMemo, type ReactElement } from 'react';
+import { type ReactElement } from 'react';
 
 import { useQueries } from '@tanstack/react-query';
 import axios from 'axios';
@@ -70,16 +70,14 @@ export default function ApiKeyProviderSelector({
     })),
   });
 
-  const available = useMemo(
-    () => configs.filter((_, i) => queries[i]?.data),
-    [configs, queries],
-  );
-
   if (!user) return null;
 
-  if (available.length === 0) {
-    return configs[0].renderForm();
-  }
+  const selectedIndex = Math.max(
+    configs.findIndex((c) => c.value === value),
+    0,
+  );
+  const selectedConfig = configs[selectedIndex];
+  const hasKey = queries[selectedIndex]?.data;
 
   return (
     <div>
@@ -88,8 +86,9 @@ export default function ApiKeyProviderSelector({
         id={`${type}-provider`}
         value={value}
         onChange={onChange}
-        options={available.map((p) => ({ value: p.value, label: p.label }))}
+        options={configs.map((p) => ({ value: p.value, label: p.label }))}
       />
+      {hasKey === false && <div className="mt-2">{selectedConfig.renderForm()}</div>}
     </div>
   );
 }
