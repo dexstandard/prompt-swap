@@ -21,9 +21,9 @@ jobs:
           POSTGRES_DB: promptswap_test
         options: >-
           --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
+          --health-interval 3s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 20
     steps:
       - &checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
