@@ -33,7 +33,14 @@ const exchangeConfigs: ProviderConfig[] = [
     queryKey: 'binance-key',
     getKeyPath: (id) => `/users/${id}/binance-key`,
     renderForm: () => (
-      <ExchangeApiKeySection exchange="binance" label="Binance API Credentials" />
+      <ExchangeApiKeySection
+        exchange="binance"
+        label={
+          <>
+            Binance API <span className="hidden sm:inline">Credentials</span>
+          </>
+        }
+      />
     ),
   },
 ];
