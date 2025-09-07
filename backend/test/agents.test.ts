@@ -99,7 +99,9 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
-      expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
+    expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
+    expect(typeof res.json().aiApiKeyId).toBe('string');
+    expect(typeof res.json().exchangeApiKeyId).toBe('string');
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
     res = await app.inject({
@@ -108,7 +110,9 @@ describe('agent routes', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-      expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
+    expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
+    expect(typeof res.json().aiApiKeyId).toBe('string');
+    expect(typeof res.json().exchangeApiKeyId).toBe('string');
 
     res = await app.inject({
       method: 'GET',
@@ -216,6 +220,41 @@ describe('agent routes', () => {
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
+  });
+
+  it('returns null api key ids when keys missing', async () => {
+    const app = await buildServer();
+    const userId = await addUserNoKeys('nokeys');
+    const payload = {
+      userId,
+      model: 'm',
+      name: 'NoKeys',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      status: 'draft',
+    };
+    const resCreate = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      cookies: authCookies(userId),
+      payload,
+    });
+    expect(resCreate.statusCode).toBe(200);
+    const id = resCreate.json().id as string;
+    const resGet = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${id}`,
+      cookies: authCookies(userId),
+    });
+    expect(resGet.statusCode).toBe(200);
+    expect(resGet.json().aiApiKeyId).toBeNull();
+    expect(resGet.json().exchangeApiKeyId).toBeNull();
+    await app.close();
   });
 
   it('starts and stops agent', async () => {
