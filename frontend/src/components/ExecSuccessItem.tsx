@@ -26,7 +26,7 @@ export default function ExecSuccessItem({ response }: Props) {
     <div className={`mt-1 flex items-center gap-2 rounded border p-2 ${color}`}>
       <div className="flex-1 min-w-0 whitespace-pre-wrap break-words">
         <span className="font-bold mr-1">
-          {rebalance ? 'Rebalanced' : 'Hold'}
+          {rebalance ? 'Rebalance' : 'Hold'}
         </span>
         <span>{truncate(shortReport)}</span>
         {rebalance && typeof newAllocation === 'number' && (
