@@ -1,6 +1,13 @@
 {$DOMAIN} {
     encode gzip zstd
 
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; frame-ancestors 'none'"
+    }
+
     @api path /api* /healthz
     handle @api {
         reverse_proxy backend:3000
