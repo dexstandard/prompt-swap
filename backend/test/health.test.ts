@@ -10,6 +10,8 @@ describe('health route', () => {
     expect(res.headers['x-content-type-options']).toBe('nosniff');
     expect(res.headers['referrer-policy']).toBe('no-referrer');
     expect(res.headers['content-security-policy']).toContain("default-src 'self'");
+    expect(res.headers['content-security-policy']).toContain('https://accounts.google.com');
+    expect(res.headers['content-security-policy']).toContain('https://api.binance.com');
     await app.close();
   });
 });

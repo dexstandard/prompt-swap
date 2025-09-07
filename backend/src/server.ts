@@ -19,11 +19,12 @@ export default async function buildServer(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://accounts.google.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
+        imgSrc: ["'self'", 'data:', 'https://accounts.google.com'],
+        connectSrc: ["'self'", 'https://api.binance.com', 'https://accounts.google.com'],
         fontSrc: ["'self'", 'data:'],
+        frameSrc: ['https://accounts.google.com'],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
       },
