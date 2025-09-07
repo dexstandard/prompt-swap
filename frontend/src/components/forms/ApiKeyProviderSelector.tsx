@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactElement } from 'react';
+
 import { useQueries } from '@tanstack/react-query';
 import axios from 'axios';
 import { useUser } from '../../lib/useUser';
@@ -12,7 +13,7 @@ interface ProviderConfig {
   label: string;
   queryKey: string;
   getKeyPath: (id: string) => string;
-  renderForm: () => JSX.Element;
+  renderForm: () => ReactElement;
 }
 
 const aiConfigs: ProviderConfig[] = [
