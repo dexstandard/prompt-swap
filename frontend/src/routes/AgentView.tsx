@@ -15,7 +15,6 @@ import AgentUpdateModal from '../components/AgentUpdateModal';
 import AgentDetailsDesktop from '../components/AgentDetailsDesktop';
 import AgentDetailsMobile from '../components/AgentDetailsMobile';
 import Toggle from '../components/ui/Toggle';
-import ApiKeyProviderSelector from '../components/forms/ApiKeyProviderSelector';
 
 export default function AgentView() {
   const { id } = useParams();
@@ -41,8 +40,6 @@ export default function AgentView() {
   });
 
   const [showUpdate, setShowUpdate] = useState(false);
-  const [aiProvider, setAiProvider] = useState('openai');
-  const [exchangeProvider, setExchangeProvider] = useState('binance');
 
   const [logPage, setLogPage] = useState(1);
   const [onlyRebalance, setOnlyRebalance] = useState(false);
@@ -68,20 +65,6 @@ export default function AgentView() {
     const isActive = data.status === 'active';
     return (
       <div className="p-4">
-        <div className="mb-4 space-y-4">
-          <ApiKeyProviderSelector
-            type="ai"
-            label="AI Provider"
-            value={aiProvider}
-            onChange={setAiProvider}
-          />
-          <ApiKeyProviderSelector
-            type="exchange"
-            label="Exchange"
-            value={exchangeProvider}
-            onChange={setExchangeProvider}
-          />
-        </div>
         <div className="hidden md:block">
           <AgentDetailsDesktop agent={data} />
         </div>
