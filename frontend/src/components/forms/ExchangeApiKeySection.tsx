@@ -15,6 +15,9 @@ interface Props {
 }
 
 export default function ExchangeApiKeySection({ exchange, label }: Props) {
+  const whitelistHost =
+    exchange === 'binance' ? import.meta.env.VITE_DO_SSH_HOST : undefined;
+
   return (
     <ApiKeySection
       label={label}
@@ -24,6 +27,7 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
       videoGuideUrl={videoGuideLinks[exchange]}
       balanceQueryKey={`${exchange}-balance`}
       getBalancePath={(id) => `/users/${id}/${exchange}-balance`}
+      whitelistHost={whitelistHost}
     />
   );
 }
