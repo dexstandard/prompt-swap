@@ -15,8 +15,6 @@ import { useToast } from '../lib/useToast';
 import Button from '../components/ui/Button';
 import { usePrerequisites } from '../lib/usePrerequisites';
 import AgentStartButton from '../components/AgentStartButton';
-import SelectInput from '../components/forms/SelectInput';
-import FormField from '../components/forms/FormField';
 
 interface AgentPreviewDetails {
   name: string;
@@ -52,8 +50,6 @@ export default function AgentPreview({ draft }: Props) {
   }, [data]);
   const tokens = agentData ? [agentData.tokenA, agentData.tokenB] : [];
   const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
-  const [aiProvider, setAiProvider] = useState('openai');
-  const [exchange, setExchange] = useState('binance');
   const [model, setModel] = useState(draft?.model || '');
   const [hadModel, setHadModel] = useState(false);
   useEffect(() => {
@@ -112,16 +108,6 @@ export default function AgentPreview({ draft }: Props) {
         value={agentData.agentInstructions}
         onChange={(v) => setAgentData((d) => (d ? { ...d, agentInstructions: v } : d))}
       />
-      <div className="mt-4">
-        <FormField label="AI Provider" className="w-full max-w-xs">
-          <SelectInput
-            id="ai-provider"
-            value={aiProvider}
-            onChange={setAiProvider}
-            options={[{ value: 'openai', label: 'OpenAI' }]}
-          />
-        </FormField>
-      </div>
       {user && !hasOpenAIKey && (
         <div className="mt-4">
           <AiApiKeySection label="OpenAI API Key" />
@@ -129,30 +115,25 @@ export default function AgentPreview({ draft }: Props) {
       )}
       {user && hasOpenAIKey && (models.length || draft?.model) && (
         <div className="mt-4">
-          <FormField label="Model" className="w-full max-w-xs">
-            <SelectInput
-              id="model"
-              value={model}
-              onChange={setModel}
-              options={
-                draft?.model && !models.length
-                  ? [{ value: draft.model, label: draft.model }]
-                  : models.map((m) => ({ value: m, label: m }))
-              }
-            />
-          </FormField>
+          <h2 className="text-md font-bold">Model</h2>
+          <select
+            id="model"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            className="border rounded p-2"
+          >
+            {draft?.model && !models.length ? (
+              <option value={draft.model}>{draft.model}</option>
+            ) : (
+              models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))
+            )}
+          </select>
         </div>
       )}
-      <div className="mt-4">
-        <FormField label="Exchange" className="w-full max-w-xs">
-          <SelectInput
-            id="exchange"
-            value={exchange}
-            onChange={setExchange}
-            options={[{ value: 'binance', label: 'Binance' }]}
-          />
-        </FormField>
-      </div>
       {user && !hasBinanceKey && (
         <div className="mt-4">
           <ExchangeApiKeySection exchange="binance" label="Binance API Credentials" />
