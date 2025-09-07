@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { z } from 'zod';
 import {
   getAgent,
   getAgentsPaginated,
@@ -37,6 +38,10 @@ import {
 } from '../services/rebalance.js';
 import { parseBinanceError } from '../services/binance.js';
 import { getRebalanceInfo } from '../repos/agent-review-result.js';
+import { parseParams } from '../util/validation.js';
+
+const idParams = z.object({ id: z.string().regex(/^\d+$/) });
+const logIdParams = z.object({ logId: z.string().regex(/^\d+$/) });
 
 
 async function getAgentForRequest(
@@ -45,7 +50,9 @@ async function getAgentForRequest(
 ): Promise<{ userId: string; id: string; log: FastifyBaseLogger; agent: any } | undefined> {
   const userId = requireUserId(req, reply);
   if (!userId) return;
-  const id = (req.params as any).id as string;
+  const params = parseParams(idParams, req.params, reply);
+  if (!params) return;
+  const { id } = params;
   const log = req.log.child({ userId, agentId: id });
   const agent = await getAgent(id);
   if (!agent || agent.status === AgentStatus.Retired) {
@@ -174,7 +181,9 @@ export default async function agentRoutes(app: FastifyInstance) {
       const ctx = await getAgentForRequest(req, reply);
       if (!ctx) return;
       const { id, log } = ctx;
-      const { logId } = req.params as { id: string; logId: string };
+      const lp = parseParams(logIdParams, req.params, reply);
+      if (!lp) return;
+      const { logId } = lp;
       const rows = await getLimitOrdersByReviewResult(id, logId);
       log.info({ execLogId: logId }, 'fetched exec orders');
       return {
@@ -204,7 +213,9 @@ export default async function agentRoutes(app: FastifyInstance) {
           .code(400)
           .send(errorResponse('manual rebalance disabled'));
       }
-      const { logId } = req.params as { id: string; logId: string };
+      const lp = parseParams(logIdParams, req.params, reply);
+      if (!lp) return;
+      const { logId } = lp;
       const existing = await getLimitOrdersByReviewResult(id, logId);
       if (existing.length) {
         log.error({ execLogId: logId }, 'manual order exists');
@@ -310,7 +321,9 @@ export default async function agentRoutes(app: FastifyInstance) {
           .code(400)
           .send(errorResponse('manual rebalance disabled'));
       }
-      const { logId } = req.params as { id: string; logId: string };
+      const lp = parseParams(logIdParams, req.params, reply);
+      if (!lp) return;
+      const { logId } = lp;
       const existing = await getLimitOrdersByReviewResult(id, logId);
       if (existing.length) {
         log.error({ execLogId: logId }, 'manual order exists');
