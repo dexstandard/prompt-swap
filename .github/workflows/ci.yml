@@ -8,9 +8,9 @@ on:
 
 jobs:
   build:
+    if: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name }}
-    services:
+    services: &postgres
       postgres:
         image: postgres:16
         ports:
@@ -25,45 +25,71 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - &checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - &setup_node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
 
-      - name: Install dependencies
+      - &install_deps
+        name: Install dependencies
         run: |
           npm --prefix backend ci &
           npm --prefix frontend ci &
           wait
+        shell: bash
 
-      - name: Lint frontend and test backend
+      - &lint_test
+        name: Lint frontend and test backend
         run: |
           npm --prefix frontend run lint &
           DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test &
           wait
+        shell: bash
 
-      - name: Build frontend and backend
+      - &build_app
+        name: Build frontend and backend
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
           npm --prefix frontend run build &
           npm --prefix backend run build &
           wait
+        shell: bash
 
-      - name: Prune production dependencies
+      - &prune_deps
+        name: Prune production dependencies
         run: |
           npm --prefix frontend prune --production &
           npm --prefix backend prune --production &
           wait
+        shell: bash
 
-      # Export secrets to env, then validate in bash
+  build-and-deploy:
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    services: *postgres
+    steps:
+      - *checkout
+
+      - *setup_node
+
+      - *install_deps
+
+      - *lint_test
+
+      - *build_app
+
+      - *prune_deps
+
       - name: Verify required secrets
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
         env:
           DO_SSH_HOST: ${{ secrets.DO_SSH_HOST }}
           DO_SSH_USER: ${{ secrets.DO_SSH_USER }}
@@ -82,9 +108,9 @@ jobs:
               exit 1
             fi
           done
+        shell: bash
 
       - name: Upload files to droplet
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.DO_SSH_HOST }}
@@ -95,7 +121,6 @@ jobs:
           target: "~/prompt-swap"
 
       - name: Deploy with Docker Compose
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
         uses: appleboy/ssh-action@v1.1.0
         env:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -117,6 +142,5 @@ jobs:
             export VITE_GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
             export DB_CONNECTION_STR="${DB_CONNECTION_STR}"
             docker compose up -d --build
-            # Wait for backend health endpoint via Caddy
             timeout 60s bash -c 'until curl -fsS -H "Host: ${DOMAIN}" http://localhost/api/health; do sleep 3; done'
             docker compose ps
