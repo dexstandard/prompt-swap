@@ -1,10 +1,14 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import { requireUserIdMatch } from '../util/auth.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import { getAiKeyRow } from '../repos/api-keys.js';
+import { parseParams } from '../util/validation.js';
+
+const idParams = z.object({ id: z.string().regex(/^\d+$/) });
 
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 const modelsCache = new Map<string, { models: string[]; expires: number }>();
@@ -28,7 +32,9 @@ export default async function modelsRoutes(app: FastifyInstance) {
     '/users/:id/models',
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {
-      const id = (req.params as any).id as string;
+      const params = parseParams(idParams, req.params, reply);
+      if (!params) return;
+      const { id } = params;
       if (!requireUserIdMatch(req, reply, id)) return;
     const row = await getAiKeyRow(id);
     if (!row?.ai_api_key_enc)
