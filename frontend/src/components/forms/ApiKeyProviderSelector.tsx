@@ -83,7 +83,7 @@ export default function ApiKeyProviderSelector({
   return (
     <div>
       <h2 className="text-md font-bold">{label}</h2>
-      {allKeysMissing && configs.length === 1 ? (
+      {hasKey === false && configs.length === 1 ? (
         <div className="mt-2">{configs[0].renderForm()}</div>
       ) : (
         <>
