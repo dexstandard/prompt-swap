@@ -1,44 +1,52 @@
 import { db } from '../db/index.js';
 
-export function getAiKeyRow(id: string) {
-  return db
-    .prepare('SELECT ai_api_key_enc FROM users WHERE id = ?')
-    .get(id) as { ai_api_key_enc?: string } | undefined;
+export async function getAiKeyRow(id: string) {
+  const { rows } = await db.query(
+    "SELECT ak.id, ak.api_key_enc AS ai_api_key_enc FROM users u LEFT JOIN ai_api_keys ak ON ak.user_id = u.id AND ak.provider = 'openai' WHERE u.id = $1",
+    [id],
+  );
+  return rows[0] as { id?: string; ai_api_key_enc?: string } | undefined;
 }
 
-export function setAiKey(id: string, enc: string) {
-  db.prepare('UPDATE users SET ai_api_key_enc = ? WHERE id = ?').run(enc, id);
+export async function setAiKey(id: string, enc: string) {
+  await db.query(
+    "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2) ON CONFLICT (user_id, provider) DO UPDATE SET api_key_enc = EXCLUDED.api_key_enc",
+    [id, enc],
+  );
 }
 
-export function clearAiKey(id: string) {
-  db.prepare('UPDATE users SET ai_api_key_enc = NULL WHERE id = ?').run(id);
+export async function clearAiKey(id: string) {
+  await db.query(
+    "DELETE FROM ai_api_keys WHERE user_id = $1 AND provider = 'openai'",
+    [id],
+  );
 }
 
-export function getBinanceKeyRow(id: string) {
-  return db
-    .prepare(
-      'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
-    )
-    .get(id) as
-    | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
+export async function getBinanceKeyRow(id: string) {
+  const { rows } = await db.query(
+    "SELECT ek.id, ek.api_key_enc AS binance_api_key_enc, ek.api_secret_enc AS binance_api_secret_enc FROM users u LEFT JOIN exchange_keys ek ON ek.user_id = u.id AND ek.provider = 'binance' WHERE u.id = $1",
+    [id],
+  );
+  return rows[0] as
+    | { id?: string; binance_api_key_enc?: string; binance_api_secret_enc?: string }
     | undefined;
 }
 
-export function setBinanceKey(
+export async function setBinanceKey(
   id: string,
   keyEnc: string,
   secretEnc: string,
-) {
-  db.prepare(
-    'UPDATE users SET binance_api_key_enc = ?, binance_api_secret_enc = ? WHERE id = ?',
-  ).run(keyEnc, secretEnc, id);
+): Promise<void> {
+  await db.query(
+    "INSERT INTO exchange_keys (user_id, provider, api_key_enc, api_secret_enc) VALUES ($3, 'binance', $1, $2) ON CONFLICT (user_id, provider) DO UPDATE SET api_key_enc = EXCLUDED.api_key_enc, api_secret_enc = EXCLUDED.api_secret_enc",
+    [keyEnc, secretEnc, id],
+  );
 }
 
-export function clearBinanceKey(id: string) {
-  db
-    .prepare(
-      'UPDATE users SET binance_api_key_enc = NULL, binance_api_secret_enc = NULL WHERE id = ?',
-    )
-    .run(id);
+export async function clearBinanceKey(id: string): Promise<void> {
+  await db.query(
+    "DELETE FROM exchange_keys WHERE user_id = $1 AND provider = 'binance'",
+    [id],
+  );
 }
 

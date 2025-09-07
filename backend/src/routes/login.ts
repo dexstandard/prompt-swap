@@ -1,15 +1,21 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 import { authenticator } from 'otplib';
 import { env } from '../util/env.js';
 import { RATE_LIMITS } from '../rate-limit.js';
-import { getUser, insertUser, setUserEmail } from '../repos/users.js';
+import { insertUser, setUserEmail } from '../repos/users.js';
+import {
+  findUserByIdentity,
+  insertUserIdentity,
+} from '../repos/user-identities.js';
 import { encrypt } from '../util/crypto.js';
+import { errorResponse, type ErrorResponse } from '../util/errorMessages.js';
+import jwt from 'jsonwebtoken';
 
 interface ValidationErr {
   code: number;
-  body: unknown;
+  body: ErrorResponse;
 }
 
 const client = new OAuth2Client();
@@ -22,45 +28,81 @@ async function verifyToken(token: string) {
   return ticket.getPayload();
 }
 
+function setSessionCookie(reply: FastifyReply, id: string) {
+  const token = jwt.sign({ id }, env.KEY_PASSWORD);
+  reply.setCookie('session', token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+  });
+}
+
 export default async function loginRoutes(app: FastifyInstance) {
+  app.get('/login/csrf', async (_req, reply) => ({
+    csrfToken: await reply.generateCsrf(),
+  }));
+
   app.post(
     '/login',
-    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
+    {
+      config: { rateLimit: RATE_LIMITS.VERY_TIGHT },
+      onRequest: async (req, reply) => {
+        const site = req.headers['sec-fetch-site'] as string | undefined;
+        if (site === 'same-origin' || site === 'same-site') return;
+        const origin = req.headers.origin;
+        if (origin) {
+          try {
+            const { host } = new URL(origin);
+            if (host === req.headers.host) return;
+          } catch {}
+        }
+        await new Promise<void>((resolve, reject) => {
+          (app.csrfProtection as any)(req, reply, (err: any) =>
+            err ? reject(err) : resolve(),
+          );
+        });
+      },
+    },
     async (req, reply) => {
       const body = z
         .object({ token: z.string(), otp: z.string().optional() })
         .parse(req.body);
       const payload = await verifyToken(body.token);
       if (!payload?.sub)
-        return reply.code(400).send({ error: 'invalid token' });
-      const id = payload.sub;
-      const row = getUser(id);
+        return reply.code(400).send(errorResponse('invalid token'));
       const emailEnc = payload.email
         ? encrypt(payload.email, env.KEY_PASSWORD)
         : null;
+      const row = await findUserByIdentity('google', payload.sub);
+      let id: string;
       if (!row) {
-        insertUser(id, emailEnc);
+        id = await insertUser(emailEnc);
+        await insertUserIdentity(id, 'google', payload.sub);
+        setSessionCookie(reply, id);
         return { id, email: payload.email, role: 'user' };
       }
-      if (emailEnc) setUserEmail(id, emailEnc);
+      id = row.id;
+      if (emailEnc) await setUserEmail(id, emailEnc);
       if (!row.is_enabled) {
-        return reply.code(403).send({ error: 'user disabled' });
+        return reply.code(403).send(errorResponse('user disabled'));
       }
       const err = validateOtp(row, body.otp);
       if (err) return reply.code(err.code).send(err.body);
+      setSessionCookie(reply, id);
       return { id, email: payload.email, role: row.role };
     }
   );
 }
 
 function validateOtp(
-  row: { totp_secret?: string; is_totp_enabled?: number },
+  row: { totp_secret?: string; is_totp_enabled?: boolean },
   otp: string | undefined,
 ): ValidationErr | null {
   if (row.is_totp_enabled && row.totp_secret) {
-    if (!otp) return { code: 401, body: { error: 'otp required' } };
+    if (!otp) return { code: 401, body: errorResponse('otp required') };
     const valid = authenticator.verify({ token: otp, secret: row.totp_secret });
-    if (!valid) return { code: 401, body: { error: 'invalid otp' } };
+    if (!valid) return { code: 401, body: errorResponse('invalid otp') };
   }
   return null;
 }

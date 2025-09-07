@@ -37,6 +37,11 @@ export default function GoogleLoginButton() {
   const [otpOpen, setOtpOpen] = useState(false);
   const [otp, setOtp] = useState('');
   const [pendingCred, setPendingCred] = useState<string | null>(null);
+  const [csrf, setCsrf] = useState('');
+
+  useEffect(() => {
+    api.get('/login/csrf').then((res) => setCsrf(res.data.csrfToken));
+  }, []);
 
   useEffect(() => {
     if (!btnRef.current || user) return;
@@ -49,7 +54,11 @@ export default function GoogleLoginButton() {
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: async (resp: CredentialResponse) => {
           try {
-            const res = await api.post('/login', { token: resp.credential });
+            const res = await api.post(
+              '/login',
+              { token: resp.credential },
+              { headers: { 'x-csrf-token': csrf } }
+            );
             setUser(res.data);
             if (btnRef.current) btnRef.current.innerHTML = '';
           } catch (err: unknown) {
@@ -79,7 +88,7 @@ export default function GoogleLoginButton() {
       script?.addEventListener('load', initialize);
       return () => script?.removeEventListener('load', initialize);
     }
-  }, [user, setUser]);
+    }, [user, setUser, csrf]);
 
   if (user) {
     const email = user.email ?? '';
@@ -134,10 +143,14 @@ export default function GoogleLoginButton() {
             onClick={async () => {
               if (!pendingCred) return;
               try {
-                const res2 = await api.post('/login', {
-                  token: pendingCred,
-                  otp,
-                });
+                const res2 = await api.post(
+                  '/login',
+                  {
+                    token: pendingCred,
+                    otp,
+                  },
+                  { headers: { 'x-csrf-token': csrf } }
+                );
                 setUser(res2.data);
                 if (btnRef.current) btnRef.current.innerHTML = '';
                 setOtp('');

@@ -1,0 +1,14 @@
+import { db } from '../../src/db/index.js';
+import {
+  insertAgent as insertAgentProd,
+  startAgent,
+  stopAgent,
+  deleteAgent,
+} from '../../src/repos/agents.js';
+
+export const insertAgent = insertAgentProd;
+export { startAgent, stopAgent, deleteAgent };
+
+export async function setAgentStatus(id: string, status: string) {
+  await db.query('UPDATE agents SET status = $1 WHERE id = $2', [status, id]);
+}

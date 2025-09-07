@@ -1,22 +1,24 @@
 import { db } from '../db/index.js';
+import { AgentStatus } from '../util/agents.js';
+
+export interface AgentTokenRow { token: string; min_allocation: number; }
 
 export interface AgentRow {
   id: string;
   user_id: string;
   model: string;
   status: string;
-  created_at: number;
+  created_at: string;
   start_balance: number | null;
   name: string;
-  token_a: string;
-  token_b: string;
-  min_a_allocation: number;
-  min_b_allocation: number;
+  tokens: AgentTokenRow[];
   risk: string;
   review_interval: string;
   agent_instructions: string;
+  manual_rebalance: boolean;
+  ai_api_key_id: string | null;
+  exchange_api_key_id: string | null;
 }
-
 
 export function toApi(row: AgentRow) {
   return {
@@ -24,115 +26,136 @@ export function toApi(row: AgentRow) {
     userId: row.user_id,
     model: row.model,
     status: row.status,
-    createdAt: row.created_at,
+    createdAt: Date.parse(row.created_at),
     startBalanceUsd: row.start_balance ?? null,
     name: row.name,
-    tokenA: row.token_a,
-    tokenB: row.token_b,
-    minTokenAAllocation: row.min_a_allocation,
-    minTokenBAllocation: row.min_b_allocation,
+    tokens: row.tokens.map((t) => ({
+      token: t.token,
+      minAllocation: t.min_allocation,
+    })),
     risk: row.risk,
     reviewInterval: row.review_interval,
     agentInstructions: row.agent_instructions,
+    manualRebalance: row.manual_rebalance,
+    aiApiKeyId: row.ai_api_key_id ?? null,
+    exchangeApiKeyId: row.exchange_api_key_id ?? null,
   };
 }
 
-const baseSelect =
-  'SELECT id, user_id, model, status, created_at, start_balance, name, token_a, token_b, ' +
-  'min_a_allocation, min_b_allocation, risk, review_interval, ' +
-  'agent_instructions FROM agents';
+const baseSelect = `
+  SELECT a.id, a.user_id, a.model, a.status, a.created_at, a.start_balance, a.name,
+         COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
+                  FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
+         a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance,
+         ak.id AS ai_api_key_id, ek.id AS exchange_api_key_id
+    FROM agents a
+    LEFT JOIN agent_tokens t ON t.agent_id = a.id
+    LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
+    LEFT JOIN exchange_keys ek ON ek.user_id = a.user_id AND ek.provider = 'binance'
+`;
 
-export function getAgent(id: string) {
-  return db
-    .prepare<[string], AgentRow>(`${baseSelect} WHERE id = ?`)
-    .get(id) as AgentRow | undefined;
+export async function getAgent(id: string): Promise<AgentRow | undefined> {
+  const { rows } = await db.query(
+    `${baseSelect} WHERE a.id = $1 AND a.status != $2 GROUP BY a.id, ak.id, ek.id`,
+    [id, AgentStatus.Retired],
+  );
+  return rows[0] as AgentRow | undefined;
 }
 
-export function getAgentsPaginated(
+export async function getAgentsPaginated(
   userId: string,
   status: string | undefined,
   limit: number,
   offset: number,
 ) {
-  let where = 'WHERE user_id = ?';
-  const params: unknown[] = [userId];
-  if (status === 'active' || status === 'inactive' || status === 'draft') {
-    where += ' AND status = ?';
-    params.push(status);
+  if (status) {
+    if (status === AgentStatus.Retired) return { rows: [], total: 0 };
+    const where = 'WHERE a.user_id = $1 AND a.status = $2';
+    const totalRes = await db.query(
+      `SELECT COUNT(*) as count FROM agents a ${where}`,
+      [userId, status],
+    );
+    const { rows } = await db.query(
+      `${baseSelect} ${where} GROUP BY a.id, ak.id, ek.id LIMIT $3 OFFSET $4`,
+      [userId, status, limit, offset],
+    );
+    return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
   }
-  const totalRow = db
-    .prepare(`SELECT COUNT(*) as count FROM agents ${where}`)
-    .get(...params) as { count: number };
-  const rows = db
-    .prepare(`${baseSelect} ${where} LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as AgentRow[];
-  return { rows, total: totalRow.count };
+  const where = 'WHERE a.user_id = $1 AND a.status != $2';
+  const totalRes = await db.query(
+    `SELECT COUNT(*) as count FROM agents a ${where}`,
+    [userId, AgentStatus.Retired],
+  );
+  const { rows } = await db.query(
+    `${baseSelect} ${where} GROUP BY a.id, ak.id, ek.id LIMIT $3 OFFSET $4`,
+    [userId, AgentStatus.Retired, limit, offset],
+  );
+  return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
 }
 
-export function findIdenticalDraftAgent(
+export async function findIdenticalDraftAgent(
   data: {
     userId: string;
     model: string;
     name: string;
-    tokenA: string;
-    tokenB: string;
-    minTokenAAllocation: number;
-    minTokenBAllocation: number;
+    tokens: { token: string; minAllocation: number }[];
     risk: string;
     reviewInterval: string;
     agentInstructions: string;
+    manualRebalance: boolean;
   },
   excludeId?: string,
 ) {
-  const query = `SELECT id, name FROM agents
-     WHERE user_id = ? AND status = 'draft'${excludeId ? ' AND id != ?' : ''} AND model = ? AND name = ?
-       AND token_a = ? AND token_b = ?
-       AND min_a_allocation = ? AND min_b_allocation = ?
-       AND risk = ? AND review_interval = ? AND agent_instructions = ?`;
+  const query = `SELECT a.id, a.name FROM agents a
+    LEFT JOIN (
+      SELECT agent_id,
+             json_agg(json_build_object('token', token, 'min_allocation', min_allocation) ORDER BY position) AS tokens
+        FROM agent_tokens GROUP BY agent_id
+    ) t ON t.agent_id = a.id
+    WHERE a.user_id = $1 AND a.status = 'draft' AND ($2::bigint IS NULL OR a.id != $2)
+      AND a.model = $3 AND a.name = $4
+      AND a.risk = $5 AND a.review_interval = $6 AND a.agent_instructions = $7 AND a.manual_rebalance = $8
+      AND COALESCE(t.tokens::jsonb, '[]'::jsonb) = $9::jsonb`;
   const params: unknown[] = [
     data.userId,
-    ...(excludeId ? [excludeId] : []),
+    excludeId ?? null,
     data.model,
     data.name,
-    data.tokenA,
-    data.tokenB,
-    data.minTokenAAllocation,
-    data.minTokenBAllocation,
     data.risk,
     data.reviewInterval,
     data.agentInstructions,
+    data.manualRebalance,
+    JSON.stringify(
+      data.tokens.map((t) => ({
+        token: t.token,
+        min_allocation: t.minAllocation,
+      })),
+    ),
   ];
-  return db.prepare(query).get(...params) as
-    | { id: string; name: string }
-    | undefined;
+  const { rows } = await db.query(query, params as any[]);
+  return rows[0] as { id: string; name: string } | undefined;
 }
 
-export function findActiveTokenConflicts(
+export async function findActiveTokenConflicts(
   userId: string,
-  tokenA: string,
-  tokenB: string,
+  tokens: string[],
   excludeId?: string,
 ) {
-  const query = `SELECT id, name, token_a, token_b FROM agents
-       WHERE user_id = ? AND status = 'active'${excludeId ? ' AND id != ?' : ''}
-         AND (token_a IN (?, ?) OR token_b IN (?, ?))`;
-  const params: unknown[] = [userId];
-  if (excludeId) params.push(excludeId);
-  params.push(tokenA, tokenB, tokenA, tokenB);
-  return db.prepare(query).all(...params) as {
-    id: string;
-    name: string;
-    token_a: string;
-    token_b: string;
-  }[];
+  const query = `SELECT a.id, a.name, t.token FROM agents a
+      JOIN agent_tokens t ON t.agent_id = a.id
+     WHERE a.user_id = $1 AND a.status = 'active' AND ($2::bigint IS NULL OR a.id != $2)
+       AND t.token = ANY($3::text[])`;
+  const params: unknown[] = [userId, excludeId ?? null, tokens];
+  const { rows } = await db.query(query, params as any[]);
+  return rows as { id: string; name: string; token: string }[];
 }
 
-export function getUserApiKeys(userId: string) {
-  return db
-    .prepare(
-      'SELECT ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?',
-    )
-    .get(userId) as
+export async function getUserApiKeys(userId: string) {
+  const { rows } = await db.query(
+    "SELECT ak.api_key_enc AS ai_api_key_enc, ek.api_key_enc AS binance_api_key_enc, ek.api_secret_enc AS binance_api_secret_enc FROM users u LEFT JOIN ai_api_keys ak ON ak.user_id = u.id AND ak.provider = 'openai' LEFT JOIN exchange_keys ek ON ek.user_id = u.id AND ek.provider = 'binance' WHERE u.id = $1",
+    [userId],
+  );
+  return rows[0] as
     | {
         ai_api_key_enc?: string;
         binance_api_key_enc?: string;
@@ -141,128 +164,181 @@ export function getUserApiKeys(userId: string) {
     | undefined;
 }
 
-export function insertAgent(data: {
-  id: string;
+export async function insertAgent(data: {
   userId: string;
   model: string;
   status: string;
-  createdAt: number;
   startBalance: number | null;
   name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
-}) {
-  db.prepare(
-    `INSERT INTO agents (id, user_id, model, status, created_at, start_balance, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    data.id,
-    data.userId,
-    data.model,
-    data.status,
-    data.createdAt,
-    data.startBalance,
-    data.name,
-    data.tokenA,
-    data.tokenB,
-    data.minTokenAAllocation,
-    data.minTokenBAllocation,
-    data.risk,
-    data.reviewInterval,
-    data.agentInstructions,
+  manualRebalance: boolean;
+}): Promise<AgentRow> {
+  const { rows } = await db.query(
+    `INSERT INTO agents (user_id, model, status, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
+    [
+      data.userId,
+      data.model,
+      data.status,
+      data.startBalance,
+      data.name,
+      data.risk,
+      data.reviewInterval,
+      data.agentInstructions,
+      data.manualRebalance,
+    ],
   );
+  const id = rows[0].id as string;
+  const params: any[] = [id];
+  const values: string[] = [];
+  data.tokens.forEach((t, i) => {
+    values.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, ${i + 1})`);
+    params.push(t.token, t.minAllocation);
+  });
+  if (values.length)
+    await db.query(
+      `INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ${values.join(
+        ', ',
+      )}`,
+      params,
+    );
+  return (await getAgent(id))!;
 }
 
-
-export function updateAgent(data: {
+export async function updateAgent(data: {
   id: string;
-  userId: string;
   model: string;
   status: string;
   name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
   startBalance: number | null;
-}) {
-  db.prepare(
-    `UPDATE agents SET user_id = ?, model = ?, status = ?, name = ?, token_a = ?, token_b = ?, min_a_allocation = ?, min_b_allocation = ?, risk = ?, review_interval = ?, agent_instructions = ?, start_balance = ? WHERE id = ?`,
-  ).run(
-    data.userId,
-    data.model,
-    data.status,
-    data.name,
-    data.tokenA,
-    data.tokenB,
-    data.minTokenAAllocation,
-    data.minTokenBAllocation,
-    data.risk,
-    data.reviewInterval,
-    data.agentInstructions,
-    data.startBalance,
-    data.id,
+  manualRebalance: boolean;
+}): Promise<void> {
+  await db.query(
+    `UPDATE agents SET model = $1, status = $2, name = $3, risk = $4, review_interval = $5, agent_instructions = $6, start_balance = $7, manual_rebalance = $8 WHERE id = $9`,
+    [
+      data.model,
+      data.status,
+      data.name,
+      data.risk,
+      data.reviewInterval,
+      data.agentInstructions,
+      data.startBalance,
+      data.manualRebalance,
+      data.id,
+    ],
+  );
+  await db.query('DELETE FROM agent_tokens WHERE agent_id = $1', [data.id]);
+  const params: any[] = [data.id];
+  const values: string[] = [];
+  data.tokens.forEach((t, i) => {
+    values.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, ${i + 1})`);
+    params.push(t.token, t.minAllocation);
+  });
+  if (values.length)
+    await db.query(
+      `INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ${values.join(
+        ', ',
+      )}`,
+      params,
+    );
+}
+
+export async function deleteAgent(id: string): Promise<void> {
+  await db.query(
+    'UPDATE agents SET status = $1, start_balance = NULL WHERE id = $2',
+    [AgentStatus.Retired, id],
   );
 }
 
-export function deleteAgent(id: string) {
-  db.prepare('DELETE FROM agents WHERE id = ?').run(id);
+export async function startAgent(
+  id: string,
+  startBalance: number,
+): Promise<void> {
+  await db.query(
+    'UPDATE agents SET status = $1, start_balance = $2 WHERE id = $3',
+    [AgentStatus.Active, startBalance, id],
+  );
 }
 
-export function startAgent(id: string, startBalance: number) {
-  db
-    .prepare('UPDATE agents SET status = ?, start_balance = ? WHERE id = ?')
-    .run('active', startBalance, id);
-}
-
-export function stopAgent(id: string) {
-  db
-    .prepare('UPDATE agents SET status = ?, start_balance = NULL WHERE id = ?')
-    .run('inactive', id);
+export async function stopAgent(id: string): Promise<void> {
+  await db.query(
+    'UPDATE agents SET status = $1, start_balance = NULL WHERE id = $2',
+    [AgentStatus.Inactive, id],
+  );
 }
 
 export interface ActiveAgentRow {
   id: string;
   user_id: string;
   model: string;
-  token_a: string;
-  token_b: string;
-  min_a_allocation: number;
-  min_b_allocation: number;
+  tokens: AgentTokenRow[];
   risk: string;
   review_interval: string;
   agent_instructions: string;
   ai_api_key_enc: string;
+  manual_rebalance: boolean;
 }
 
-export function getActiveAgents(options?: {
+export async function getActiveAgents(options?: {
   agentId?: string;
   interval?: string;
-}): ActiveAgentRow[] {
-  let sql = `SELECT a.id, a.user_id, a.model,
-                      a.token_a, a.token_b,
-                      a.min_a_allocation, a.min_b_allocation,
+}): Promise<ActiveAgentRow[]> {
+  const sql = `SELECT a.id, a.user_id, a.model,
+                      COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
+                               FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
-                      u.ai_api_key_enc
+                      ak.api_key_enc AS ai_api_key_enc, a.manual_rebalance
                  FROM agents a
-                 JOIN users u ON u.id = a.user_id
-                WHERE a.status = 'active'`;
-  const params: unknown[] = [];
-  if (options?.agentId) {
-    sql += ' AND a.id = ?';
-    params.push(options.agentId);
-  }
-  if (options?.interval) {
-    sql += ' AND a.review_interval = ?';
-    params.push(options.interval);
-  }
-  return db.prepare(sql).all(...params) as ActiveAgentRow[];
+                 LEFT JOIN agent_tokens t ON t.agent_id = a.id
+                 LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
+                WHERE a.status = 'active'
+                  AND ($1::bigint IS NULL OR a.id = $1)
+                  AND ($2::text IS NULL OR a.review_interval = $2)
+             GROUP BY a.id, ak.api_key_enc`;
+  const { rows } = await db.query(sql, [
+    options?.agentId ?? null,
+    options?.interval ?? null,
+  ]);
+  return rows as ActiveAgentRow[];
+}
+
+export async function getActiveAgentsByUser(
+  userId: string,
+): Promise<ActiveAgentRow[]> {
+  const sql = `SELECT a.id, a.user_id, a.model,
+                      COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
+                               FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
+                      a.risk, a.review_interval, a.agent_instructions,
+                      ak.api_key_enc AS ai_api_key_enc, a.manual_rebalance
+                 FROM agents a
+                 LEFT JOIN agent_tokens t ON t.agent_id = a.id
+                 LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
+                WHERE a.status = 'active' AND a.user_id = $1
+             GROUP BY a.id, ak.api_key_enc`;
+  const { rows } = await db.query(sql, [userId]);
+  return rows as ActiveAgentRow[];
+}
+
+export async function deactivateAgentsByUser(
+  userId: string,
+): Promise<void> {
+  await db.query(
+    `UPDATE agents SET status = $1, start_balance = NULL WHERE user_id = $2 AND status = $3`,
+    [AgentStatus.Inactive, userId, AgentStatus.Active],
+  );
+}
+
+export async function draftAgentsByUser(userId: string): Promise<void> {
+  await db.query(
+    `UPDATE agents SET status = $1, model = NULL, start_balance = NULL WHERE user_id = $2 AND status = $3`,
+    [AgentStatus.Draft, userId, AgentStatus.Active],
+  );
 }

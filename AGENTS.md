@@ -24,17 +24,22 @@ Only allowlisted token pairs are traded.
 ### Data Model
 Tables:
 - `users` — accounts and encrypted API keys.
-- `executions` — records of performed trades.
+- `limit_order` — records of performed trades.
 - `agents` — user-configured trading bots.
-- `agent_exec_log` — prompt/response history per agent.
-- `agent_exec_result` — outcomes and rebalances.
+- `agent_review_raw_log` — prompt/response history per agent.
+- `agent_review_result` — outcomes and rebalances.
 
 ### Config
 Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
 
 ### Testing
-- `npm test`
-- `npm run build`
+  - IMPORTANT: AGENT MUST RUN LOCAL PG SERVER TO BE ABLE TO RUN TEST!
+  - Check `psql` or `pg_isready` to confirm PostgreSQL is installed; install it if missing.
+  - Start a database if needed:
+    `docker run --rm --name promptswap-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=promptswap_test -p 5432:5432 -d postgres:16`
+  - Run tests with
+    `DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test`.
+  - `npm run build`
 
 ### Guidelines
 - Do not write DB migrations during early development—edit `schema.sql` directly (unless this rule is removed).
@@ -42,6 +47,8 @@ Environment variables: `DATABASE_URL`, `KEY_PASSWORD`, `GOOGLE_CLIENT_ID`.
 - New API endpoints should use the `RATE_LIMITS` presets for rate limiting.
 - Use structured logging and include `userId`, `agentId`, and `execLogId` when available.
 - Break down complex functions into reusable utilities and check for existing helpers before adding new ones.
+- All API errors must use `errorResponse` and return `{ "error": "message" }`. Parse upstream service errors (e.g. Binance) into user-friendly messages.
+- When adding a new dependency, run `npm --prefix backend audit --audit-level=high` to check for vulnerabilities.
 
 ## Frontend
 
@@ -65,3 +72,4 @@ Environment variables:
 ### Guidelines
 - Reuse existing components (forms, tables, etc.) for consistent UI and validation.
 - Break down complex components into smaller pieces and extract helper functions when needed.
+- Surface backend errors by reading the `error` field from responses; avoid relying on alternative shapes.

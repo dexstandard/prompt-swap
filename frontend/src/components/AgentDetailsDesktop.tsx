@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import AgentStatusLabel from './AgentStatusLabel';
 import TokenDisplay from './TokenDisplay';
-import StrategyForm from './StrategyForm';
 import AgentPnl from './AgentPnl';
 import FormattedDate from './ui/FormattedDate';
 import type { Agent } from '../lib/useAgentData';
@@ -12,17 +11,7 @@ interface Props {
 }
 
 export default function AgentDetailsDesktop({ agent }: Props) {
-  const [showStrategy, setShowStrategy] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
-
-  const strategyData = {
-    tokenA: agent.tokenA,
-    tokenB: agent.tokenB,
-    minTokenAAllocation: agent.minTokenAAllocation,
-    minTokenBAllocation: agent.minTokenBAllocation,
-    risk: agent.risk,
-    reviewInterval: agent.reviewInterval,
-  };
 
   return (
     <div>
@@ -37,28 +26,13 @@ export default function AgentDetailsDesktop({ agent }: Props) {
       </p>
       <p className="flex items-center gap-1 mt-2">
         <strong>Tokens:</strong>
-        <TokenDisplay token={agent.tokenA} />
-        <span>/</span>
-        <TokenDisplay token={agent.tokenB} />
+        {agent.tokens.map((t, i) => (
+          <span key={i} className="flex items-center gap-1">
+            {i > 0 && <span>/</span>}
+            <TokenDisplay token={t.token} />
+          </span>
+        ))}
       </p>
-      <div className="mt-2">
-        <div
-          className="flex items-center gap-1 cursor-pointer"
-          onClick={() => setShowStrategy((s) => !s)}
-        >
-          <h2 className="text-l font-bold">Strategy</h2>
-          {showStrategy ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
-        </div>
-        {showStrategy && (
-          <div className="mt-2 max-w-2xl">
-            <StrategyForm data={strategyData} onChange={() => {}} disabled />
-          </div>
-        )}
-      </div>
       <div className="mt-2">
         <div className="flex items-center gap-1">
           <h2 className="text-l font-bold">Trading Instructions</h2>
@@ -81,8 +55,7 @@ export default function AgentDetailsDesktop({ agent }: Props) {
         )}
       </div>
       <AgentPnl
-        tokenA={agent.tokenA}
-        tokenB={agent.tokenB}
+        tokens={agent.tokens.map((t) => t.token)}
         startBalanceUsd={agent.startBalanceUsd}
       />
     </div>

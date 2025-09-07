@@ -13,7 +13,7 @@ export default function WalletBalances({ balances, hasBinanceKey }: Props) {
   if (!user || !hasBinanceKey) {
     return (
       <div>
-        <h3 className="text-xl font-bold mb-2">Binance Balances</h3>
+        <h3 className="text-md font-bold mb-2">Binance Balances</h3>
         <p>Binance Balances - Unavailable</p>
       </div>
     );
@@ -21,7 +21,7 @@ export default function WalletBalances({ balances, hasBinanceKey }: Props) {
 
   return (
     <div>
-      <h3 className="text-xl font-bold mb-2">Binance Balances</h3>
+      <h3 className="text-md font-bold mb-2">Binance Balances</h3>
       {balances.map((b) => (
         <p key={b.token} className="flex items-center gap-1">
           <TokenDisplay token={b.token} className="font-bold" />

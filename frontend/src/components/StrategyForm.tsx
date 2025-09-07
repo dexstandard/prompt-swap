@@ -5,10 +5,7 @@ import FormField from './forms/FormField';
 import { tokens, riskOptions, reviewIntervalOptions } from '../lib/constants';
 
 interface StrategyData {
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
 }
@@ -21,57 +18,82 @@ interface Props {
 
 
 export default function StrategyForm({ data, onChange, disabled = false }: Props) {
-  const {
-    tokenA,
-    tokenB,
-    minTokenAAllocation,
-    minTokenBAllocation,
-    risk,
-    reviewInterval,
-  } = data;
+  const { tokens: tokenData, risk, reviewInterval } = data;
+  const token1 = tokenData[0];
+  const token2 = tokenData[1];
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Token A" htmlFor="tokenA">
+        <FormField label="Token 1" htmlFor="token1">
           <TokenSelect
-            id="tokenA"
-            value={tokenA}
-            onChange={(v) => onChange('tokenA', v)}
-            options={tokens.filter((t) => t.value === tokenA || t.value !== tokenB)}
+            id="token1"
+            value={token1.token}
+            onChange={(v) =>
+              onChange('tokens', [
+                { ...token1, token: v },
+                token2,
+              ])
+            }
+            options={tokens.filter(
+              (t) => t.value === token1.token || t.value !== token2.token,
+            )}
             disabled={disabled}
           />
         </FormField>
-        <FormField label="Token B" htmlFor="tokenB">
+        <FormField label="Token 2" htmlFor="token2">
           <TokenSelect
-            id="tokenB"
-            value={tokenB}
-            onChange={(v) => onChange('tokenB', v)}
-            options={tokens.filter((t) => t.value === tokenB || t.value !== tokenA)}
+            id="token2"
+            value={token2.token}
+            onChange={(v) =>
+              onChange('tokens', [
+                token1,
+                { ...token2, token: v },
+              ])
+            }
+            options={tokens.filter(
+              (t) => t.value === token2.token || t.value !== token1.token,
+            )}
             disabled={disabled}
           />
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label={`Min ${tokenA.toUpperCase()} allocation`} htmlFor="minTokenAAllocation">
+        <FormField
+          label={`Min ${token1.token.toUpperCase()} allocation`}
+          htmlFor="minToken1Allocation"
+        >
           <TextInput
-            id="minTokenAAllocation"
+            id="minToken1Allocation"
             type="number"
             min={0}
             max={95}
-            value={minTokenAAllocation}
-            onChange={(e) => onChange('minTokenAAllocation', Number(e.target.value))}
+            value={token1.minAllocation}
+            onChange={(e) =>
+              onChange('tokens', [
+                { ...token1, minAllocation: Number(e.target.value) },
+                token2,
+              ])
+            }
             disabled={disabled}
           />
         </FormField>
-        <FormField label={`Min ${tokenB.toUpperCase()} allocation`} htmlFor="minTokenBAllocation">
+        <FormField
+          label={`Min ${token2.token.toUpperCase()} allocation`}
+          htmlFor="minToken2Allocation"
+        >
           <TextInput
-            id="minTokenBAllocation"
+            id="minToken2Allocation"
             type="number"
             min={0}
             max={95}
-            value={minTokenBAllocation}
-            onChange={(e) => onChange('minTokenBAllocation', Number(e.target.value))}
+            value={token2.minAllocation}
+            onChange={(e) =>
+              onChange('tokens', [
+                token1,
+                { ...token2, minAllocation: Number(e.target.value) },
+              ])
+            }
             disabled={disabled}
           />
         </FormField>

@@ -14,14 +14,14 @@ import CreateAgentForm from '../components/forms/CreateAgentForm';
 import PriceChart from '../components/forms/PriceChart';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useToast } from '../lib/useToast';
+import Toggle from '../components/ui/Toggle';
 
 interface Agent {
   id: string;
   userId: string;
   model: string;
   status: 'active' | 'inactive' | 'draft';
-  tokenA?: string;
-  tokenB?: string;
+  tokens?: { token: string }[];
   startBalanceUsd?: number | null;
 }
 
@@ -33,8 +33,7 @@ function AgentRow({
   onDelete: (id: string) => void;
 }) {
   const { balance, isLoading } = useAgentBalanceUsd(
-    agent.tokenA,
-    agent.tokenB,
+    agent.tokens ? agent.tokens.map((t) => t.token) : [],
   );
   const balanceText =
     balance === null ? '-' : isLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
@@ -65,10 +64,14 @@ function AgentRow({
   return (
     <tr key={agent.id}>
       <td>
-        {agent.tokenA && agent.tokenB ? (
+        {agent.tokens && agent.tokens.length ? (
           <span className="inline-flex items-center gap-1">
-            <TokenDisplay token={agent.tokenA} /> /
-            <TokenDisplay token={agent.tokenB} />
+            {agent.tokens.map((t, i) => (
+              <span key={t.token} className="flex items-center gap-1">
+                {i > 0 && <span>/</span>}
+                <TokenDisplay token={t.token} />
+              </span>
+            ))}
           </span>
         ) : (
           '-'
@@ -112,8 +115,7 @@ function AgentBlock({
   onDelete: (id: string) => void;
 }) {
   const { balance, isLoading } = useAgentBalanceUsd(
-    agent.tokenA,
-    agent.tokenB,
+    agent.tokens ? agent.tokens.map((t) => t.token) : [],
   );
   const balanceText =
     balance === null ? '-' : isLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
@@ -144,10 +146,14 @@ function AgentBlock({
   return (
     <div className="border rounded p-3 text-sm">
       <div className="mb-2 flex items-center gap-1 font-medium">
-        {agent.tokenA && agent.tokenB ? (
+        {agent.tokens && agent.tokens.length ? (
           <span className="inline-flex items-center gap-1">
-            <TokenDisplay token={agent.tokenA} /> /
-            <TokenDisplay token={agent.tokenB} />
+            {agent.tokens.map((t, i) => (
+              <span key={t.token} className="flex items-center gap-1">
+                {i > 0 && <span>/</span>}
+                <TokenDisplay token={t.token} />
+              </span>
+            ))}
           </span>
         ) : (
           '-'
@@ -198,14 +204,14 @@ function AgentBlock({
 export default function Dashboard() {
   const { user } = useUser();
   const [page, setPage] = useState(1);
-  const [tokens, setTokens] = useState({ tokenA: 'USDT', tokenB: 'SOL' });
+  const [tokens, setTokens] = useState(['USDT', 'SOL']);
   const [onlyActive, setOnlyActive] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  const handleTokensChange = useCallback((a: string, b: string) => {
+  const handleTokensChange = useCallback((newTokens: string[]) => {
     setTokens((prev) =>
-      prev.tokenA === a && prev.tokenB === b ? prev : { tokenA: a, tokenB: b }
+      prev[0] === newTokens[0] && prev[1] === newTokens[1] ? prev : newTokens
     );
   }, []);
 
@@ -262,7 +268,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row gap-3 items-stretch">
         <div className="hidden md:flex flex-1">
           <ErrorBoundary>
-            <PriceChart tokenA={tokens.tokenA} tokenB={tokens.tokenB} />
+            <PriceChart tokens={tokens} />
           </ErrorBoundary>
         </div>
         <CreateAgentForm onTokensChange={handleTokensChange} />
@@ -271,16 +277,11 @@ export default function Dashboard() {
         <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">My Agents</h2>
-            <label className="flex items-center gap-1 text-sm cursor-pointer">
-              <span>Only Active</span>
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={onlyActive}
-                onChange={(e) => setOnlyActive(e.target.checked)}
-              />
-              <div className="ml-2 relative w-10 h-5 bg-gray-200 rounded-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 peer-checked:after:border-white" />
-            </label>
+            <Toggle
+              label="Only Active"
+              checked={onlyActive}
+              onChange={setOnlyActive}
+            />
           </div>
           {!user ? (
             <p>Please log in to view your agents.</p>

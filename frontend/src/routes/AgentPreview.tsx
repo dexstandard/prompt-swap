@@ -8,23 +8,21 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
-import AiApiKeySection from '../components/forms/AiApiKeySection';
-import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
+import ApiKeyProviderSelector from '../components/forms/ApiKeyProviderSelector';
 import WalletBalances from '../components/WalletBalances';
 import { useToast } from '../lib/useToast';
 import Button from '../components/ui/Button';
 import { usePrerequisites } from '../lib/usePrerequisites';
 import AgentStartButton from '../components/AgentStartButton';
+import SelectInput from '../components/forms/SelectInput';
 
 interface AgentPreviewDetails {
   name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
 }
 
 interface AgentDraft extends AgentPreviewDetails {
@@ -48,22 +46,21 @@ export default function AgentPreview({ draft }: Props) {
   useEffect(() => {
     if (data) setAgentData(data);
   }, [data]);
-  const tokens = agentData ? [agentData.tokenA, agentData.tokenB] : [];
+  const tokens = agentData ? agentData.tokens.map((t) => t.token) : [];
   const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
   const [model, setModel] = useState(draft?.model || '');
-  const [hadModel, setHadModel] = useState(false);
+  const [aiProvider, setAiProvider] = useState('openai');
+  const [exchangeProvider, setExchangeProvider] = useState('binance');
   useEffect(() => {
     setModel(draft?.model || '');
-    if (draft?.model) setHadModel(true);
   }, [draft?.model]);
   useEffect(() => {
-    if (!hasOpenAIKey) setModel('');
-  }, [hasOpenAIKey]);
-  useEffect(() => {
-    if (!draft?.model && models.length && !model && !hadModel) {
-      setModel(models[0]);
+    if (!hasOpenAIKey) {
+      setModel('');
+    } else if (!model) {
+      setModel(draft?.model || models[0] || '');
     }
-  }, [models, draft?.model, model, hadModel]);
+  }, [hasOpenAIKey, models, draft?.model, model]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   function WarningSign({ children }: { children: ReactNode }) {
@@ -95,11 +92,15 @@ export default function AgentPreview({ draft }: Props) {
             setAgentData((d) => {
               if (!d) return d;
               const updated = { ...d, [key]: value } as AgentPreviewDetails;
-              const normalized = normalizeAllocations(
-                updated.minTokenAAllocation,
-                updated.minTokenBAllocation,
+              const norm = normalizeAllocations(
+                updated.tokens[0].minAllocation,
+                updated.tokens[1].minAllocation,
               );
-              return { ...updated, ...normalized };
+              const tokens = [
+                { ...updated.tokens[0], minAllocation: norm.minTokenAAllocation },
+                { ...updated.tokens[1], minAllocation: norm.minTokenBAllocation },
+              ];
+              return { ...updated, tokens };
             })
           }
         />
@@ -108,47 +109,67 @@ export default function AgentPreview({ draft }: Props) {
         value={agentData.agentInstructions}
         onChange={(v) => setAgentData((d) => (d ? { ...d, agentInstructions: v } : d))}
       />
-      {user && !hasOpenAIKey && (
-        <div className="mt-4">
-          <AiApiKeySection label="OpenAI API Key" />
-        </div>
-      )}
-      {user && hasOpenAIKey && (models.length || draft?.model) && (
-        <div className="mt-4">
-          <h2 className="text-md font-bold">Model</h2>
-          <select
-            id="model"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="border rounded p-2"
-          >
-            {draft?.model && !models.length ? (
-              <option value={draft.model}>{draft.model}</option>
-            ) : (
-              models.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-      )}
-      {user && !hasBinanceKey && (
-        <div className="mt-4">
-          <ExchangeApiKeySection exchange="binance" label="Binance API Credentials" />
+      {user && (
+        <div className="mt-4 max-w-2xl">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <ApiKeyProviderSelector
+                type="ai"
+                label="AI Provider"
+                value={aiProvider}
+                onChange={setAiProvider}
+              />
+              {hasOpenAIKey && (models.length || draft?.model) && (
+                <div className="mt-2">
+                  <h2 className="text-md font-bold">Model</h2>
+                  <SelectInput
+                    id="model"
+                    value={model}
+                    onChange={setModel}
+                    options={
+                      draft?.model && !models.length
+                        ? [{ value: draft.model, label: draft.model }]
+                        : models.map((m) => ({ value: m, label: m }))
+                    }
+                  />
+                </div>
+              )}
+            </div>
+            <div>
+              <ApiKeyProviderSelector
+                type="exchange"
+                label="Exchange"
+                value={exchangeProvider}
+                onChange={setExchangeProvider}
+              />
+              <div className="mt-2">
+                <WalletBalances balances={balances} hasBinanceKey={hasBinanceKey} />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="mt-4">
-        <WalletBalances balances={balances} hasBinanceKey={hasBinanceKey} />
+      <div className="mt-4 max-w-2xl">
         <WarningSign>
-          Trading agent will use all available balance for {agentData.tokenA.toUpperCase()} and {agentData.tokenB.toUpperCase()} in
+          Trading agent will use all available balance for {agentData.tokens.map((t) => t.token.toUpperCase()).join(' and ')} in
           your Binance Spot wallet. Move excess funds to futures wallet before trading.
           <br />
           <strong>DON'T MOVE FUNDS ON SPOT WALLET DURING TRADING!</strong> It will confuse the trading agent and may
           lead to unexpected results.
         </WarningSign>
+        <label className="mt-4 flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={agentData.manualRebalance}
+            onChange={(e) =>
+              setAgentData((d) =>
+                d ? { ...d, manualRebalance: e.target.checked } : d,
+              )
+            }
+          />
+          <span>Manual Rebalancing</span>
+        </label>
         {!user && (
           <p className="text-sm text-gray-600 mb-2 mt-4">Log in to continue</p>
         )}
@@ -165,13 +186,14 @@ export default function AgentPreview({ draft }: Props) {
                     userId: draft!.userId,
                     model,
                     name: agentData.name,
-                    tokenA: agentData.tokenA,
-                    tokenB: agentData.tokenB,
-                    minTokenAAllocation: agentData.minTokenAAllocation,
-                    minTokenBAllocation: agentData.minTokenBAllocation,
+                    tokens: agentData.tokens.map((t) => ({
+                      token: t.token.toUpperCase(),
+                      minAllocation: t.minAllocation,
+                    })),
                     risk: agentData.risk,
                     reviewInterval: agentData.reviewInterval,
                     agentInstructions: agentData.agentInstructions,
+                    manualRebalance: agentData.manualRebalance,
                     status: 'draft',
                   });
                 } else {
@@ -179,13 +201,14 @@ export default function AgentPreview({ draft }: Props) {
                     userId: user.id,
                     model,
                     name: agentData.name,
-                    tokenA: agentData.tokenA,
-                    tokenB: agentData.tokenB,
-                    minTokenAAllocation: agentData.minTokenAAllocation,
-                    minTokenBAllocation: agentData.minTokenBAllocation,
+                    tokens: agentData.tokens.map((t) => ({
+                      token: t.token.toUpperCase(),
+                      minAllocation: t.minAllocation,
+                    })),
                     risk: agentData.risk,
                     reviewInterval: agentData.reviewInterval,
                     agentInstructions: agentData.agentInstructions,
+                    manualRebalance: agentData.manualRebalance,
                     status: 'draft',
                   });
                 }
@@ -208,9 +231,7 @@ export default function AgentPreview({ draft }: Props) {
             draft={draft}
             agentData={agentData}
             model={model}
-            disabled={
-              !user || !hasOpenAIKey || !hasBinanceKey || (!model && !models.length)
-            }
+            disabled={!user || !hasOpenAIKey || !hasBinanceKey || !model}
           />
         </div>
       </div>

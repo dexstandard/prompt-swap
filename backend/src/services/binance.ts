@@ -1,26 +1,33 @@
-import { db } from '../db/index.js';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import { createHmac } from 'node:crypto';
+import { getBinanceKeyRow } from '../repos/api-keys.js';
 
 type UserCreds = { key: string; secret: string };
 
-function getUserCreds(id: string): UserCreds | null {
-  const row = db
-    .prepare(
-      'SELECT binance_api_key_enc, binance_api_secret_enc FROM users WHERE id = ?'
-    )
-    .get(id) as
-    | { binance_api_key_enc?: string; binance_api_secret_enc?: string }
-    | undefined;
+async function getUserCreds(id: string): Promise<UserCreds | null> {
+  const row = await getBinanceKeyRow(id);
   if (!row?.binance_api_key_enc || !row.binance_api_secret_enc) return null;
   const key = decrypt(row.binance_api_key_enc, env.KEY_PASSWORD);
   const secret = decrypt(row.binance_api_secret_enc, env.KEY_PASSWORD);
   return { key, secret };
 }
 
+export function parseBinanceError(err: unknown): string | null {
+  if (err instanceof Error) {
+    const match = err.message.match(/\{.+\}$/);
+    if (match) {
+      try {
+        const body = JSON.parse(match[0]);
+        if (typeof body.msg === 'string') return body.msg;
+      } catch {}
+    }
+  }
+  return null;
+}
+
 export async function fetchAccount(id: string) {
-  const creds = getUserCreds(id);
+  const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
   const query = `timestamp=${timestamp}`;
@@ -83,7 +90,7 @@ export async function createLimitOrder(
   id: string,
   opts: { symbol: string; side: 'BUY' | 'SELL'; quantity: number; price: number }
 ) {
-  const creds = getUserCreds(id);
+  const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
   const params = new URLSearchParams({
@@ -118,7 +125,7 @@ export async function cancelOrder(
   id: string,
   opts: { symbol: string; orderId: number }
 ) {
-  const creds = getUserCreds(id);
+  const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
   const params = new URLSearchParams({
@@ -140,6 +147,35 @@ export async function cancelOrder(
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`failed to cancel order: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
+export async function cancelOpenOrders(
+  id: string,
+  opts: { symbol: string }
+) {
+  const creds = await getUserCreds(id);
+  if (!creds) return null;
+  const timestamp = Date.now();
+  const params = new URLSearchParams({
+    symbol: opts.symbol.toUpperCase(),
+    timestamp: String(timestamp),
+  });
+  const signature = createHmac('sha256', creds.secret)
+    .update(params.toString())
+    .digest('hex');
+  params.append('signature', signature);
+  const res = await fetch(
+    `https://api.binance.com/api/v3/openOrders?${params.toString()}`,
+    {
+      method: 'DELETE',
+      headers: { 'X-MBX-APIKEY': creds.key },
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`failed to cancel open orders: ${res.status} ${body}`);
   }
   return res.json();
 }
@@ -182,10 +218,10 @@ async function fetchSymbolData(symbol: string) {
   };
 }
 
-export async function fetchPairData(tokenA: string, tokenB: string) {
+export async function fetchPairData(token1: string, token2: string) {
   const symbols = [
-    `${tokenA}${tokenB}`.toUpperCase(),
-    `${tokenB}${tokenA}`.toUpperCase(),
+    `${token1}${token2}`.toUpperCase(),
+    `${token2}${token1}`.toUpperCase(),
   ];
   let lastErr: unknown;
   for (const symbol of symbols) {

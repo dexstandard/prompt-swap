@@ -2,48 +2,113 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
   workflow_dispatch:
 
 jobs:
   build:
+    if: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
     runs-on: ubuntu-latest
+    services: &postgres
+      postgres:
+        image: postgres:16
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: promptswap_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
     steps:
-      - uses: actions/checkout@v4
+      - &checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
 
-      - uses: actions/setup-node@v4
+      - &setup_node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
 
-      - name: Install dependencies
+      - &install_deps
+        name: Install dependencies
         run: |
-          npm --prefix backend ci &
-          npm --prefix frontend ci &
-          wait
+          set -e
+          npm --prefix backend ci & pid1=$!
+          npm --prefix frontend ci & pid2=$!
+          wait $pid1
+          wait $pid2
+        shell: bash
 
-      - name: Lint frontend
-        run: npm --prefix frontend run lint
+      - &audit_deps
+        name: Audit dependencies
+        run: |
+          set -e
+          npm --prefix backend audit --audit-level=high & pid1=$!
+          npm --prefix frontend audit --audit-level=high & pid2=$!
+          wait $pid1
+          wait $pid2
+        shell: bash
 
-      - name: Test backend
-        run: npm test
+      - &lint_test
+        name: Lint frontend and test backend
+        run: |
+          set -e
+          npm --prefix frontend run lint & pid1=$!
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test & pid2=$!
+          wait $pid1
+          wait $pid2
+        shell: bash
 
-      - name: Build backend
-        run: npm run build
+      - &build_app
+        name: Build frontend and backend
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          set -e
+          npm --prefix frontend run build & pid1=$!
+          npm --prefix backend run build & pid2=$!
+          wait $pid1
+          wait $pid2
+        shell: bash
 
-  deploy:
-    needs: build
-    if: github.ref == 'refs/heads/main'
+      - &prune_deps
+        name: Prune production dependencies
+        run: |
+          set -e
+          npm --prefix frontend prune --production & pid1=$!
+          npm --prefix backend prune --production & pid2=$!
+          wait $pid1
+          wait $pid2
+        shell: bash
+
+  build-and-deploy:
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}
     runs-on: ubuntu-latest
-    environment: main
+    environment: ${{ github.ref_name }}
+    services: *postgres
     steps:
-      - uses: actions/checkout@v4
+      - *checkout
 
-      # Export secrets to env, then validate in bash
+      - *setup_node
+
+      - *install_deps
+
+      - *audit_deps
+
+      - *lint_test
+
+      - *build_app
+
+      - *prune_deps
+
       - name: Verify required secrets
         env:
           DO_SSH_HOST: ${{ secrets.DO_SSH_HOST }}
@@ -53,18 +118,20 @@ jobs:
           DOMAIN: ${{ secrets.DOMAIN }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          DB_CONNECTION_STR: ${{ secrets.DB_CONNECTION_STR }}
         run: |
           set -euo pipefail
-          for s in DO_SSH_HOST DO_SSH_USER DO_SSH_PRIVATE_KEY DO_SSH_PASSPHRASE DOMAIN KEY_PASSWORD GOOGLE_CLIENT_ID; do
+          for s in DO_SSH_HOST DO_SSH_USER DO_SSH_PRIVATE_KEY DO_SSH_PASSPHRASE DOMAIN KEY_PASSWORD GOOGLE_CLIENT_ID DB_CONNECTION_STR; do
             v="${!s}"
             if [ -z "$v" ]; then
               echo "Missing secret: $s"
               exit 1
             fi
           done
+        shell: bash
 
       - name: Upload files to droplet
-        uses: appleboy/scp-action@v0.1.4
+        uses: appleboy/scp-action@8a92fcdb1eb4ffbf538b2fa286739760aac8a95b # v0.1.4
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
@@ -74,17 +141,18 @@ jobs:
           target: "~/prompt-swap"
 
       - name: Deploy with Docker Compose
-        uses: appleboy/ssh-action@v1.1.0
+        uses: appleboy/ssh-action@25ce8cbbcb08177468c7ff7ec5cbfa236f9341e1 # v1.1.0
         env:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           DOMAIN: ${{ secrets.DOMAIN }}
+          DB_CONNECTION_STR: ${{ secrets.DB_CONNECTION_STR }}
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
-          envs: KEY_PASSWORD,GOOGLE_CLIENT_ID,DOMAIN
+          envs: KEY_PASSWORD,GOOGLE_CLIENT_ID,DOMAIN,DB_CONNECTION_STR
           script: |
             set -euo pipefail
             cd ~/prompt-swap
@@ -92,7 +160,7 @@ jobs:
             export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
             export DOMAIN="${DOMAIN}"
             export VITE_GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
+            export DB_CONNECTION_STR="${DB_CONNECTION_STR}"
             docker compose up -d --build
-            # Wait for backend health endpoint via Caddy
             timeout 60s bash -c 'until curl -fsS -H "Host: ${DOMAIN}" http://localhost/api/health; do sleep 3; done'
             docker compose ps

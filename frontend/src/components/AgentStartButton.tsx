@@ -10,13 +10,11 @@ import ConfirmDialog from './ui/ConfirmDialog';
 
 interface AgentPreviewDetails {
   name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
 }
 
 interface AgentDraft extends AgentPreviewDetails {
@@ -47,6 +45,10 @@ export default function AgentStartButton({
 
   async function startAgent() {
     if (!user) return;
+    if (!model) {
+      toast.show('Model is required');
+      return;
+    }
     setConfirmOpen(false);
     setIsCreating(true);
     try {
@@ -60,13 +62,14 @@ export default function AgentStartButton({
           userId: user.id,
           model,
           name: agentData.name,
-          tokenA: agentData.tokenA,
-          tokenB: agentData.tokenB,
-          minTokenAAllocation: agentData.minTokenAAllocation,
-          minTokenBAllocation: agentData.minTokenBAllocation,
+          tokens: agentData.tokens.map((t) => ({
+            token: t.token.toUpperCase(),
+            minAllocation: t.minAllocation,
+          })),
           risk: agentData.risk,
           reviewInterval: agentData.reviewInterval,
           agentInstructions: agentData.agentInstructions,
+          manualRebalance: agentData.manualRebalance,
           status: 'active',
         });
         navigate(`/agents/${res.data.id}`);

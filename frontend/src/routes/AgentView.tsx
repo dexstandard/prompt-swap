@@ -14,6 +14,7 @@ import FormattedDate from '../components/ui/FormattedDate';
 import AgentUpdateModal from '../components/AgentUpdateModal';
 import AgentDetailsDesktop from '../components/AgentDetailsDesktop';
 import AgentDetailsMobile from '../components/AgentDetailsMobile';
+import Toggle from '../components/ui/Toggle';
 
 export default function AgentView() {
   const { id } = useParams();
@@ -41,11 +42,12 @@ export default function AgentView() {
   const [showUpdate, setShowUpdate] = useState(false);
 
   const [logPage, setLogPage] = useState(1);
+  const [onlyRebalance, setOnlyRebalance] = useState(false);
   const { data: logData } = useQuery({
-    queryKey: ['agent-log', id, logPage, user?.id],
+    queryKey: ['agent-log', id, logPage, user?.id, onlyRebalance],
     queryFn: async () => {
       const res = await api.get(`/agents/${id}/exec-log`, {
-        params: { page: logPage, pageSize: 10 },
+        params: { page: logPage, pageSize: 10, rebalanceOnly: onlyRebalance },
       });
       return res.data as {
         items: ExecLog[];
@@ -60,8 +62,8 @@ export default function AgentView() {
   if (!data) return <div className="p-4">Loading...</div>;
   if (data.status === 'draft') return <AgentPreview draft={data} />;
 
-  const isActive = data.status === 'active';
-  return (
+    const isActive = data.status === 'active';
+    return (
       <div className="p-4">
         <div className="hidden md:block">
           <AgentDetailsDesktop agent={data} />
@@ -70,38 +72,45 @@ export default function AgentView() {
           <AgentDetailsMobile agent={data} />
         </div>
         {isActive ? (
-            <div className="mt-4 flex gap-2">
-              <Button onClick={() => setShowUpdate(true)}>
-                Update Agent
-              </Button>
-              <Button
-                  disabled={stopMut.isPending}
-                  loading={stopMut.isPending}
-                  onClick={() => stopMut.mutate()}
-              >
-                Stop Agent
-              </Button>
-              <Button
-                  disabled={reviewMut.isPending}
-                  loading={reviewMut.isPending}
-                  onClick={() => id && reviewMut.mutate(id)}
-              >
-                Run Review
-              </Button>
-            </div>
-        ) : (
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => setShowUpdate(true)}>Update Agent</Button>
             <Button
-                className="mt-4"
-                disabled={startMut.isPending}
-                loading={startMut.isPending}
-                onClick={() => startMut.mutate()}
+              disabled={stopMut.isPending}
+              loading={stopMut.isPending}
+              onClick={() => stopMut.mutate()}
+            >
+              Stop Agent
+            </Button>
+            <Button
+              disabled={reviewMut.isPending}
+              loading={reviewMut.isPending}
+              onClick={() => id && reviewMut.mutate(id)}
+            >
+              Run Review
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => setShowUpdate(true)}>Update Agent</Button>
+            <Button
+              disabled={startMut.isPending}
+              loading={startMut.isPending}
+              onClick={() => startMut.mutate()}
             >
               Start Agent
             </Button>
+          </div>
         )}
         {logData && (
             <div className="mt-6">
-              <h2 className="text-xl font-bold mb-2">Execution Log</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-bold">Execution Log</h2>
+                <Toggle
+                  label="Only Rebalances"
+                  checked={onlyRebalance}
+                  onChange={setOnlyRebalance}
+                />
+              </div>
               {logData.items.length === 0 ? (
                   <p>No logs yet.</p>
               ) : (
@@ -124,7 +133,12 @@ export default function AgentView() {
                               <FormattedDate date={log.createdAt} />
                             </td>
                             <td className="w-full">
-                              <ExecLogItem log={log} />
+                              <ExecLogItem
+                                log={log}
+                                agentId={id!}
+                                manualRebalance={data.manualRebalance}
+                                tokens={data.tokens.map((t) => t.token)}
+                              />
                             </td>
                           </tr>
                         ))}
@@ -136,7 +150,12 @@ export default function AgentView() {
                           <div className="text-xs text-gray-500 mb-1">
                             <FormattedDate date={log.createdAt} />
                           </div>
-                          <ExecLogItem log={log} />
+                          <ExecLogItem
+                            log={log}
+                            agentId={id!}
+                            manualRebalance={data.manualRebalance}
+                            tokens={data.tokens.map((t) => t.token)}
+                          />
                         </div>
                       ))}
                     </div>

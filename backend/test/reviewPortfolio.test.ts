@@ -42,6 +42,10 @@ vi.mock('../src/services/indicators.js', () => ({
   fetchTokenIndicators: vi.fn().mockResolvedValue(sampleIndicators),
 }));
 
+vi.mock('../src/services/rebalance.js', () => ({
+  createRebalanceLimitOrder: vi.fn().mockResolvedValue(undefined),
+}));
+
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let reviewPortfolios: (
   log: FastifyBaseLogger,
@@ -52,6 +56,7 @@ let fetchAccount: any;
 let fetchPairData: any;
 let fetchMarketTimeseries: any;
 let fetchTokenIndicators: any;
+let createRebalanceLimitOrder: any;
 
 beforeAll(async () => {
   ({ reviewAgentPortfolio, default: reviewPortfolios } = await import(
@@ -62,32 +67,33 @@ beforeAll(async () => {
     '../src/services/binance.js'
   ));
   ({ fetchTokenIndicators } = await import('../src/services/indicators.js'));
+  ({ createRebalanceLimitOrder } = await import('../src/services/rebalance.js'));
 });
 
 describe('reviewPortfolio', () => {
   it('passes last five responses to callRebalancingAgent', async () => {
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u1', 'enc');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run('a1', 'u1');
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['1']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['1', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent', 'low', '1h', 'inst', false)",
+      ['1', '1'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['1'],
+    );
+    const base = new Date('2023-01-01T00:00:00Z');
     for (let i = 0; i < 6; i++) {
-      db
-        .prepare(
-          'INSERT INTO agent_exec_result (id, agent_id, log, rebalance, new_allocation, short_report, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        )
-        .run(
-          `id${i}`,
-          'a1',
-          'ignore',
-          1,
-          i,
-          `short-${i}`,
-          i,
-        );
+      await db.query(
+        'INSERT INTO agent_review_result (agent_id, log, rebalance, new_allocation, short_report, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
+        ['1', 'ignore', 1, i, `short-${i}`, new Date(base.getTime() + i * 1000)],
+      );
     }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgentPortfolio(log, 'a1');
+    await reviewAgentPortfolio(log, '1');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
     const args = (callRebalancingAgent as any).mock.calls[0];
     const prev = args[1].previous_responses.map((s: string) => JSON.parse(s));
@@ -103,7 +109,7 @@ describe('reviewPortfolio', () => {
     const ethPos = cfg.portfolio.positions.find((p: any) => p.sym === 'ETH');
     expect(btcPos.qty).toBe(1.5);
     expect(ethPos.qty).toBe(2);
-    expect(cfg.policy.floors).toEqual({ BTC: 0.1, ETH: 0.2 });
+    expect(cfg.policy.floorPercents).toEqual({ BTC: 10, ETH: 20 });
     expect(cfg.portfolio.weights.BTC).toBeCloseTo(150 / 350);
     expect(cfg.portfolio.weights.ETH).toBeCloseTo(200 / 350);
     expect(args[1].marketData).toEqual({
@@ -121,21 +127,31 @@ describe('reviewPortfolio', () => {
   it('saves prompt and response to exec log', async () => {
     vi.mocked(callRebalancingAgent).mockClear();
     vi.mocked(callRebalancingAgent).mockResolvedValueOnce('ok');
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u4', 'enc');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent4', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run('a4', 'u4');
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['4']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['4', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent4', 'low', '1h', 'inst', false)",
+      ['4', '4'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['4'],
+    );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgentPortfolio(log, 'a4');
-    const rows = db
-      .prepare('SELECT prompt, response FROM agent_exec_log WHERE agent_id = ?')
-      .all('a4') as { prompt: string | null; response: string | null }[];
-    expect(rows).toHaveLength(1);
-    expect(JSON.parse(rows[0].prompt!)).toMatchObject({
+    await reviewAgentPortfolio(log, '4');
+    const { rows } = await db.query(
+      'SELECT prompt, response FROM agent_review_raw_log WHERE agent_id = $1',
+      ['4'],
+    );
+    const rowsTyped = rows as { prompt: string | null; response: string | null }[];
+    expect(rowsTyped).toHaveLength(1);
+    expect(JSON.parse(rowsTyped[0].prompt!)).toMatchObject({
       instructions: 'inst',
       config: {
-        policy: { floors: { BTC: 0.1, ETH: 0.2 } },
+        policy: { floorPercents: { BTC: 10, ETH: 20 } },
         portfolio: {
           positions: [
             expect.objectContaining({ sym: 'BTC', qty: 1.5 }),
@@ -144,24 +160,105 @@ describe('reviewPortfolio', () => {
         },
       },
     });
-    const respEntry = JSON.parse(rows[0].response!);
+    const respEntry = JSON.parse(rowsTyped[0].response!);
     expect(typeof respEntry).toBe('string');
 
-    const parsedRows = db
-      .prepare(
-        'SELECT log, rebalance, new_allocation, short_report, error FROM agent_exec_result WHERE agent_id = ?',
-      )
-      .all('a4') as {
-        log: string;
-        rebalance: number | null;
-        new_allocation: number | null;
-        short_report: string | null;
-        error: string | null;
-      }[];
+    const { rows: parsedRowsRaw } = await db.query(
+      'SELECT log, rebalance, new_allocation, short_report, error FROM agent_review_result WHERE agent_id = $1',
+      ['4'],
+    );
+    const parsedRows = parsedRowsRaw as {
+      log: string;
+      rebalance: number | null;
+      new_allocation: number | null;
+      short_report: string | null;
+      error: string | null;
+    }[];
     expect(parsedRows).toHaveLength(1);
     expect(parsedRows[0].log).toBe('ok');
-    expect(parsedRows[0].rebalance).toBeNull();
+    expect(parsedRows[0].rebalance).toBe(false);
     expect(parsedRows[0].error).toBeNull();
+  });
+
+  it('calls createRebalanceLimitOrder when rebalance is requested', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(createRebalanceLimitOrder).mockClear();
+    vi.mocked(callRebalancingAgent).mockResolvedValueOnce(
+      JSON.stringify({
+        object: 'response',
+        output: [
+          {
+            id: 'msg_1',
+            content: [
+              {
+                text: JSON.stringify({
+                  result: { rebalance: true, newAllocation: 60, shortReport: 's' },
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['11']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['11', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent11', 'low', '1h', 'inst', false)",
+      ['11', '11'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['11'],
+    );
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewAgentPortfolio(log, '11');
+    expect(createRebalanceLimitOrder).toHaveBeenCalledTimes(1);
+    const args = vi.mocked(createRebalanceLimitOrder).mock.calls[0][0];
+    expect(args.userId).toBe('11');
+    expect(args.tokens).toEqual(['BTC', 'ETH']);
+    expect(args.newAllocation).toBe(60);
+    expect(args.reviewResultId).toBeTruthy();
+  });
+
+  it('skips createRebalanceLimitOrder when manualRebalance is enabled', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(createRebalanceLimitOrder).mockClear();
+    vi.mocked(callRebalancingAgent).mockResolvedValueOnce(
+      JSON.stringify({
+        object: 'response',
+        output: [
+          {
+            id: 'msg_1',
+            content: [
+              {
+                text: JSON.stringify({
+                  result: { rebalance: true, newAllocation: 55, shortReport: 's' },
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['12']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['12', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent12', 'low', '1h', 'inst', TRUE)",
+      ['12', '12'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['12'],
+    );
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewAgentPortfolio(log, '12');
+    expect(createRebalanceLimitOrder).not.toHaveBeenCalled();
   });
 
   it('omits indicators for stablecoins', async () => {
@@ -174,13 +271,21 @@ describe('reviewPortfolio', () => {
         { asset: 'ETH', free: '2', locked: '0' },
       ],
     });
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u5', 'enc');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent5', 'USDT', 'ETH', 10, 20, 'low', '1h', 'inst')`,
-    ).run('a5', 'u5');
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['5']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['5', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent5', 'low', '1h', 'inst', false)",
+      ['5', '5'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'USDT', 10, 1), ($1, 'ETH', 20, 2)",
+      ['5'],
+    );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgentPortfolio(log, 'a5');
+    await reviewAgentPortfolio(log, '5');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
     const args = (callRebalancingAgent as any).mock.calls[0];
     expect(args[1].marketData).toEqual({
@@ -199,25 +304,33 @@ describe('reviewPortfolio', () => {
     vi.mocked(fetchAccount).mockResolvedValueOnce({
       balances: [{ asset: 'BTC', free: '1', locked: '0' }],
     });
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u2', 'enc');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run('a2', 'u2');
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['2']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['2', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent2', 'low', '1h', 'inst', false)",
+      ['2', '2'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['2'],
+    );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgentPortfolio(log, 'a2');
+    await reviewAgentPortfolio(log, '2');
     expect(callRebalancingAgent).not.toHaveBeenCalled();
-    const rows = db
-      .prepare('SELECT response FROM agent_exec_log WHERE agent_id = ?')
-      .all('a2') as { response: string | null }[];
-    expect(rows).toHaveLength(1);
-    const entry = JSON.parse(rows[0].response!);
-    expect(entry.error).toContain('failed to fetch token balances');
-    const parsedRows = db
-      .prepare(
-        'SELECT log, error FROM agent_exec_result WHERE agent_id = ?',
-      )
-      .all('a2') as { log: string; error: string | null }[];
+    const { rows } = await db.query(
+      'SELECT response FROM agent_review_raw_log WHERE agent_id = $1',
+      ['2'],
+    );
+    const rowsTyped = rows as { response: string | null }[];
+    expect(rowsTyped).toHaveLength(0);
+    const { rows: parsedRowsRaw } = await db.query(
+      'SELECT log, error FROM agent_review_result WHERE agent_id = $1',
+      ['2'],
+    );
+    const parsedRows = parsedRowsRaw as { log: string; error: string | null }[];
     expect(parsedRows).toHaveLength(1);
     expect(parsedRows[0].error).toContain('failed to fetch token balances');
   });
@@ -231,25 +344,33 @@ describe('reviewPortfolio', () => {
       ],
     });
     vi.mocked(fetchPairData).mockRejectedValueOnce(new Error('fail'));
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u3', 'enc');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent3', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run('a3', 'u3');
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['3']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['3', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent3', 'low', '1h', 'inst', false)",
+      ['3', '3'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['3'],
+    );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    await reviewAgentPortfolio(log, 'a3');
+    await reviewAgentPortfolio(log, '3');
     expect(callRebalancingAgent).not.toHaveBeenCalled();
-    const rows = db
-      .prepare('SELECT response FROM agent_exec_log WHERE agent_id = ?')
-      .all('a3') as { response: string | null }[];
-    expect(rows).toHaveLength(1);
-    const entry2 = JSON.parse(rows[0].response!);
-    expect(entry2.error).toContain('failed to fetch market data');
-    const parsedRows = db
-      .prepare(
-        'SELECT log, error FROM agent_exec_result WHERE agent_id = ?',
-      )
-      .all('a3') as { log: string; error: string | null }[];
+    const { rows } = await db.query(
+      'SELECT response FROM agent_review_raw_log WHERE agent_id = $1',
+      ['3'],
+    );
+    const rowsTyped = rows as { response: string | null }[];
+    expect(rowsTyped).toHaveLength(0);
+    const { rows: parsedRowsRaw } = await db.query(
+      'SELECT log, error FROM agent_review_result WHERE agent_id = $1',
+      ['3'],
+    );
+    const parsedRows = parsedRowsRaw as { log: string; error: string | null }[];
     expect(parsedRows).toHaveLength(1);
     expect(parsedRows[0].error).toContain('failed to fetch market data');
   });
@@ -259,17 +380,27 @@ describe('reviewPortfolio', () => {
     vi.mocked(fetchPairData).mockClear();
     vi.mocked(fetchTokenIndicators).mockClear();
     vi.mocked(fetchMarketTimeseries).mockClear();
-    db.prepare('DELETE FROM agents').run();
-    db.prepare('DELETE FROM users').run();
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u6', 'enc');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent6', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run('a6', 'u6');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent7', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run('a7', 'u6');
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['6']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['6', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent6', 'low', '1h', 'inst', false)",
+      ['6', '6'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['6'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent7', 'low', '1h', 'inst', false)",
+      ['7', '6'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['7'],
+    );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolios(log, '1h'); // run for all 1h agents
     expect(fetchPairData).toHaveBeenCalledTimes(3);
@@ -280,33 +411,38 @@ describe('reviewPortfolio', () => {
 
   it('runs only agents matching interval', async () => {
     vi.mocked(callRebalancingAgent).mockClear();
-    db.prepare('DELETE FROM agents').run();
-    db.prepare('DELETE FROM users').run();
-    db.prepare('DELETE FROM agent_exec_log').run();
-    db.prepare('DELETE FROM agent_exec_result').run();
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u8', 'enc');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent9', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run('a9', 'u8');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent10', 'BTC', 'ETH', 10, 20, 'low', '3h', 'inst')`
-    ).run('a10', 'u8');
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['8']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['8', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent9', 'low', '1h', 'inst', false)",
+      ['9', '8'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['9'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent10', 'low', '3h', 'inst', false)",
+      ['10', '8'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['10'],
+    );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewPortfolios(log, '3h');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
-    const rows = db
-      .prepare('SELECT agent_id FROM agent_exec_log')
-      .all() as { agent_id: string }[];
-    expect(rows).toHaveLength(1);
-    expect(rows[0].agent_id).toBe('a10');
+    const { rows } = await db.query('SELECT agent_id FROM agent_review_raw_log');
+    const rowsTyped = rows as { agent_id: string }[];
+    expect(rowsTyped).toHaveLength(1);
+    expect(rowsTyped[0].agent_id).toBe('10');
   });
 
   it('prevents concurrent runs for same agent', async () => {
     vi.mocked(callRebalancingAgent).mockClear();
-    db.prepare('DELETE FROM agents').run();
-    db.prepare('DELETE FROM users').run();
     let resolveFn!: (v: unknown) => void;
     vi.mocked(callRebalancingAgent).mockImplementation(
       () =>
@@ -314,17 +450,26 @@ describe('reviewPortfolio', () => {
           resolveFn = resolve;
         }),
     );
-    db.prepare('INSERT INTO users (id, ai_api_key_enc) VALUES (?, ?)').run('u7', 'enc');
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'Agent8', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run('a8', 'u7');
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['7']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['7', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent8', 'low', '1h', 'inst', false)",
+      ['8', '7'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['8'],
+    );
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
-    const p1 = reviewAgentPortfolio(log, 'a8');
+    const p1 = reviewAgentPortfolio(log, '8');
     await new Promise((r) => setImmediate(r));
-    await expect(reviewAgentPortfolio(log, 'a8')).rejects.toThrow(
+    await expect(reviewAgentPortfolio(log, '8')).rejects.toThrow(
       'Agent is already reviewing portfolio',
     );
+    await vi.waitFor(() => expect(callRebalancingAgent).toHaveBeenCalled());
     resolveFn('ok');
     await p1;
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);

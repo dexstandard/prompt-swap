@@ -3,7 +3,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import api from './axios';
 import { useUser } from './useUser';
 
-export function useAgentBalanceUsd(tokenA?: string, tokenB?: string) {
+export function useAgentBalanceUsd(tokens: string[]) {
   const { user } = useUser();
   const { data: binanceKey } = useQuery<string | null>({
     queryKey: ['binance-key', user?.id],
@@ -19,10 +19,10 @@ export function useAgentBalanceUsd(tokenA?: string, tokenB?: string) {
     },
   });
 
-  const enabled = !!user && !!binanceKey && !!tokenA && !!tokenB;
+  const enabled = !!user && !!binanceKey && tokens.length > 0;
   const balanceQueries = useQueries({
     queries: enabled
-      ? [tokenA!, tokenB!].map((token) => ({
+      ? tokens.map((token) => ({
           queryKey: ['binance-balance-usd', user?.id, token.toUpperCase()],
           enabled,
           queryFn: async () => {

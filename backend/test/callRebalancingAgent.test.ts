@@ -10,7 +10,7 @@ describe('callRebalancingAgent structured output', () => {
     const prompt: RebalancePrompt = {
       instructions: 'inst',
       config: {
-        policy: { floors: { USDT: 0.2 } },
+        policy: { floorPercents: { USDT: 20 } },
         portfolio: {
           ts: new Date().toISOString(),
           positions: [

@@ -1,4 +1,4 @@
-import type { Logger } from 'pino';
+import type { FastifyBaseLogger } from 'fastify';
 import {
   getUserApiKeys,
   findIdenticalDraftAgent,
@@ -8,6 +8,7 @@ import {
   errorResponse,
   lengthMessage,
   ERROR_MESSAGES,
+  type ErrorResponse,
 } from './errorMessages.js';
 import { fetchTokensBalanceUsd } from '../services/binance.js';
 import { validateAllocations } from './allocations.js';
@@ -16,76 +17,79 @@ export enum AgentStatus {
   Active = 'active',
   Inactive = 'inactive',
   Draft = 'draft',
+  Retired = 'retired',
 }
 
 export interface AgentInput {
   userId: string;
   model: string;
   name: string;
-  tokenA: string;
-  tokenB: string;
-  minTokenAAllocation: number;
-  minTokenBAllocation: number;
+  tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
   agentInstructions: string;
+  manualRebalance: boolean;
   status: AgentStatus;
 }
 
 export interface ValidationErr {
   code: number;
-  body: unknown;
+  body: ErrorResponse;
 }
 
-export function validateTokenConflicts(
-  log: Logger,
+export async function validateTokenConflicts(
+  log: FastifyBaseLogger,
   userId: string,
-  tokenA: string,
-  tokenB: string,
+  tokens: string[],
   id?: string,
-): ValidationErr | null {
-  const dupRows = findActiveTokenConflicts(userId, tokenA, tokenB, id);
+): Promise<ValidationErr | null> {
+  const dupRows = await findActiveTokenConflicts(userId, tokens, id);
   if (!dupRows.length) return null;
-  const conflicts: { token: string; id: string; name: string }[] = [];
-  for (const row of dupRows) {
-    if (row.token_a === tokenA || row.token_b === tokenA)
-      conflicts.push({ token: tokenA, id: row.id, name: row.name });
-    if (row.token_a === tokenB || row.token_b === tokenB)
-      conflicts.push({ token: tokenB, id: row.id, name: row.name });
-  }
-  const parts = conflicts.map((c) => `${c.token} used by ${c.name} (${c.id})`);
+  const conflicts = dupRows.map((r) => `${r.token} used by ${r.name} (${r.id})`);
+  const parts = conflicts;
   const msg = `token${parts.length > 1 ? 's' : ''} ${parts.join(', ')} already used`;
   log.error('token conflict');
   return { code: 400, body: errorResponse(msg) };
 }
 
-function validateAgentInput(
-  log: Logger,
+async function validateAgentInput(
+  log: FastifyBaseLogger,
   userId: string,
   body: AgentInput,
   id?: string,
-): ValidationErr | null {
+): Promise<ValidationErr | null> {
   if (body.userId !== userId) {
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
   }
-  if (body.model.length > 50) {
+  if (body.tokens.length !== 2) {
+    log.error('invalid tokens');
+    return { code: 400, body: errorResponse('exactly two tokens required') };
+  }
+  if (body.status === AgentStatus.Retired) {
+    log.error('invalid status');
+    return { code: 400, body: errorResponse('invalid status') };
+  }
+  if (!body.model) {
+    if (body.status !== AgentStatus.Draft) {
+      log.error('model required');
+      return { code: 400, body: errorResponse('model required') };
+    }
+  } else if (body.model.length > 50) {
     log.error('model too long');
     return { code: 400, body: errorResponse(lengthMessage('model', 50)) };
   }
   if (body.status === AgentStatus.Draft) {
-    const dupDraft = findIdenticalDraftAgent(
+    const dupDraft = await findIdenticalDraftAgent(
       {
         userId: body.userId,
         model: body.model,
         name: body.name,
-        tokenA: body.tokenA,
-        tokenB: body.tokenB,
-        minTokenAAllocation: body.minTokenAAllocation,
-        minTokenBAllocation: body.minTokenBAllocation,
+        tokens: body.tokens,
         risk: body.risk,
         reviewInterval: body.reviewInterval,
         agentInstructions: body.agentInstructions,
+        manualRebalance: body.manualRebalance,
       },
       id,
     );
@@ -99,11 +103,10 @@ function validateAgentInput(
       };
     }
   } else {
-    const conflict = validateTokenConflicts(
+    const conflict = await validateTokenConflicts(
       log,
       body.userId,
-      body.tokenA,
-      body.tokenB,
+      body.tokens.map((t) => t.token),
       id,
     );
     if (conflict) return conflict;
@@ -111,11 +114,11 @@ function validateAgentInput(
   return null;
 }
 
-export function ensureApiKeys(
-  log: Logger,
+export async function ensureApiKeys(
+  log: FastifyBaseLogger,
   userId: string,
-): ValidationErr | null {
-  const userRow = getUserApiKeys(userId);
+): Promise<ValidationErr | null> {
+  const userRow = await getUserApiKeys(userId);
   if (
     !userRow?.ai_api_key_enc ||
     !userRow.binance_api_key_enc ||
@@ -128,13 +131,12 @@ export function ensureApiKeys(
 }
 
 export async function getStartBalance(
-  log: Logger,
+  log: FastifyBaseLogger,
   userId: string,
-  tokenA: string,
-  tokenB: string,
+  tokens: string[],
 ): Promise<number | ValidationErr> {
   try {
-    const startBalance = await fetchTokensBalanceUsd(userId, [tokenA, tokenB]);
+    const startBalance = await fetchTokensBalanceUsd(userId, tokens);
     if (startBalance === null) {
       log.error('failed to fetch balance');
       return { code: 500, body: errorResponse('failed to fetch balance') };
@@ -147,33 +149,29 @@ export async function getStartBalance(
 }
 
 export async function prepareAgentForUpsert(
-  log: Logger,
+  log: FastifyBaseLogger,
   userId: string,
   body: AgentInput,
   id?: string,
 ): Promise<{ body: AgentInput; startBalance: number | null } | ValidationErr> {
-  let norm;
   try {
-    norm = validateAllocations(
-      body.minTokenAAllocation,
-      body.minTokenBAllocation,
-    );
+    body.manualRebalance = !!body.manualRebalance;
+    body.tokens = validateAllocations(body.tokens);
   } catch {
     log.error('invalid allocations');
-    return {
-      code: 400,
-      body: errorResponse('invalid minimum allocations'),
-    };
+    return { code: 400, body: errorResponse('invalid minimum allocations') };
   }
-  body.minTokenAAllocation = norm.minTokenAAllocation;
-  body.minTokenBAllocation = norm.minTokenBAllocation;
-  const err = validateAgentInput(log, userId, body, id);
+  const err = await validateAgentInput(log, userId, body, id);
   if (err) return err;
   let startBalance: number | null = null;
   if (body.status === AgentStatus.Active) {
-    const keyErr = ensureApiKeys(log, body.userId);
+    const keyErr = await ensureApiKeys(log, body.userId);
     if (keyErr) return keyErr;
-    const bal = await getStartBalance(log, userId, body.tokenA, body.tokenB);
+    const bal = await getStartBalance(
+      log,
+      userId,
+      body.tokens.map((t) => t.token),
+    );
     if (typeof bal === 'number') startBalance = bal;
     else return bal;
   }

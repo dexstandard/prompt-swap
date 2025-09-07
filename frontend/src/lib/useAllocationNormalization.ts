@@ -1,15 +1,12 @@
 import {useEffect} from 'react';
 import {normalizeAllocations} from './allocations';
 
-type SetAllocationValue = (
-    field: 'minTokenAAllocation' | 'minTokenBAllocation',
-    value: number
-) => void;
+type SetAllocationValue = (index: 0 | 1, value: number) => void;
 
 export default function useAllocationNormalization(
     minTokenAAllocation: number,
     minTokenBAllocation: number,
-    setValue: SetAllocationValue
+    setValue: SetAllocationValue,
 ) {
     useEffect(() => {
         const currentMinA = Number.isFinite(minTokenAAllocation)
@@ -23,8 +20,8 @@ export default function useAllocationNormalization(
             normalized.minTokenAAllocation !== currentMinA ||
             normalized.minTokenBAllocation !== currentMinB
         ) {
-            setValue('minTokenAAllocation', normalized.minTokenAAllocation);
-            setValue('minTokenBAllocation', normalized.minTokenBAllocation);
+            setValue(0, normalized.minTokenAAllocation);
+            setValue(1, normalized.minTokenBAllocation);
         }
     }, [minTokenAAllocation, minTokenBAllocation, setValue]);
 }

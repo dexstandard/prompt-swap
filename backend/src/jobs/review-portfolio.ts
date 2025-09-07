@@ -1,16 +1,15 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { randomUUID } from 'node:crypto';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
 import {
   getActiveAgents,
   type ActiveAgentRow,
 } from '../repos/agents.js';
-import { insertExecLog } from '../repos/agent-exec-log.js';
+import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import {
-  insertExecResult,
-  getRecentExecResults,
-} from '../repos/agent-exec-result.js';
+  insertReviewResult,
+  getRecentReviewResults,
+} from '../repos/agent-review-result.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
 import { callRebalancingAgent } from '../util/ai.js';
 import {
@@ -18,6 +17,7 @@ import {
   fetchPairData,
   fetchMarketTimeseries,
 } from '../services/binance.js';
+import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import {
   fetchTokenIndicators,
   type TokenIndicators,
@@ -32,6 +32,10 @@ type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
  */
 const runningAgents = new Set<string>();
 
+export function removeAgentFromSchedule(id: string) {
+  runningAgents.delete(id);
+}
+
 type PromptCache = {
   pairData: Map<string, { currentPrice: number }>;
   indicators: Map<string, TokenIndicators>;
@@ -42,7 +46,7 @@ export async function reviewAgentPortfolio(
   log: FastifyBaseLogger,
   agentId: string,
 ): Promise<void> {
-  const agents = getActiveAgents({ agentId });
+  const agents = await getActiveAgents({ agentId });
   const { toRun, skipped } = filterRunningAgents(agents);
   if (skipped.length) throw new Error('Agent is already reviewing portfolio');
   await runAgents(log, toRun);
@@ -52,7 +56,7 @@ export default async function reviewPortfolios(
   log: FastifyBaseLogger,
   interval: string,
 ): Promise<void> {
-  const agents = getActiveAgents({ interval });
+  const agents = await getActiveAgents({ interval });
   const { toRun } = filterRunningAgents(agents);
   if (!toRun.length) return;
   await runAgents(log, toRun);
@@ -71,8 +75,8 @@ async function runAgents(
   const prepared = await prepareAgents(agents, log, cache);
 
   await Promise.all(
-    prepared.map(({ row, prompt, key, log: lg, execLogId }) =>
-      executeAgent(row, prompt, key, lg, execLogId).finally(() => {
+    prepared.map(({ row, prompt, key, log: lg }) =>
+      executeAgent(row, prompt, key, lg).finally(() => {
         runningAgents.delete(row.id);
       }),
     ),
@@ -102,38 +106,35 @@ async function prepareAgents(
     prompt: RebalancePrompt;
     key: string;
     log: FastifyBaseLogger;
-    execLogId: string;
   }[] = [];
 
   for (const row of rows) {
-    const execLogId = randomUUID();
     const log = parentLog.child({
       userId: row.user_id,
       agentId: row.id,
-      execLogId,
     });
 
     const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
 
-    const balances = await fetchBalances(row, log, execLogId);
+    const balances = await fetchBalances(row, log);
     if (!balances) {
       runningAgents.delete(row.id);
       continue;
     }
 
-    const prompt = await buildPrompt(row, balances, log, execLogId, cache);
+    const prompt = await buildPrompt(row, balances, log, cache);
     if (!prompt) {
       runningAgents.delete(row.id);
       continue;
     }
 
-    const prevRows = getRecentExecResults(row.id, 5);
-    prompt.previous_responses = prevRows.map((r) => {
+    const prevRows = await getRecentReviewResults(row.id, 5);
+    prompt.previous_responses = prevRows.map((r: any) => {
       const str = JSON.stringify(r);
       return str === '{}' ? '' : str;
     });
 
-    prepared.push({ row, prompt, key, log, execLogId });
+    prepared.push({ row, prompt, key, log });
   }
 
   return prepared;
@@ -142,68 +143,68 @@ async function prepareAgents(
 async function fetchBalances(
   row: ActiveAgentRow,
   log: FastifyBaseLogger,
-  execLogId: string,
-): Promise<{ tokenABalance: number; tokenBBalance: number } | undefined> {
-  let tokenABalance: number | undefined;
-  let tokenBBalance: number | undefined;
+): Promise<{ token1Balance: number; token2Balance: number } | undefined> {
+  const token1 = row.tokens[0].token;
+  const token2 = row.tokens[1].token;
+  let token1Balance: number | undefined;
+  let token2Balance: number | undefined;
   try {
     const account = await fetchAccount(row.user_id);
     if (account) {
-      const balA = account.balances.find((b) => b.asset === row.token_a);
-      if (balA) tokenABalance = Number(balA.free) + Number(balA.locked);
-      const balB = account.balances.find((b) => b.asset === row.token_b);
-      if (balB) tokenBBalance = Number(balB.free) + Number(balB.locked);
+      const bal1 = account.balances.find((b) => b.asset === token1);
+      if (bal1) token1Balance = Number(bal1.free) + Number(bal1.locked);
+      const bal2 = account.balances.find((b) => b.asset === token2);
+      if (bal2) token2Balance = Number(bal2.free) + Number(bal2.locked);
     }
   } catch (err) {
     log.error({ err }, 'failed to fetch balance');
   }
-  if (tokenABalance === undefined || tokenBBalance === undefined) {
+  if (token1Balance === undefined || token2Balance === undefined) {
     const msg = 'failed to fetch token balances';
-    saveFailure(row, execLogId, msg);
+    await saveFailure(row, msg);
     log.error({ err: msg }, 'agent run failed');
     return undefined;
   }
-  return { tokenABalance, tokenBBalance };
+  return { token1Balance, token2Balance };
 }
 
 async function buildPrompt(
   row: ActiveAgentRow,
-  balances: { tokenABalance: number; tokenBBalance: number },
+  balances: { token1Balance: number; token2Balance: number },
   log: FastifyBaseLogger,
-  execLogId: string,
   cache: PromptCache,
 ): Promise<RebalancePrompt | undefined> {
   try {
     const {
       pairData,
-      priceA,
-      priceB,
-      indA,
-      indB,
-      tsA,
-      tsB,
+      price1,
+      price2,
+      ind1,
+      ind2,
+      ts1,
+      ts2,
     } = await fetchPromptData(row, cache);
-    const { floors, positions, weights } = computePortfolioValues(
+    const { floorPercents, positions, weights } = computePortfolioValues(
       row,
       balances,
-      priceA,
-      priceB,
+      price1,
+      price2,
     );
     return {
       instructions: row.agent_instructions,
       config: {
-        policy: { floors },
+        policy: { floorPercents },
         portfolio: {
           ts: new Date().toISOString(),
           positions,
           weights,
         },
       },
-      marketData: assembleMarketData(row, pairData, indA, indB, tsA, tsB),
+      marketData: assembleMarketData(row, pairData, ind1, ind2, ts1, ts2),
     };
   } catch (err) {
     const msg = 'failed to fetch market data';
-    saveFailure(row, execLogId, msg);
+    await saveFailure(row, msg);
     log.error({ err }, 'agent run failed');
     return undefined;
   }
@@ -214,17 +215,19 @@ async function fetchPromptData(
   cache: PromptCache,
 ): Promise<{
   pairData: { currentPrice: number };
-  priceA: number;
-  priceB: number;
-  indA?: TokenIndicators;
-  indB?: TokenIndicators;
-  tsA?: MarketTimeseries;
-  tsB?: MarketTimeseries;
+  price1: number;
+  price2: number;
+  ind1?: TokenIndicators;
+  ind2?: TokenIndicators;
+  ts1?: MarketTimeseries;
+  ts2?: MarketTimeseries;
 }> {
-  const pairKey = `${row.token_a}-${row.token_b}`;
+  const token1 = row.tokens[0].token;
+  const token2 = row.tokens[1].token;
+  const pairKey = `${token1}-${token2}`;
   let pairData = cache.pairData.get(pairKey);
   if (!pairData) {
-    pairData = await fetchPairData(row.token_a, row.token_b);
+    pairData = await fetchPairData(token1, token2);
     cache.pairData.set(pairKey, pairData);
   }
 
@@ -256,83 +259,89 @@ async function fetchPromptData(
     return ts;
   }
 
-  const [priceAData, priceBData, indA, indB, tsA, tsB] = await Promise.all([
-    getPrice(row.token_a),
-    getPrice(row.token_b),
-    getIndicators(row.token_a),
-    getIndicators(row.token_b),
-    getTimeseries(row.token_a),
-    getTimeseries(row.token_b),
+  const [price1Data, price2Data, ind1, ind2, ts1, ts2] = await Promise.all([
+    getPrice(token1),
+    getPrice(token2),
+    getIndicators(token1),
+    getIndicators(token2),
+    getTimeseries(token1),
+    getTimeseries(token2),
   ]);
 
   return {
     pairData,
-    priceA: priceAData.currentPrice,
-    priceB: priceBData.currentPrice,
-    indA,
-    indB,
-    tsA,
-    tsB,
+    price1: price1Data.currentPrice,
+    price2: price2Data.currentPrice,
+    ind1,
+    ind2,
+    ts1,
+    ts2,
   };
 }
 
 function computePortfolioValues(
   row: ActiveAgentRow,
-  balances: { tokenABalance: number; tokenBBalance: number },
-  priceA: number,
-  priceB: number,
+  balances: { token1Balance: number; token2Balance: number },
+  price1: number,
+  price2: number,
 ) {
-  const valueA = balances.tokenABalance * priceA;
-  const valueB = balances.tokenBBalance * priceB;
-  const totalValue = valueA + valueB;
-  const floors: Record<string, number> = {
-    [row.token_a]: row.min_a_allocation / 100,
-    [row.token_b]: row.min_b_allocation / 100,
+  const token1 = row.tokens[0].token;
+  const token2 = row.tokens[1].token;
+  const min1 = row.tokens[0].min_allocation;
+  const min2 = row.tokens[1].min_allocation;
+  const value1 = balances.token1Balance * price1;
+  const value2 = balances.token2Balance * price2;
+  const totalValue = value1 + value2;
+  const floorPercents: Record<string, number> = {
+    [token1]: min1,
+    [token2]: min2,
   };
   const positions = [
     {
-      sym: row.token_a,
-      qty: balances.tokenABalance,
-      price_usdt: priceA,
-      value_usdt: valueA,
+      sym: token1,
+      qty: balances.token1Balance,
+      price_usdt: price1,
+      value_usdt: value1,
     },
     {
-      sym: row.token_b,
-      qty: balances.tokenBBalance,
-      price_usdt: priceB,
-      value_usdt: valueB,
+      sym: token2,
+      qty: balances.token2Balance,
+      price_usdt: price2,
+      value_usdt: value2,
     },
   ];
   const weights: Record<string, number> = {
-    [row.token_a]: totalValue ? valueA / totalValue : 0,
-    [row.token_b]: totalValue ? valueB / totalValue : 0,
+    [token1]: totalValue ? value1 / totalValue : 0,
+    [token2]: totalValue ? value2 / totalValue : 0,
   };
-  return { floors, positions, weights };
+  return { floorPercents, positions, weights };
 }
 
 function assembleMarketData(
   row: ActiveAgentRow,
   pairData: { currentPrice: number },
-  indA?: TokenIndicators,
-  indB?: TokenIndicators,
-  tsA?: MarketTimeseries,
-  tsB?: MarketTimeseries,
+  ind1?: TokenIndicators,
+  ind2?: TokenIndicators,
+  ts1?: MarketTimeseries,
+  ts2?: MarketTimeseries,
 ) {
+  const token1 = row.tokens[0].token;
+  const token2 = row.tokens[1].token;
   return {
     currentPrice: pairData.currentPrice,
-    ...(indA || indB
+    ...(ind1 || ind2
       ? {
           indicators: {
-            ...(indA ? { [row.token_a]: indA } : {}),
-            ...(indB ? { [row.token_b]: indB } : {}),
+            ...(ind1 ? { [token1]: ind1 } : {}),
+            ...(ind2 ? { [token2]: ind2 } : {}),
           },
         }
       : {}),
-    ...(tsA || tsB
+    ...(ts1 || ts2
       ? {
           market_timeseries: {
-            ...(tsA ? { [`${row.token_a}USDT`]: tsA } : {}),
-            ...(tsB ? { [`${row.token_b}USDT`]: tsB } : {}),
+            ...(ts1 ? { [`${token1}USDT`]: ts1 } : {}),
+            ...(ts2 ? { [`${token2}USDT`]: ts2 } : {}),
           },
         }
       : {}),
@@ -344,21 +353,16 @@ async function executeAgent(
   prompt: RebalancePrompt,
   key: string,
   log: FastifyBaseLogger,
-  execLogId: string,
 ) {
   try {
     const text = await callRebalancingAgent(row.model, prompt, key);
-    const createdAt = Date.now();
-    insertExecLog({
-      id: execLogId,
+    const logId = await insertReviewRawLog({
       agentId: row.id,
       prompt,
       response: text,
-      createdAt,
     });
     const parsed = parseExecLog(text);
-    insertExecResult({
-      id: execLogId,
+    const resultId = await insertReviewResult({
       agentId: row.id,
       log: parsed.text,
       ...(parsed.response
@@ -369,32 +373,42 @@ async function executeAgent(
           }
         : {}),
       ...(parsed.error ? { error: parsed.error } : {}),
-      createdAt,
     });
+    if (
+      !row.manual_rebalance &&
+      parsed.response?.rebalance &&
+      parsed.response.newAllocation !== undefined
+    ) {
+      await createRebalanceLimitOrder({
+        userId: row.user_id,
+        tokens: row.tokens.map((t) => t.token),
+        positions: prompt.config.portfolio.positions,
+        newAllocation: parsed.response.newAllocation,
+        log,
+        reviewResultId: resultId,
+      });
+    }
     log.info('agent run complete');
   } catch (err) {
-    saveFailure(row, execLogId, String(err), prompt);
+    await saveFailure(row, String(err), prompt);
     log.error({ err }, 'agent run failed');
   }
 }
 
-function saveFailure(
+async function saveFailure(
   row: ActiveAgentRow,
-  execLogId: string,
   message: string,
   prompt?: RebalancePrompt,
 ) {
-  const createdAt = Date.now();
-  insertExecLog({
-    id: execLogId,
-    agentId: row.id,
-    ...(prompt ? { prompt } : {}),
-    response: { error: message },
-    createdAt,
-  });
+  if (prompt) {
+    await insertReviewRawLog({
+      agentId: row.id,
+      prompt,
+      response: { error: message },
+    });
+  }
   const parsed = parseExecLog({ error: message });
-  insertExecResult({
-    id: execLogId,
+  await insertReviewResult({
     agentId: row.id,
     log: parsed.text,
     ...(parsed.response
@@ -405,7 +419,6 @@ function saveFailure(
         }
       : {}),
     ...(parsed.error ? { error: parsed.error } : {}),
-    createdAt,
   });
 }
 

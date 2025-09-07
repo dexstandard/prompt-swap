@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { encrypt, decrypt } from './crypto.js';
 import { env } from './env.js';
+import { errorResponse, type ErrorResponse } from './errorMessages.js';
 
 export enum ApiKeyType {
   Ai = 'ai',
@@ -50,22 +51,22 @@ export function decryptKey(value: string) {
 
 export interface ValidationErr {
   code: number;
-  body: unknown;
+  body: ErrorResponse;
 }
 
 export function ensureUser(row: unknown): ValidationErr | null {
-  if (!row) return { code: 404, body: { error: 'user not found' } };
+  if (!row) return { code: 404, body: errorResponse('user not found') };
   return null;
 }
 
 export function ensureKeyAbsent(row: any, fields: string[]): ValidationErr | null {
   if (fields.some((f) => row?.[f]))
-    return { code: 400, body: { error: 'key exists' } };
+    return { code: 400, body: errorResponse('key exists') };
   return null;
 }
 
 export function ensureKeyPresent(row: any, fields: string[]): ValidationErr | null {
   if (fields.some((f) => !row?.[f]))
-    return { code: 404, body: { error: 'not found' } };
+    return { code: 404, body: errorResponse('not found') };
   return null;
 }

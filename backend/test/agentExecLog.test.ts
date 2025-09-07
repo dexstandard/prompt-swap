@@ -1,34 +1,92 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
 import { parseExecLog } from '../src/util/parse-exec-log.js';
-import { insertExecResult } from '../src/repos/agent-exec-result.js';
-
-function addUser(id: string) {
-  db.prepare('INSERT INTO users (id) VALUES (?)').run(id);
-}
+import { insertReviewResult } from '../src/repos/agent-review-result.js';
+import { insertUser } from './repos/users.js';
+import { insertAgent } from './repos/agents.js';
+import { insertReviewRawLog } from './repos/agent-review-raw-log.js';
+import { db } from '../src/db/index.js';
+import * as binance from '../src/services/binance.js';
+import { authCookies } from './helpers.js';
 
 describe('agent exec log routes', () => {
+  it('returns orders for log and enforces ownership', async () => {
+    const app = await buildServer();
+    const user1Id = await insertUser('10');
+    const user2Id = await insertUser('11');
+    const agent = await insertAgent({
+      userId: user1Id,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    await db.query(
+      'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
+      [
+        user1Id,
+        JSON.stringify({ side: 'BUY', quantity: 1, price: 100 }),
+        'open',
+        reviewResultId,
+        '1',
+      ],
+    );
+    let res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders`,
+      cookies: authCookies(user1Id),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      orders: [
+        { side: 'BUY', quantity: 1, price: 100, status: 'open' },
+      ],
+    });
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders`,
+      cookies: authCookies(user2Id),
+    });
+    expect(res.statusCode).toBe(403);
+    await app.close();
+  });
   it('returns paginated logs and enforces ownership', async () => {
     const app = await buildServer();
-    addUser('u1');
-    addUser('u2');
+    const user1Id = await insertUser('1');
+    const user2Id = await insertUser('2');
 
-    const agentId = 'a1';
-    db.prepare(
-        `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-         VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run(agentId, 'u1');
+    const agent = await insertAgent({
+      userId: user1Id,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const agentId = agent.id;
 
     for (let i = 0; i < 3; i++) {
-      db.prepare(
-        'INSERT INTO agent_exec_log (id, agent_id, response, created_at) VALUES (?, ?, ?, ?)',
-      ).run(`log${i}`, agentId, JSON.stringify(`log-${i}`), i);
+      await insertReviewRawLog({ agentId, prompt: `prompt-${i}`, response: `log-${i}` });
       const parsed = parseExecLog(`log-${i}`);
-      insertExecResult({
-        id: `log${i}`,
+      await insertReviewResult({
         agentId,
         log: parsed.text,
         ...(parsed.response
@@ -39,14 +97,13 @@ describe('agent exec log routes', () => {
             }
           : {}),
         ...(parsed.error ? { error: parsed.error } : {}),
-        createdAt: i,
       });
     }
 
     let res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=2`,
-      headers: { 'x-user-id': 'u1' },
+      cookies: authCookies(user1Id),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ total: 3, page: 1, pageSize: 2 });
@@ -55,7 +112,7 @@ describe('agent exec log routes', () => {
     res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=2`,
-      headers: { 'x-user-id': 'u2' },
+      cookies: authCookies(user2Id),
     });
     expect(res.statusCode).toBe(403);
 
@@ -64,25 +121,33 @@ describe('agent exec log routes', () => {
 
   it('parses OpenAI response content JSON into {response}', async () => {
     const app = await buildServer();
-    addUser('u3');
+    const userId = await insertUser('3');
 
-    const agentId = 'a2';
-    db.prepare(
-        `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-         VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run(agentId, 'u3');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const agentId = agent.id;
 
     const aiLog = readFileSync(
-        join(__dirname, 'fixtures/real-openai-log.json'),
-        'utf8',
+      join(__dirname, 'fixtures/real-openai-log.json'),
+      'utf8',
     );
 
-    db.prepare(
-      'INSERT INTO agent_exec_log (id, agent_id, response, created_at) VALUES (?, ?, ?, ?)',
-    ).run('log-new', agentId, aiLog, 0);
+      await insertReviewRawLog({ agentId, prompt: 'p', response: aiLog });
     const parsedAi = parseExecLog(aiLog);
-    insertExecResult({
-      id: 'log-new',
+    await insertReviewResult({
       agentId,
       log: parsedAi.text,
       ...(parsedAi.response
@@ -93,24 +158,21 @@ describe('agent exec log routes', () => {
           }
         : {}),
       ...(parsedAi.error ? { error: parsedAi.error } : {}),
-      createdAt: 0,
     });
 
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
-      headers: { 'x-user-id': 'u3' },
+      cookies: authCookies(userId),
     });
 
     expect(res.statusCode).toBe(200);
     const body = res.json();
 
-    // The parser should put the assistant message's JSON string into `log`
     expect(typeof body.items[0].log).toBe('string');
     expect(body.items[0].log).toContain('"result"');
     expect(body.items[0].log).toContain('"rebalance"');
 
-    // And it should normalize `response`
     expect(body.items[0].response).toMatchObject({
       rebalance: true,
       newAllocation: 70, // matches the provided fixture
@@ -123,19 +185,27 @@ describe('agent exec log routes', () => {
 
   it('handles exec log entries with prompt wrapper', async () => {
     const app = await buildServer();
-    addUser('u5');
-    const agentId = 'a5';
-    db.prepare(
-        `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-         VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run(agentId, 'u5');
+    const userId = await insertUser('5');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const agentId = agent.id;
     const entry = JSON.stringify({ prompt: { instructions: 'inst' }, response: 'ok' });
-    db.prepare(
-      'INSERT INTO agent_exec_log (id, agent_id, response, created_at) VALUES (?, ?, ?, ?)',
-    ).run('logp', agentId, entry, 0);
+    await insertReviewRawLog({ agentId, prompt: 'p', response: entry });
     const parsedP = parseExecLog(entry);
-    insertExecResult({
-      id: 'logp',
+    await insertReviewResult({
       agentId,
       log: parsedP.text,
       ...(parsedP.response
@@ -146,16 +216,256 @@ describe('agent exec log routes', () => {
           }
         : {}),
       ...(parsedP.error ? { error: parsedP.error } : {}),
-      createdAt: 0,
     });
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
-      headers: { 'x-user-id': 'u5' },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.items[0].log).toBe('ok');
+    await app.close();
+  });
+
+  it('creates manual rebalance order once', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('20');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: true,
+    });
+    const reviewResultId = await insertReviewResult({
+      agentId: agent.id,
+      log: '',
+      rebalance: true,
+      newAllocation: 60,
+    });
+    vi.spyOn(binance, 'fetchAccount').mockResolvedValue({
+      balances: [
+        { asset: 'BTC', free: '1', locked: '0' },
+        { asset: 'ETH', free: '1', locked: '0' },
+      ],
+    } as any);
+    vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
+      currentPrice: 100,
+    } as any);
+    vi.spyOn(binance, 'createLimitOrder').mockResolvedValue({ orderId: 1 } as any);
+    let res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(201);
+    const { rows } = await db.query(
+      'SELECT * FROM limit_order WHERE review_result_id = $1',
+      [reviewResultId],
+    );
+    expect(rows).toHaveLength(1);
+    expect(JSON.parse(rows[0].planned_json)).toMatchObject({ price: 99.9 });
+    res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(400);
+    vi.restoreAllMocks();
+    await app.close();
+  });
+
+  it('rejects manual rebalance order below minimum value', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('60');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: true,
+    });
+    const reviewResultId = await insertReviewResult({
+      agentId: agent.id,
+      log: '',
+      rebalance: true,
+      newAllocation: 50,
+    });
+    vi.spyOn(binance, 'fetchAccount').mockResolvedValue({
+      balances: [
+        { asset: 'BTC', free: '1', locked: '0' },
+        { asset: 'ETH', free: '0.9999', locked: '0' },
+      ],
+    } as any);
+    vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
+      currentPrice: 100,
+    } as any);
+    const spy = vi
+      .spyOn(binance, 'createLimitOrder')
+      .mockResolvedValue({ orderId: 1 } as any);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(400);
+    const { rows } = await db.query(
+      'SELECT * FROM limit_order WHERE review_result_id = $1',
+      [reviewResultId],
+    );
+    expect(rows).toHaveLength(0);
+    expect(spy).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+    await app.close();
+  });
+
+  it('previews manual rebalance order', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('21');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: true,
+    });
+    const reviewResultId = await insertReviewResult({
+      agentId: agent.id,
+      log: '',
+      rebalance: true,
+      newAllocation: 60,
+    });
+    vi.spyOn(binance, 'fetchAccount').mockResolvedValue({
+      balances: [
+        { asset: 'BTC', free: '1', locked: '0' },
+        { asset: 'ETH', free: '1', locked: '0' },
+      ],
+    } as any);
+    vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
+      currentPrice: 100,
+    } as any);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance/preview`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.order).toMatchObject({
+      side: 'BUY',
+      quantity: 0.2,
+      price: 99.9,
+    });
+    vi.restoreAllMocks();
+    await app.close();
+  });
+
+  it('returns binance error message when limit order fails', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('31');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: true,
+    });
+    const reviewResultId = await insertReviewResult({
+      agentId: agent.id,
+      log: '',
+      rebalance: true,
+      newAllocation: 60,
+    });
+    vi.spyOn(binance, 'fetchAccount').mockResolvedValue({
+      balances: [
+        { asset: 'BTC', free: '1', locked: '0' },
+        { asset: 'ETH', free: '1', locked: '0' },
+      ],
+    } as any);
+    vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
+      currentPrice: 100,
+    } as any);
+    vi.spyOn(binance, 'createLimitOrder').mockRejectedValue(
+      new Error(
+        'failed to create order: 401 {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}',
+      ),
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({
+      error: 'Invalid API-key, IP, or permissions for action.',
+    });
+    vi.restoreAllMocks();
+    await app.close();
+  });
+
+  it('filters exec log by rebalanceOnly', async () => {
+    const app = await buildServer();
+    const userId = await insertUser('9');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    await insertReviewResult({ agentId: agent.id, log: 'no', rebalance: false });
+    await insertReviewResult({ agentId: agent.id, log: 'yes', rebalance: true });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agent.id}/exec-log?rebalanceOnly=true`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.total).toBe(1);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].response.rebalance).toBe(true);
     await app.close();
   });
 });

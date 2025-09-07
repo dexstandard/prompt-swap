@@ -1,22 +1,49 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
+import cookie from '@fastify/cookie';
+import csrf from '@fastify/csrf-protection';
+import helmet from '@fastify/helmet';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { RATE_LIMITS } from './rate-limit.js';
+import { errorResponse } from './util/errorMessages.js';
 
 export default async function buildServer(
   routesDir: string = path.join(process.cwd(), 'src/routes'),
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
 
+  await app.register(cookie);
+  await app.register(csrf, {
+    getToken: (req) => req.headers['x-csrf-token'] as string,
+    cookieOpts: { sameSite: 'strict', path: '/', secure: true },
+  });
+
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://accounts.google.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
+        imgSrc: ["'self'", 'data:', 'https://accounts.google.com'],
+        connectSrc: ["'self'", 'https://api.binance.com', 'https://accounts.google.com'],
+        fontSrc: ["'self'", 'data:'],
+        frameSrc: ['https://accounts.google.com'],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    frameguard: { action: 'deny' },
+    referrerPolicy: { policy: 'no-referrer' },
+  });
+
   await app.register(rateLimit, {
     global: false,
     ...RATE_LIMITS.LAX,
     errorResponseBuilder: (_req, context) => ({
       statusCode: 429,
-      error: 'Too Many Requests',
-      message: `Too many requests, please try again in ${context.after}.`,
+      ...errorResponse(`Too many requests, please try again in ${context.after}.`),
     }),
   });
 

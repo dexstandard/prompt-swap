@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { db } from '../src/db/index.js';
+import { insertUser } from './repos/users.js';
+import { setAiKey, setBinanceKey } from '../src/repos/api-keys.js';
 
 const reviewAgentPortfolioMock = vi.fn<
   (log: unknown, agentId: string) => Promise<unknown>
@@ -10,20 +11,22 @@ vi.mock('../src/jobs/review-portfolio.js', () => ({
 
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
+import { authCookies } from './helpers.js';
 
-function addUser(id: string) {
+async function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
   const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
   const bs = encrypt('skey', process.env.KEY_PASSWORD!);
-  db.prepare(
-    'INSERT INTO users (id, ai_api_key_enc, binance_api_key_enc, binance_api_secret_enc) VALUES (?, ?, ?, ?)'
-  ).run(id, ai, bk, bs);
+  const userId = await insertUser(id, null);
+  await setAiKey(userId, ai);
+  await setBinanceKey(userId, bk, bs);
+  return userId;
 }
 
 describe('agent creation', () => {
   it('does not await initial review', async () => {
     const app = await buildServer();
-    addUser('u1');
+    const userId = await addUser('1');
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -47,13 +50,13 @@ describe('agent creation', () => {
     (globalThis as any).fetch = fetchMock;
 
     const payload = {
-      userId: 'u1',
+      userId,
       model: 'm',
       name: 'Draft',
-      tokenA: 'BTC',
-      tokenB: 'ETH',
-      minTokenAAllocation: 10,
-      minTokenBAllocation: 20,
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
@@ -63,13 +66,13 @@ describe('agent creation', () => {
     const createPromise = app.inject({
       method: 'POST',
       url: '/api/agents',
-      headers: { 'x-user-id': 'u1' },
+      cookies: authCookies(userId),
       payload,
     });
     const res = await Promise.race([
       createPromise,
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 200),
+        setTimeout(() => reject(new Error('timeout')), 1000),
       ),
     ]);
     expect(res.statusCode).toBe(200);

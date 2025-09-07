@@ -1,13 +1,12 @@
 import { useAgentBalanceUsd } from '../lib/useAgentBalanceUsd';
 
 interface Props {
-  tokenA: string;
-  tokenB: string;
+  tokens: string[];
   startBalanceUsd: number | null;
 }
 
-export default function AgentPnlMobile({ tokenA, tokenB, startBalanceUsd }: Props) {
-  const { balance, isLoading } = useAgentBalanceUsd(tokenA, tokenB);
+export default function AgentPnlMobile({ tokens, startBalanceUsd }: Props) {
+  const { balance, isLoading } = useAgentBalanceUsd(tokens);
   const balanceText =
     balance === null ? '-' : isLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
   const pnl =

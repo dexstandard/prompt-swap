@@ -1,10 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { db } from '../src/db/index.js';
 import buildServer from '../src/server.js';
-
-function addUser(id: string) {
-  db.prepare('INSERT INTO users (id) VALUES (?)').run(id);
-}
+import { insertUser } from './repos/users.js';
+import { insertAgent } from './repos/agents.js';
+import { authCookies } from './helpers.js';
 
 const reviewAgentPortfolioMock = vi.fn<(
   log: unknown,
@@ -17,17 +15,28 @@ vi.mock('../src/jobs/review-portfolio.js', () => ({
 describe('manual review endpoint', () => {
   it('triggers portfolio review', async () => {
     const app = await buildServer();
-    addUser('u1');
-    const agentId = 'a1';
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'A', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run(agentId, 'u1');
+    const userId = await insertUser('1');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const agentId = agent.id;
 
     const res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agentId}/review`,
-      headers: { 'x-user-id': 'u1' },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ok: true });
@@ -38,19 +47,30 @@ describe('manual review endpoint', () => {
 
   it('returns error when agent is already reviewing', async () => {
     const app = await buildServer();
-    addUser('u2');
-    const agentId = 'b1';
-    db.prepare(
-      `INSERT INTO agents (id, user_id, model, status, created_at, name, token_a, token_b, min_a_allocation, min_b_allocation, risk, review_interval, agent_instructions)
-       VALUES (?, ?, 'gpt', 'active', 0, 'A2', 'BTC', 'ETH', 10, 20, 'low', '1h', 'inst')`
-    ).run(agentId, 'u2');
+    const userId = await insertUser('2');
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A2',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const agentId = agent.id;
     reviewAgentPortfolioMock.mockRejectedValueOnce(
       new Error('Agent is already reviewing portfolio'),
     );
     const res = await app.inject({
       method: 'POST',
       url: `/api/agents/${agentId}/review`,
-      headers: { 'x-user-id': 'u2' },
+      cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: 'Agent is already reviewing portfolio' });
