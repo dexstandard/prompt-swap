@@ -72,34 +72,34 @@ export default function AgentView() {
           <AgentDetailsMobile agent={data} />
         </div>
         {isActive ? (
-            <div className="mt-4 flex gap-2">
-              <Button onClick={() => setShowUpdate(true)}>
-                Update Agent
-              </Button>
-              <Button
-                  disabled={stopMut.isPending}
-                  loading={stopMut.isPending}
-                  onClick={() => stopMut.mutate()}
-              >
-                Stop Agent
-              </Button>
-              <Button
-                  disabled={reviewMut.isPending}
-                  loading={reviewMut.isPending}
-                  onClick={() => id && reviewMut.mutate(id)}
-              >
-                Run Review
-              </Button>
-            </div>
-        ) : (
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => setShowUpdate(true)}>Update Agent</Button>
             <Button
-                className="mt-4"
-                disabled={startMut.isPending}
-                loading={startMut.isPending}
-                onClick={() => startMut.mutate()}
+              disabled={stopMut.isPending}
+              loading={stopMut.isPending}
+              onClick={() => stopMut.mutate()}
+            >
+              Stop Agent
+            </Button>
+            <Button
+              disabled={reviewMut.isPending}
+              loading={reviewMut.isPending}
+              onClick={() => id && reviewMut.mutate(id)}
+            >
+              Run Review
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => setShowUpdate(true)}>Update Agent</Button>
+            <Button
+              disabled={startMut.isPending}
+              loading={startMut.isPending}
+              onClick={() => startMut.mutate()}
             >
               Start Agent
             </Button>
+          </div>
         )}
         {logData && (
             <div className="mt-6">
