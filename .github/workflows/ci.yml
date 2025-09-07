@@ -148,13 +148,13 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           DOMAIN: ${{ secrets.DOMAIN }}
           DB_CONNECTION_STR: ${{ secrets.DB_CONNECTION_STR }}
-          DO_SSH_HOST: ${{ secrets.DO_SSH_HOST }}
+          OUTPUT_IP: ${{ secrets.OUTPUT_IP }}
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
-          envs: KEY_PASSWORD,GOOGLE_CLIENT_ID,DOMAIN,DB_CONNECTION_STR,DO_SSH_HOST
+          envs: KEY_PASSWORD,GOOGLE_CLIENT_ID,DOMAIN,DB_CONNECTION_STR,OUTPUT_IP
           script: |
             set -euo pipefail
             cd ~/prompt-swap
@@ -162,7 +162,7 @@ jobs:
             export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
             export DOMAIN="${DOMAIN}"
             export VITE_GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}"
-            export VITE_DO_SSH_HOST="${DO_SSH_HOST}"
+            export VITE_DO_SSH_HOST="${OUTPUT_IP}"
             export DB_CONNECTION_STR="${DB_CONNECTION_STR}"
             docker compose up -d --build
             timeout 60s bash -c 'until curl -fsS -H "Host: ${DOMAIN}" http://localhost/api/health; do sleep 3; done'
