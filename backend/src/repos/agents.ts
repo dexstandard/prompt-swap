@@ -16,6 +16,8 @@ export interface AgentRow {
   review_interval: string;
   agent_instructions: string;
   manual_rebalance: boolean;
+  ai_api_key_id: string | null;
+  exchange_api_key_id: string | null;
 }
 
 export function toApi(row: AgentRow) {
@@ -35,6 +37,8 @@ export function toApi(row: AgentRow) {
     reviewInterval: row.review_interval,
     agentInstructions: row.agent_instructions,
     manualRebalance: row.manual_rebalance,
+    aiApiKeyId: row.ai_api_key_id ?? null,
+    exchangeApiKeyId: row.exchange_api_key_id ?? null,
   };
 }
 
@@ -42,14 +46,17 @@ const baseSelect = `
   SELECT a.id, a.user_id, a.model, a.status, a.created_at, a.start_balance, a.name,
          COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
                   FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
-         a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance
+         a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance,
+         ak.id AS ai_api_key_id, ek.id AS exchange_api_key_id
     FROM agents a
     LEFT JOIN agent_tokens t ON t.agent_id = a.id
+    LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
+    LEFT JOIN exchange_keys ek ON ek.user_id = a.user_id AND ek.provider = 'binance'
 `;
 
 export async function getAgent(id: string): Promise<AgentRow | undefined> {
   const { rows } = await db.query(
-    `${baseSelect} WHERE a.id = $1 AND a.status != $2 GROUP BY a.id`,
+    `${baseSelect} WHERE a.id = $1 AND a.status != $2 GROUP BY a.id, ak.id, ek.id`,
     [id, AgentStatus.Retired],
   );
   return rows[0] as AgentRow | undefined;
@@ -69,7 +76,7 @@ export async function getAgentsPaginated(
       [userId, status],
     );
     const { rows } = await db.query(
-      `${baseSelect} ${where} GROUP BY a.id LIMIT $3 OFFSET $4`,
+      `${baseSelect} ${where} GROUP BY a.id, ak.id, ek.id LIMIT $3 OFFSET $4`,
       [userId, status, limit, offset],
     );
     return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
@@ -80,7 +87,7 @@ export async function getAgentsPaginated(
     [userId, AgentStatus.Retired],
   );
   const { rows } = await db.query(
-    `${baseSelect} ${where} GROUP BY a.id LIMIT $3 OFFSET $4`,
+    `${baseSelect} ${where} GROUP BY a.id, ak.id, ek.id LIMIT $3 OFFSET $4`,
     [userId, AgentStatus.Retired, limit, offset],
   );
   return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
@@ -172,7 +179,7 @@ export async function insertAgent(data: {
   const { rows } = await db.query(
     `INSERT INTO agents (user_id, model, status, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, user_id, model, status, created_at, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance`,
+       RETURNING id`,
     [
       data.userId,
       data.model,
@@ -185,9 +192,8 @@ export async function insertAgent(data: {
       data.manualRebalance,
     ],
   );
-  const agent =
-    rows[0] as Omit<AgentRow, 'tokens'>;
-  const params: any[] = [agent.id];
+  const id = rows[0].id as string;
+  const params: any[] = [id];
   const values: string[] = [];
   data.tokens.forEach((t, i) => {
     values.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, ${i + 1})`);
@@ -200,13 +206,7 @@ export async function insertAgent(data: {
       )}`,
       params,
     );
-  return {
-    ...agent,
-    tokens: data.tokens.map((t) => ({
-      token: t.token,
-      min_allocation: t.minAllocation,
-    })),
-  };
+  return (await getAgent(id))!;
 }
 
 export async function updateAgent(data: {

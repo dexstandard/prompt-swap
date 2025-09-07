@@ -15,6 +15,8 @@ export interface Agent {
   agentInstructions: string;
   startBalanceUsd: number | null;
   manualRebalance: boolean;
+  aiApiKeyId: string | null;
+  exchangeApiKeyId: string | null;
 }
 
 export function useAgentData(id?: string) {

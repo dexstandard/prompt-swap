@@ -15,6 +15,8 @@ import AgentUpdateModal from '../components/AgentUpdateModal';
 import AgentDetailsDesktop from '../components/AgentDetailsDesktop';
 import AgentDetailsMobile from '../components/AgentDetailsMobile';
 import Toggle from '../components/ui/Toggle';
+import AiApiKeySection from '../components/forms/AiApiKeySection';
+import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 
 export default function AgentView() {
   const { id } = useParams();
@@ -62,9 +64,20 @@ export default function AgentView() {
   if (!data) return <div className="p-4">Loading...</div>;
   if (data.status === 'draft') return <AgentPreview draft={data} />;
 
-  const isActive = data.status === 'active';
-  return (
+    const isActive = data.status === 'active';
+    return (
       <div className="p-4">
+        {!data.aiApiKeyId || !data.exchangeApiKeyId ? (
+          <div className="mb-4 space-y-4">
+            {!data.aiApiKeyId && <AiApiKeySection label="OpenAI API Key" />}
+            {!data.exchangeApiKeyId && (
+              <ExchangeApiKeySection
+                exchange="binance"
+                label="Binance API Credentials"
+              />
+            )}
+          </div>
+        ) : null}
         <div className="hidden md:block">
           <AgentDetailsDesktop agent={data} />
         </div>
