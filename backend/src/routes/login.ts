@@ -39,9 +39,31 @@ function setSessionCookie(reply: FastifyReply, id: string) {
 }
 
 export default async function loginRoutes(app: FastifyInstance) {
+  app.get('/login/csrf', async (_req, reply) => ({
+    csrfToken: await reply.generateCsrf(),
+  }));
+
   app.post(
     '/login',
-    { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
+    {
+      config: { rateLimit: RATE_LIMITS.VERY_TIGHT },
+      onRequest: async (req, reply) => {
+        const site = req.headers['sec-fetch-site'] as string | undefined;
+        if (site === 'same-origin' || site === 'same-site') return;
+        const origin = req.headers.origin;
+        if (origin) {
+          try {
+            const { host } = new URL(origin);
+            if (host === req.headers.host) return;
+          } catch {}
+        }
+        await new Promise<void>((resolve, reject) => {
+          (app.csrfProtection as any)(req, reply, (err: any) =>
+            err ? reject(err) : resolve(),
+          );
+        });
+      },
+    },
     async (req, reply) => {
       const body = z
         .object({ token: z.string(), otp: z.string().optional() })

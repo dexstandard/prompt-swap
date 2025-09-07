@@ -17,6 +17,7 @@ describe('login route', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/login',
+      headers: { 'sec-fetch-site': 'same-origin' },
       payload: { token: 'test-token' },
     });
     expect(res.statusCode).toBe(200);
@@ -42,6 +43,7 @@ describe('login route', () => {
     const res1 = await app.inject({
       method: 'POST',
       url: '/api/login',
+      headers: { 'sec-fetch-site': 'same-origin' },
       payload: { token: 't1' },
     });
     expect(res1.statusCode).toBe(401);
@@ -50,6 +52,7 @@ describe('login route', () => {
     const res2 = await app.inject({
       method: 'POST',
       url: '/api/login',
+      headers: { 'sec-fetch-site': 'same-origin' },
       payload: { token: 't1', otp },
     });
     expect(res2.statusCode).toBe(200);
@@ -67,9 +70,42 @@ describe('login route', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/login',
+      headers: { 'sec-fetch-site': 'same-origin' },
       payload: { token: 't' },
     });
     expect(res.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it('requires csrf token for cross-site requests', async () => {
+    const app = await buildServer();
+    vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
+      getPayload: () => ({ sub: 'csrf', email: 'csrf@example.com' }),
+    } as any);
+
+    const res1 = await app.inject({
+      method: 'POST',
+      url: '/api/login',
+      headers: { 'sec-fetch-site': 'cross-site' },
+      payload: { token: 't' },
+    });
+    expect(res1.statusCode).toBe(403);
+
+    const tokenRes = await app.inject({ method: 'GET', url: '/api/login/csrf' });
+    const csrfToken = (tokenRes.json() as any).csrfToken;
+    const cookieHeader = (tokenRes.headers['set-cookie'] as string).split(';')[0];
+
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/api/login',
+      headers: {
+        'sec-fetch-site': 'cross-site',
+        'x-csrf-token': csrfToken,
+        cookie: cookieHeader,
+      },
+      payload: { token: 't' },
+    });
+    expect(res2.statusCode).toBe(200);
     await app.close();
   });
 
