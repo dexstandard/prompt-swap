@@ -40,25 +40,31 @@ jobs:
       - &install_deps
         name: Install dependencies
         run: |
-          npm --prefix backend ci &
-          npm --prefix frontend ci &
-          wait
+          set -e
+          npm --prefix backend ci & pid1=$!
+          npm --prefix frontend ci & pid2=$!
+          wait $pid1
+          wait $pid2
         shell: bash
 
       - &audit_deps
         name: Audit dependencies
         run: |
-          npm --prefix backend audit --audit-level=high &
-          npm --prefix frontend audit --audit-level=high &
-          wait
+          set -e
+          npm --prefix backend audit --audit-level=high & pid1=$!
+          npm --prefix frontend audit --audit-level=high & pid2=$!
+          wait $pid1
+          wait $pid2
         shell: bash
 
       - &lint_test
         name: Lint frontend and test backend
         run: |
-          npm --prefix frontend run lint &
-          DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test &
-          wait
+          set -e
+          npm --prefix frontend run lint & pid1=$!
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test & pid2=$!
+          wait $pid1
+          wait $pid2
         shell: bash
 
       - &build_app
@@ -66,17 +72,21 @@ jobs:
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
-          npm --prefix frontend run build &
-          npm --prefix backend run build &
-          wait
+          set -e
+          npm --prefix frontend run build & pid1=$!
+          npm --prefix backend run build & pid2=$!
+          wait $pid1
+          wait $pid2
         shell: bash
 
       - &prune_deps
         name: Prune production dependencies
         run: |
-          npm --prefix frontend prune --production &
-          npm --prefix backend prune --production &
-          wait
+          set -e
+          npm --prefix frontend prune --production & pid1=$!
+          npm --prefix backend prune --production & pid2=$!
+          wait $pid1
+          wait $pid2
         shell: bash
 
   build-and-deploy:

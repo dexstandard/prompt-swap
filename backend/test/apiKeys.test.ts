@@ -58,7 +58,7 @@ describe('AI API key routes', () => {
       payload: { key: key1 },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'aike...7890' });
+    expect(res.json()).toMatchObject({ key: '<REDACTED>' });
     row = await getAiKeyRow(userId);
     expect(row!.ai_api_key_enc).not.toBe(key1);
 
@@ -68,7 +68,7 @@ describe('AI API key routes', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'aike...7890' });
+    expect(res.json()).toMatchObject({ key: '<REDACTED>' });
 
     res = await app.inject({
       method: 'POST',
@@ -92,7 +92,7 @@ describe('AI API key routes', () => {
       url: `/api/users/${userId}/ai-key`,
       cookies: authCookies(userId),
     });
-    expect(res.json()).toMatchObject({ key: 'aike...7890' });
+    expect(res.json()).toMatchObject({ key: '<REDACTED>' });
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
     res = await app.inject({
@@ -102,7 +102,7 @@ describe('AI API key routes', () => {
       payload: { key: key2 },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'aike...ghij' });
+    expect(res.json()).toMatchObject({ key: '<REDACTED>' });
 
     res = await app.inject({
       method: 'DELETE',
@@ -170,8 +170,8 @@ describe('Binance API key routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      key: 'bkey...7890',
-      secret: 'bsec...7890',
+      key: '<REDACTED>',
+      secret: '<REDACTED>',
     });
     row = await getBinanceKeyRow(userId);
     expect(row!.binance_api_key_enc).not.toBe(key1);
@@ -184,8 +184,8 @@ describe('Binance API key routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      key: 'bkey...7890',
-      secret: 'bsec...7890',
+      key: '<REDACTED>',
+      secret: '<REDACTED>',
     });
 
     res = await app.inject({
@@ -211,8 +211,8 @@ describe('Binance API key routes', () => {
       cookies: authCookies(userId),
     });
     expect(res.json()).toMatchObject({
-      key: 'bkey...7890',
-      secret: 'bsec...7890',
+      key: '<REDACTED>',
+      secret: '<REDACTED>',
     });
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
@@ -224,8 +224,8 @@ describe('Binance API key routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      key: 'bkey...ghij',
-      secret: 'bsec...ghij',
+      key: '<REDACTED>',
+      secret: '<REDACTED>',
     });
 
     res = await app.inject({
