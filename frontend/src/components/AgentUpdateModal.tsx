@@ -10,6 +10,11 @@ import ConfirmDialog from './ui/ConfirmDialog';
 import StrategyForm from './StrategyForm';
 import AgentInstructions from './AgentInstructions';
 import { normalizeAllocations } from '../lib/allocations';
+import SelectInput from './forms/SelectInput';
+import FormField from './forms/FormField';
+import AiApiKeySection from './forms/AiApiKeySection';
+import ExchangeApiKeySection from './forms/ExchangeApiKeySection';
+import { usePrerequisites } from '../lib/usePrerequisites';
 
 interface Props {
   agent: Agent;
@@ -29,6 +34,12 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
     reviewInterval: agent.reviewInterval,
     agentInstructions: agent.agentInstructions,
   });
+  const tokens = [data.tokenA, data.tokenB];
+  const { hasOpenAIKey, hasBinanceKey, models } = usePrerequisites(tokens);
+  const [aiProvider, setAiProvider] = useState('openai');
+  const [exchange, setExchange] = useState('binance');
+  const [model, setModel] = useState(agent.model || '');
+  const [hadModel, setHadModel] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -41,14 +52,26 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
         reviewInterval: agent.reviewInterval,
         agentInstructions: agent.agentInstructions,
       });
+      setModel(agent.model || '');
+      if (agent.model) setHadModel(true);
     }
   }, [open, agent]);
+
+  useEffect(() => {
+    if (!hasOpenAIKey) setModel('');
+  }, [hasOpenAIKey]);
+
+  useEffect(() => {
+    if (!agent.model && models.length && !model && !hadModel) {
+      setModel(models[0]);
+    }
+  }, [models, agent.model, model, hadModel]);
 
   const updateMut = useMutation({
     mutationFn: async () => {
       await api.put(`/agents/${agent.id}`, {
         userId: agent.userId,
-        model: agent.model,
+        model,
         status: agent.status,
         name: agent.name,
         ...data,
@@ -87,10 +110,56 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
           }
         />
       </div>
-      <AgentInstructions
-        value={data.agentInstructions}
-        onChange={(v) => setData((d) => ({ ...d, agentInstructions: v }))}
-      />
+  <AgentInstructions
+    value={data.agentInstructions}
+    onChange={(v) => setData((d) => ({ ...d, agentInstructions: v }))}
+  />
+      <div className="mt-4">
+        <FormField label="AI Provider" className="w-full max-w-xs">
+          <SelectInput
+            id="ai-provider"
+            value={aiProvider}
+            onChange={setAiProvider}
+            options={[{ value: 'openai', label: 'OpenAI' }]}
+          />
+        </FormField>
+      </div>
+      {!hasOpenAIKey && (
+        <div className="mt-4">
+          <AiApiKeySection label="OpenAI API Key" />
+        </div>
+      )}
+      {hasOpenAIKey && (models.length || agent.model) && (
+        <div className="mt-4">
+          <FormField label="Model" className="w-full max-w-xs">
+            <SelectInput
+              id="model"
+              value={model}
+              onChange={setModel}
+              options={
+                agent.model && !models.length
+                  ? [{ value: agent.model, label: agent.model }]
+                  : models.map((m) => ({ value: m, label: m }))
+              }
+            />
+          </FormField>
+        </div>
+      )}
+      <div className="mt-4">
+        <FormField label="Exchange" className="w-full max-w-xs">
+          <SelectInput
+            id="exchange"
+            value={exchange}
+            onChange={setExchange}
+            options={[{ value: 'binance', label: 'Binance' }]}
+          />
+        </FormField>
+      </div>
+      {!hasBinanceKey && (
+        <div className="mt-4">
+          <ExchangeApiKeySection exchange="binance" label="Binance API Credentials" />
+        </div>
+      )}
       <div className="mt-4 flex justify-end gap-2">
         <Button onClick={onClose}>Cancel</Button>
         <Button
