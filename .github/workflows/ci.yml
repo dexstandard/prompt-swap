@@ -41,19 +41,23 @@ jobs:
           npm --prefix frontend ci &
           wait
 
-      - name: Lint frontend
-        run: npm --prefix frontend run lint
+      - name: Lint frontend and test backend
+        run: |
+          npm --prefix frontend run lint &
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm --prefix backend test &
+          wait
 
-      - name: Test backend
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/promptswap_test
-        run: npm --prefix backend test
+      - name: Build frontend and backend
+        run: |
+          npm --prefix frontend run build &
+          npm --prefix backend run build &
+          wait
 
-      - name: Build frontend
-        run: npm --prefix frontend run build
-
-      - name: Build backend
-        run: npm run build
+      - name: Prune production dependencies
+        run: |
+          npm --prefix frontend prune --production &
+          npm --prefix backend prune --production &
+          wait
 
       # Export secrets to env, then validate in bash
       - name: Verify required secrets
