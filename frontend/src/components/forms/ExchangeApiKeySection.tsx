@@ -15,20 +15,23 @@ interface Props {
 }
 
 export default function ExchangeApiKeySection({ exchange, label }: Props) {
-  const whitelistHost =
-    exchange === 'binance' ? import.meta.env.VITE_DO_SSH_HOST : undefined;
+  const commonProps = {
+    label,
+    queryKey: `${exchange}-key`,
+    getKeyPath: (id: string) => `/users/${id}/${exchange}-key`,
+    fields: exchangeFields,
+    videoGuideUrl: videoGuideLinks[exchange],
+    balanceQueryKey: `${exchange}-balance`,
+    getBalancePath: (id: string) => `/users/${id}/${exchange}-balance`,
+  } as const;
 
-  return (
+  return exchange === 'binance' ? (
     <ApiKeySection
-      label={label}
-      queryKey={`${exchange}-key`}
-      getKeyPath={(id) => `/users/${id}/${exchange}-key`}
-      fields={exchangeFields}
-      videoGuideUrl={videoGuideLinks[exchange]}
-      balanceQueryKey={`${exchange}-balance`}
-      getBalancePath={(id) => `/users/${id}/${exchange}-balance`}
-      whitelistHost={whitelistHost}
+      {...commonProps}
+      whitelistHost={import.meta.env.VITE_DO_SSH_HOST}
     />
+  ) : (
+    <ApiKeySection {...commonProps} />
   );
 }
 
