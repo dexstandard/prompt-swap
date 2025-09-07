@@ -148,7 +148,10 @@ describe('Binance API key routes', () => {
     const secret1 = 'bsec1234567890';
     const secret2 = 'bsecabcdefghij';
 
-    fetchMock.mockResolvedValueOnce({ ok: false } as any);
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ msg: 'Invalid API-key' }),
+    } as any);
     let res = await app.inject({
       method: 'POST',
       url: `/api/users/${userId}/binance-key`,
@@ -156,7 +159,9 @@ describe('Binance API key routes', () => {
       payload: { key: 'bad', secret: 'bad' },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json()).toMatchObject({ error: 'verification failed' });
+    expect(res.json()).toMatchObject({
+      error: 'verification failed: Invalid API-key',
+    });
     let row = await getBinanceKeyRow(userId);
     expect(row!.binance_api_key_enc).toBeNull();
     expect(row!.binance_api_secret_enc).toBeNull();

@@ -12,7 +12,7 @@ export async function verifyApiKey(
   type: ApiKeyType,
   key: string,
   secret?: string,
-): Promise<boolean> {
+): Promise<boolean | string> {
   if (type === ApiKeyType.Ai) {
     try {
       const res = await fetch('https://api.openai.com/v1/models', {
@@ -31,7 +31,14 @@ export async function verifyApiKey(
       `https://api.binance.com/api/v3/account?${q1}&signature=${sig1}`,
       { headers: { 'X-MBX-APIKEY': key } },
     );
-    if (!res1.ok) return false;
+    if (!res1.ok) {
+      try {
+        const body = await res1.json();
+        return typeof body.msg === 'string' ? body.msg : false;
+      } catch {
+        return false;
+      }
+    }
 
     const ts2 = Date.now();
     const q2 =
@@ -47,12 +54,13 @@ export async function verifyApiKey(
     if (res2.ok) return true;
     try {
       const body = await res2.json();
-      return res2.status === 400 && typeof body.code === 'number';
+      if (res2.status === 400 && typeof body.code === 'number') return true;
+      return typeof body.msg === 'string' ? body.msg : false;
     } catch {
       return false;
     }
-  } catch {
-    return false;
+  } catch (err) {
+    return err instanceof Error ? err.message : false;
   }
 }
 
