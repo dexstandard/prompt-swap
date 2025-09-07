@@ -15,6 +15,7 @@ import AgentUpdateModal from '../components/AgentUpdateModal';
 import AgentDetailsDesktop from '../components/AgentDetailsDesktop';
 import AgentDetailsMobile from '../components/AgentDetailsMobile';
 import Toggle from '../components/ui/Toggle';
+import { usePrerequisites } from '../lib/usePrerequisites';
 
 export default function AgentView() {
   const { id } = useParams();
@@ -23,6 +24,7 @@ export default function AgentView() {
   const { startMut, stopMut } = useAgentActions(id);
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { hasOpenAIKey, hasBinanceKey } = usePrerequisites([]);
 
   const reviewMut = useMutation({
     mutationFn: async (agentId: string) => {
@@ -92,13 +94,15 @@ export default function AgentView() {
         ) : (
           <div className="mt-4 flex gap-2">
             <Button onClick={() => setShowUpdate(true)}>Update Agent</Button>
-            <Button
-              disabled={startMut.isPending}
-              loading={startMut.isPending}
-              onClick={() => startMut.mutate()}
-            >
-              Start Agent
-            </Button>
+            {hasOpenAIKey && hasBinanceKey && (
+              <Button
+                disabled={startMut.isPending}
+                loading={startMut.isPending}
+                onClick={() => startMut.mutate()}
+              >
+                Start Agent
+              </Button>
+            )}
           </div>
         )}
         {logData && (

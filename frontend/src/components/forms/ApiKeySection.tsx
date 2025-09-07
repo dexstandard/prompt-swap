@@ -6,6 +6,7 @@ import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
 import { useToast } from '../../lib/useToast';
 import Button from '../ui/Button';
+import { Copy } from 'lucide-react';
 
 interface Field {
   name: string;
@@ -21,6 +22,7 @@ interface ApiKeySectionProps {
   videoGuideUrl?: string;
   balanceQueryKey?: string;
   getBalancePath?: (id: string) => string;
+  whitelistHost?: string;
 }
 
 const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
@@ -35,6 +37,7 @@ export default function ApiKeySection({
   videoGuideUrl,
   balanceQueryKey,
   getBalancePath,
+  whitelistHost,
 }: ApiKeySectionProps) {
   const { user } = useUser();
   const toast = useToast();
@@ -214,13 +217,30 @@ export default function ApiKeySection({
           {balanceQueryKey && (
             balanceQuery.isLoading ? (
               <p>Loading balance...</p>
-            ) : balanceQuery.data ? (
-              <p className="text-sm text-gray-600">
-                Total balance: ${balanceQuery.data.totalUsd.toFixed(2)}
-              </p>
-            ) : null
-          )}
-        </div>
+          ) : balanceQuery.data ? (
+            <p className="text-sm text-gray-600">
+              Total balance: ${balanceQuery.data.totalUsd.toFixed(2)}
+            </p>
+          ) : null
+        )}
+      </div>
+    )}
+      {whitelistHost && (
+        <p className="text-sm text-gray-600 flex items-center gap-2">
+          Whitelist IP:
+          <span className="font-mono">{whitelistHost}</span>
+          <button
+            type="button"
+            className="p-1 border rounded"
+            onClick={() => {
+              navigator.clipboard.writeText(whitelistHost);
+              toast.show('Copied to clipboard');
+            }}
+            aria-label="Copy IP"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+        </p>
       )}
     </div>
   );

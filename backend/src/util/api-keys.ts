@@ -24,18 +24,33 @@ export async function verifyApiKey(
     }
   }
   try {
-    const timestamp = Date.now();
-    const query = `timestamp=${timestamp}`;
-    const signature = createHmac('sha256', secret!)
-      .update(query)
-      .digest('hex');
-    const res = await fetch(
-      `https://api.binance.com/api/v3/account?${query}&signature=${signature}`,
+    const ts1 = Date.now();
+    const q1 = `timestamp=${ts1}`;
+    const sig1 = createHmac('sha256', secret!).update(q1).digest('hex');
+    const res1 = await fetch(
+      `https://api.binance.com/api/v3/account?${q1}&signature=${sig1}`,
+      { headers: { 'X-MBX-APIKEY': key } },
+    );
+    if (!res1.ok) return false;
+
+    const ts2 = Date.now();
+    const q2 =
+      `symbol=BTCUSDT&side=BUY&type=LIMIT&timeInForce=GTC&quantity=1&price=1&timestamp=${ts2}`;
+    const sig2 = createHmac('sha256', secret!).update(q2).digest('hex');
+    const res2 = await fetch(
+      `https://api.binance.com/api/v3/order/test?${q2}&signature=${sig2}`,
       {
+        method: 'POST',
         headers: { 'X-MBX-APIKEY': key },
       },
     );
-    return res.ok;
+    if (res2.ok) return true;
+    try {
+      const body = await res2.json();
+      return res2.status === 400 && typeof body.code === 'number';
+    } catch {
+      return false;
+    }
   } catch {
     return false;
   }
