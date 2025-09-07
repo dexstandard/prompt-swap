@@ -11,12 +11,7 @@ export default function WalletBalances({ balances, hasBinanceKey }: Props) {
   const { user } = useUser();
 
   if (!user || !hasBinanceKey) {
-    return (
-      <div>
-        <h3 className="text-md font-bold mb-2">Binance Balances</h3>
-        <p>Binance Balances - Unavailable</p>
-      </div>
-    );
+    return null;
   }
 
   return (
