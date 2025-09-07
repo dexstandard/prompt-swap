@@ -82,13 +82,21 @@ export default function ApiKeyProviderSelector({
   return (
     <div>
       <h2 className="text-md font-bold">{label}</h2>
-      <SelectInput
-        id={`${type}-provider`}
-        value={value}
-        onChange={onChange}
-        options={configs.map((p) => ({ value: p.value, label: p.label }))}
-      />
-      {hasKey === false && <div className="mt-2">{selectedConfig.renderForm()}</div>}
+      {hasKey === false && configs.length === 1 ? (
+        <div className="mt-2">{configs[0].renderForm()}</div>
+      ) : (
+        <>
+          <SelectInput
+            id={`${type}-provider`}
+            value={value}
+            onChange={onChange}
+            options={configs.map((p) => ({ value: p.value, label: p.label }))}
+          />
+          {hasKey === false && (
+            <div className="mt-2">{selectedConfig.renderForm()}</div>
+          )}
+        </>
+      )}
     </div>
   );
 }
