@@ -108,7 +108,11 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
       </div>
       <ConfirmDialog
         open={confirmOpen}
-        message="Update running agent?"
+        message={
+          agent.status === 'active'
+            ? 'Update running agent?'
+            : 'Update agent?'
+        }
         onConfirm={() => {
           setConfirmOpen(false);
           updateMut.mutate();
