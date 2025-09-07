@@ -20,7 +20,7 @@ export default function Modal({ open, onClose, children }: Props) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black bg-opacity-50 p-4">
       <div
         ref={containerRef}
         className="bg-white text-gray-900 p-4 rounded shadow max-w-lg w-full relative"
