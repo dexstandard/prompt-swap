@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
     services:
       postgres:
         image: postgres:16
@@ -48,21 +49,15 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/promptswap_test
         run: npm --prefix backend test
 
+      - name: Build frontend
+        run: npm --prefix frontend run build
+
       - name: Build backend
         run: npm run build
 
-  deploy:
-    needs: build
-    # run on push (not PR) and only on main or dev
-    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}
-    runs-on: ubuntu-latest
-    # use environment derived from branch; define env-specific secrets there
-    environment: ${{ github.ref_name }}
-    steps:
-      - uses: actions/checkout@v4
-
       # Export secrets to env, then validate in bash
       - name: Verify required secrets
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
         env:
           DO_SSH_HOST: ${{ secrets.DO_SSH_HOST }}
           DO_SSH_USER: ${{ secrets.DO_SSH_USER }}
@@ -83,6 +78,7 @@ jobs:
           done
 
       - name: Upload files to droplet
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.DO_SSH_HOST }}
@@ -93,6 +89,7 @@ jobs:
           target: "~/prompt-swap"
 
       - name: Deploy with Docker Compose
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
         uses: appleboy/ssh-action@v1.1.0
         env:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
