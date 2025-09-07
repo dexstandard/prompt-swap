@@ -81,6 +81,10 @@ export default function ApiKeyProviderSelector({
     return configs[0].renderForm();
   }
 
+  if (available.length === 1) {
+    return null;
+  }
+
   return (
     <div>
       <h2 className="text-md font-bold">{label}</h2>

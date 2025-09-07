@@ -14,6 +14,7 @@ import { useToast } from '../lib/useToast';
 import Button from '../components/ui/Button';
 import { usePrerequisites } from '../lib/usePrerequisites';
 import AgentStartButton from '../components/AgentStartButton';
+import SelectInput from '../components/forms/SelectInput';
 
 interface AgentPreviewDetails {
   name: string;
@@ -109,45 +110,47 @@ export default function AgentPreview({ draft }: Props) {
         onChange={(v) => setAgentData((d) => (d ? { ...d, agentInstructions: v } : d))}
       />
       {user && (
-        <div className="mt-4 space-y-4">
-          <ApiKeyProviderSelector
-            type="ai"
-            label="AI Provider"
-            value={aiProvider}
-            onChange={setAiProvider}
-          />
-          <ApiKeyProviderSelector
-            type="exchange"
-            label="Exchange"
-            value={exchangeProvider}
-            onChange={setExchangeProvider}
-          />
-        </div>
-      )}
-      {user && hasOpenAIKey && (models.length || draft?.model) && (
-        <div className="mt-4">
-          <h2 className="text-md font-bold">Model</h2>
-          <select
-            id="model"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="border rounded p-2"
-          >
-            {draft?.model && !models.length ? (
-              <option value={draft.model}>{draft.model}</option>
-            ) : (
-              models.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))
-            )}
-          </select>
+        <div className="mt-4 max-w-2xl">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <ApiKeyProviderSelector
+                type="ai"
+                label="AI Provider"
+                value={aiProvider}
+                onChange={setAiProvider}
+              />
+              {hasOpenAIKey && (models.length || draft?.model) && (
+                <div className="mt-2">
+                  <h2 className="text-md font-bold">Model</h2>
+                  <SelectInput
+                    id="model"
+                    value={model}
+                    onChange={setModel}
+                    options={
+                      draft?.model && !models.length
+                        ? [{ value: draft.model, label: draft.model }]
+                        : models.map((m) => ({ value: m, label: m }))
+                    }
+                  />
+                </div>
+              )}
+            </div>
+            <div>
+              <ApiKeyProviderSelector
+                type="exchange"
+                label="Exchange"
+                value={exchangeProvider}
+                onChange={setExchangeProvider}
+              />
+              <div className="mt-2">
+                <WalletBalances balances={balances} hasBinanceKey={hasBinanceKey} />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="mt-4">
-        <WalletBalances balances={balances} hasBinanceKey={hasBinanceKey} />
+      <div className="mt-4 max-w-2xl">
         <WarningSign>
           Trading agent will use all available balance for {agentData.tokens.map((t) => t.token.toUpperCase()).join(' and ')} in
           your Binance Spot wallet. Move excess funds to futures wallet before trading.
