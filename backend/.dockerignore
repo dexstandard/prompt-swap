@@ -1,6 +1,6 @@
 node_modules
 src
 test
-scripts
+/scripts
 tsconfig.json
 vitest.config.ts
