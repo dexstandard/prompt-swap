@@ -11,6 +11,7 @@ import {
     riskOptions,
     reviewIntervalOptions,
     tokens,
+    stableCoins,
 } from '../../lib/constants';
 import useAllocationNormalization from '../../lib/useAllocationNormalization';
 import TokenSelect from './TokenSelect';
@@ -100,7 +101,11 @@ export default function CreateAgentForm({
                                     value={field.value}
                                     onChange={field.onChange}
                                     options={tokens.filter(
-                                        (t) => t.value === token1 || t.value !== token2
+                                        (t) =>
+                                            t.value === token1 ||
+                                            (t.value !== token2 &&
+                                                !(stableCoins.includes(t.value) &&
+                                                    stableCoins.includes(token2)))
                                     )}
                                 />
                             )}
@@ -116,7 +121,11 @@ export default function CreateAgentForm({
                                     value={field.value}
                                     onChange={field.onChange}
                                     options={tokens.filter(
-                                        (t) => t.value === token2 || t.value !== token1
+                                        (t) =>
+                                            t.value === token2 ||
+                                            (t.value !== token1 &&
+                                                !(stableCoins.includes(t.value) &&
+                                                    stableCoins.includes(token1)))
                                     )}
                                 />
                             )}

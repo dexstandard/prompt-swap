@@ -10,6 +10,7 @@ import {
   insertReviewResult,
   getRecentReviewResults,
 } from '../repos/agent-review-result.js';
+import { getRecentLimitOrders } from '../repos/limit-orders.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
 import { callRebalancingAgent } from '../util/ai.js';
 import {
@@ -189,7 +190,7 @@ async function buildPrompt(
       ts1,
       ts2,
     } = await fetchPromptData(row, cache);
-    const { floorPercents, positions, weights } = computePortfolioValues(
+    const { floorPercents, positions, currentWeights } = computePortfolioValues(
       row,
       balances,
       price1,
@@ -199,11 +200,12 @@ async function buildPrompt(
       instructions: row.agent_instructions,
       config: {
         policy: { floorPercents },
-        portfolio: {
+        currentStatePortfolio: {
           ts: new Date().toISOString(),
           positions,
-          weights,
+          currentWeights,
         },
+        ...(await buildPreviousOrders(row.id)),
       },
       marketData: assembleMarketData(row, pairData, ind1, ind2, ts1, ts2),
     };
@@ -323,11 +325,22 @@ function computePortfolioValues(
       value_usdt: value2,
     },
   ];
-  const weights: Record<string, number> = {
+  const currentWeights: Record<string, number> = {
     [token1]: totalValue ? value1 / totalValue : 0,
     [token2]: totalValue ? value2 / totalValue : 0,
   };
-  return { floorPercents, positions, weights };
+  return { floorPercents, positions, currentWeights };
+}
+
+async function buildPreviousOrders(agentId: string) {
+  const rows = await getRecentLimitOrders(agentId, 5);
+  if (!rows.length) return {};
+  return {
+    previousLimitOrders: rows.map((r) => ({
+      planned: JSON.parse(r.planned_json),
+      status: r.status,
+    })),
+  };
 }
 
 function assembleMarketData(
@@ -395,7 +408,7 @@ async function executeAgent(
       await createRebalanceLimitOrder({
         userId: row.user_id,
         tokens: row.tokens.map((t) => t.token),
-        positions: prompt.config.portfolio.positions,
+        positions: prompt.config.currentStatePortfolio.positions,
         newAllocation: parsed.response.newAllocation,
         log,
         reviewResultId: resultId,

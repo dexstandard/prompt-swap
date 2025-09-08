@@ -10,6 +10,8 @@ export const tokens = [
     {value: 'USDC', label: 'USDC'},
 ];
 
+export const stableCoins = ['USDT', 'USDC'];
+
 export const riskOptions = [
     {value: 'low', label: createElement(RiskDisplay, {risk: 'low'})},
     {value: 'medium', label: createElement(RiskDisplay, {risk: 'medium'})},
@@ -63,6 +65,17 @@ export const createAgentSchema = z
         message: 'Tokens must be different',
         path: ['tokens', 1, 'token'],
     })
+    .refine(
+        (data) =>
+            !(
+                stableCoins.includes(data.tokens[0].token.toUpperCase()) &&
+                stableCoins.includes(data.tokens[1].token.toUpperCase())
+            ),
+        {
+            message: 'Stablecoin pairs are not allowed',
+            path: ['tokens', 1, 'token'],
+        }
+    )
     .refine(
         (data) =>
             data.tokens[0].minAllocation + data.tokens[1].minAllocation <= 95,
