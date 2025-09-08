@@ -2,7 +2,7 @@ import TokenSelect from './forms/TokenSelect';
 import TextInput from './forms/TextInput';
 import SelectInput from './forms/SelectInput';
 import FormField from './forms/FormField';
-import { tokens, riskOptions, reviewIntervalOptions } from '../lib/constants';
+import { tokens, riskOptions, reviewIntervalOptions, stableCoins } from '../lib/constants';
 
 interface StrategyData {
   tokens: { token: string; minAllocation: number }[];
@@ -36,7 +36,11 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
               ])
             }
             options={tokens.filter(
-              (t) => t.value === token1.token || t.value !== token2.token,
+              (t) =>
+                t.value === token1.token ||
+                (t.value !== token2.token &&
+                  !(stableCoins.includes(t.value) &&
+                    stableCoins.includes(token2.token)))
             )}
             disabled={disabled}
           />
@@ -52,7 +56,11 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
               ])
             }
             options={tokens.filter(
-              (t) => t.value === token2.token || t.value !== token1.token,
+              (t) =>
+                t.value === token2.token ||
+                (t.value !== token1.token &&
+                  !(stableCoins.includes(t.value) &&
+                    stableCoins.includes(token1.token)))
             )}
             disabled={disabled}
           />
