@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { UserContext, type User } from './user-context';
+import api from './axios';
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(() => {
@@ -12,6 +13,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (user) localStorage.setItem('user', JSON.stringify(user));
     else localStorage.removeItem('user');
   }, [user]);
+
+  useEffect(() => {
+    const id = api.interceptors.response.use(
+      (res) => res,
+      (err) => {
+        if (err.response?.status === 401) setUser(null);
+        return Promise.reject(err);
+      }
+    );
+    return () => {
+      api.interceptors.response.eject(id);
+    };
+  }, [setUser]);
 
   return <UserContext.Provider value={{ user, setUser }}>{children}</UserContext.Provider>;
 }
