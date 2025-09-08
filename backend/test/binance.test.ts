@@ -67,7 +67,7 @@ describe('fetchPairData', () => {
     vi.stubGlobal('fetch', fetchMock as any);
 
     const data = await fetchPairData('USDT', 'BTC');
-    expect(fetchMock).toHaveBeenCalledTimes(9);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
     expect(data.symbol).toBe('BTCUSDT');
     expect(data.year).toEqual(yearData);
   });
