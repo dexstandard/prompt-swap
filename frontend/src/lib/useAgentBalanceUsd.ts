@@ -32,7 +32,7 @@ export function useAgentBalanceUsd(tokens: string[]) {
             const bal = res.data as { free: number; locked: number };
             const amount = (bal.free ?? 0) + (bal.locked ?? 0);
             if (!amount) return 0;
-            if (token.toUpperCase() === 'USDT') return amount;
+            if (['USDT', 'USDC'].includes(token.toUpperCase())) return amount;
             const priceRes = await fetch(
               `https://api.binance.com/api/v3/ticker/price?symbol=${token.toUpperCase()}USDT`
             );

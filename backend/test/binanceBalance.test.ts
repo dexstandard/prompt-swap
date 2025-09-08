@@ -24,6 +24,7 @@ describe('binance balance route', () => {
         balances: [
           { asset: 'BTC', free: '1', locked: '0' },
           { asset: 'USDT', free: '100', locked: '0' },
+          { asset: 'USDC', free: '50', locked: '0' },
         ],
       }),
     } as any);
@@ -38,7 +39,7 @@ describe('binance balance route', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ totalUsd: 20100 });
+    expect(res.json()).toEqual({ totalUsd: 20150 });
 
     await app.close();
     (globalThis as any).fetch = originalFetch;

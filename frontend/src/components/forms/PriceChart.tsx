@@ -43,9 +43,13 @@ export default function PriceChart({ tokens }: { tokens: string[] }) {
     queryKey: ['price-history', token1, token2],
     queryFn: async () => {
       const data1 =
-        token1 === 'USDT' ? generateStablecoinData() : await fetchHistory(token1);
+        ['USDT', 'USDC'].includes(token1)
+          ? generateStablecoinData()
+          : await fetchHistory(token1);
       const data2 =
-        token2 === 'USDT' ? generateStablecoinData() : await fetchHistory(token2);
+        ['USDT', 'USDC'].includes(token2)
+          ? generateStablecoinData()
+          : await fetchHistory(token2);
       return { [token1]: data1, [token2]: data2 };
     },
   });
