@@ -63,3 +63,42 @@ export async function getRecentLimitOrders(agentId: string, limit: number) {
   );
   return rows as { planned_json: string; status: LimitOrderStatus }[];
 }
+
+export async function getOpenLimitOrdersForAgent(agentId: string) {
+  const { rows } = await db.query(
+    `SELECT e.user_id, e.order_id, e.planned_json
+       FROM limit_order e
+       JOIN agent_review_result r ON e.review_result_id = r.id
+      WHERE r.agent_id = $1 AND e.status = 'open'`,
+    [agentId],
+  );
+  return rows as { user_id: string; order_id: string; planned_json: string }[];
+}
+
+export async function getAllOpenLimitOrders() {
+  const { rows } = await db.query(
+    `SELECT e.user_id, e.order_id, e.planned_json, r.agent_id, a.status AS agent_status
+       FROM limit_order e
+       JOIN agent_review_result r ON e.review_result_id = r.id
+       JOIN agents a ON r.agent_id = a.id
+      WHERE e.status = 'open'`,
+  );
+  return rows as {
+    user_id: string;
+    order_id: string;
+    planned_json: string;
+    agent_id: string;
+    agent_status: string;
+  }[];
+}
+
+export async function updateLimitOrderStatus(
+  userId: string,
+  orderId: string,
+  status: LimitOrderStatus,
+) {
+  await db.query(
+    `UPDATE limit_order SET status = $3 WHERE user_id = $1 AND order_id = $2`,
+    [userId, orderId, status],
+  );
+}

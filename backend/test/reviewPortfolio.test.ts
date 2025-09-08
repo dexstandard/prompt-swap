@@ -43,6 +43,8 @@ vi.mock('../src/services/binance.js', () => ({
     quantityPrecision: 8,
     pricePrecision: 8,
   }),
+  cancelOrder: vi.fn().mockResolvedValue(undefined),
+  parseBinanceError: vi.fn().mockReturnValue(null),
 }));
 
 vi.mock('../src/services/indicators.js', () => ({
