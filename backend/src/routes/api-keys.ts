@@ -8,6 +8,8 @@ import {
   getBinanceKeyRow,
   setBinanceKey,
   clearBinanceKey,
+  shareAiKey,
+  revokeAiKeyShare,
 } from '../repos/api-keys.js';
 import {
   getActiveAgentsByUser,
@@ -16,17 +18,18 @@ import {
 } from '../repos/agents.js';
 import { removeAgentFromSchedule } from '../jobs/review-portfolio.js';
 import { cancelOpenOrders } from '../services/binance.js';
-import { requireUserIdMatch } from '../util/auth.js';
+import { requireUserIdMatch, requireAdmin } from '../util/auth.js';
 import {
   ApiKeyType,
   verifyApiKey,
   encryptKey,
-  decryptKey,
   ensureUser,
   ensureKeyAbsent,
   ensureKeyPresent,
+  decryptKey,
 } from '../util/api-keys.js';
-import { errorResponse } from '../util/errorMessages.js';
+import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
+import { findUserByEmail } from '../repos/users.js';
 import { parseParams } from '../util/validation.js';
 
 const idParams = z.object({ id: z.string().regex(/^\d+$/) });
@@ -44,6 +47,10 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const row = await getAiKeyRow(id);
       let err = ensureUser(row);
       if (err) return reply.code(err.code).send(err.body);
+      if (row!.is_shared)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
       err = ensureKeyAbsent(row, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
       if (!(await verifyApiKey(ApiKeyType.Ai, key)))
@@ -63,10 +70,11 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const { id } = params;
       if (!requireUserIdMatch(req, reply, id)) return;
       const row = await getAiKeyRow(id);
-      const err = ensureKeyPresent(row, ['ai_api_key_enc']);
-      if (err) return reply.code(err.code).send(err.body);
-      const key = decryptKey(row!.ai_api_key_enc!);
-      return { key: '<REDACTED>' };
+      if (!row?.id)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      return { key: '<REDACTED>', ...(row.is_shared ? { shared: true } : {}) };
     },
   );
 
@@ -80,8 +88,14 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       if (!requireUserIdMatch(req, reply, id)) return;
       const { key } = req.body as { key: string };
       const row = await getAiKeyRow(id);
-      const err = ensureKeyPresent(row, ['ai_api_key_enc']);
-      if (err) return reply.code(err.code).send(err.body);
+      if (row?.is_shared)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      if (!row?.ai_api_key_enc)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
       if (!(await verifyApiKey(ApiKeyType.Ai, key)))
         return reply.code(400).send(errorResponse('verification failed'));
       const enc = encryptKey(key);
@@ -99,8 +113,14 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const { id } = params;
       if (!requireUserIdMatch(req, reply, id)) return;
       const row = await getAiKeyRow(id);
-      const err = ensureKeyPresent(row, ['ai_api_key_enc']);
-      if (err) return reply.code(err.code).send(err.body);
+      if (row?.is_shared)
+        return reply
+          .code(403)
+          .send(errorResponse(ERROR_MESSAGES.forbidden));
+      if (!row?.ai_api_key_enc)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
       const agents = await getActiveAgentsByUser(id);
       for (const agent of agents) {
         removeAgentFromSchedule(agent.id);
@@ -116,6 +136,55 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       }
       await draftAgentsByUser(id);
       await clearAiKey(id);
+      return { ok: true };
+    },
+  );
+
+  app.post(
+    '/users/:id/ai-key/share',
+    { config: { rateLimit: RATE_LIMITS.MODERATE } },
+    async (req, reply) => {
+      const params = parseParams(idParams, req.params, reply);
+      if (!params) return;
+      const { id } = params;
+      const adminId = await requireAdmin(req, reply);
+      if (!adminId || adminId !== id) return;
+      const { email } = req.body as { email: string };
+      const row = await getAiKeyRow(id);
+      const err = ensureKeyPresent(row, ['ai_api_key_enc']);
+      if (err) return reply.code(err.code).send(err.body);
+      const target = await findUserByEmail(email);
+      if (!target) return reply.code(404).send(errorResponse('user not found'));
+      await shareAiKey(id, target.id);
+      return { ok: true };
+    },
+  );
+
+  app.delete(
+    '/users/:id/ai-key/share',
+    { config: { rateLimit: RATE_LIMITS.MODERATE } },
+    async (req, reply) => {
+      const params = parseParams(idParams, req.params, reply);
+      if (!params) return;
+      const { id } = params;
+      const adminId = await requireAdmin(req, reply);
+      if (!adminId || adminId !== id) return;
+      const { email } = req.body as { email: string };
+      const target = await findUserByEmail(email);
+      if (!target) return reply.code(404).send(errorResponse('user not found'));
+      const agents = await getActiveAgentsByUser(target.id);
+      for (const agent of agents) {
+        removeAgentFromSchedule(agent.id);
+        const token1 = agent.tokens[0].token;
+        const token2 = agent.tokens[1].token;
+        try {
+          await cancelOpenOrders(target.id, { symbol: `${token1}${token2}` });
+        } catch (err) {
+          req.log.error({ err, agentId: agent.id }, 'failed to cancel open orders');
+        }
+      }
+      await draftAgentsByUser(target.id);
+      await revokeAiKeyShare(id, target.id);
       return { ok: true };
     },
   );
