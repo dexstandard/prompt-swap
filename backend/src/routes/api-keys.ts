@@ -10,6 +10,9 @@ import {
   clearBinanceKey,
   shareAiKey,
   revokeAiKeyShare,
+  hasAiKeyShare,
+  getAiKeyShareTargets,
+
 } from '../repos/api-keys.js';
 import {
   getActiveAgentsByUser,
@@ -135,6 +138,26 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         }
       }
       await draftAgentsByUser(id);
+
+      const targets = await getAiKeyShareTargets(id);
+      for (const targetId of targets) {
+        const keyRow = await getAiKeyRow(targetId);
+        if (keyRow?.is_shared) {
+          const tAgents = await getActiveAgentsByUser(targetId);
+          for (const agent of tAgents) {
+            removeAgentFromSchedule(agent.id);
+            const token1 = agent.tokens[0].token;
+            const token2 = agent.tokens[1].token;
+            try {
+              await cancelOpenOrders(targetId, { symbol: `${token1}${token2}` });
+            } catch (err) {
+              req.log.error({ err, agentId: agent.id }, 'failed to cancel open orders');
+            }
+          }
+          await draftAgentsByUser(targetId);
+        }
+        await revokeAiKeyShare(id, targetId);
+      }
       await clearAiKey(id);
       return { ok: true };
     },
@@ -172,6 +195,23 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const { email } = req.body as { email: string };
       const target = await findUserByEmail(email);
       if (!target) return reply.code(404).send(errorResponse('user not found'));
+      if (!(await hasAiKeyShare(id, target.id)))
+        return reply.code(404).send(errorResponse('share not found'));
+      const keyRow = await getAiKeyRow(target.id);
+      if (keyRow?.is_shared) {
+        const agents = await getActiveAgentsByUser(target.id);
+        for (const agent of agents) {
+          removeAgentFromSchedule(agent.id);
+          const token1 = agent.tokens[0].token;
+          const token2 = agent.tokens[1].token;
+          try {
+            await cancelOpenOrders(target.id, { symbol: `${token1}${token2}` });
+          } catch (err) {
+            req.log.error({ err, agentId: agent.id }, 'failed to cancel open orders');
+          }
+        }
+        await draftAgentsByUser(target.id);
+      }
       await revokeAiKeyShare(id, target.id);
       return { ok: true };
     },

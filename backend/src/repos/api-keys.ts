@@ -48,6 +48,22 @@ export async function revokeAiKeyShare(ownerId: string, targetId: string) {
   );
 }
 
+export async function hasAiKeyShare(ownerId: string, targetId: string) {
+  const { rowCount } = await db.query(
+    'SELECT 1 FROM ai_api_key_shares WHERE owner_user_id = $1 AND target_user_id = $2',
+    [ownerId, targetId],
+  );
+  return rowCount > 0;
+}
+
+export async function getAiKeyShareTargets(ownerId: string) {
+  const { rows } = await db.query(
+    'SELECT target_user_id FROM ai_api_key_shares WHERE owner_user_id = $1',
+    [ownerId],
+  );
+  return rows.map((r: { target_user_id: string }) => r.target_user_id);
+}
+
 export async function getBinanceKeyRow(id: string) {
   const { rows } = await db.query(
     "SELECT ek.id, ek.api_key_enc AS binance_api_key_enc, ek.api_secret_enc AS binance_api_secret_enc FROM users u LEFT JOIN exchange_keys ek ON ek.user_id = u.id AND ek.provider = 'binance' WHERE u.id = $1",
