@@ -19,7 +19,6 @@ services:
       args:
         FRONTEND_BUILD_DIR: dist
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-        VITE_DO_SSH_HOST: ${VITE_DO_SSH_HOST}
     environment:
       - DOMAIN=${DOMAIN}
     ports:
