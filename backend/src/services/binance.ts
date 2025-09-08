@@ -15,10 +15,12 @@ async function getUserCreds(id: string): Promise<UserCreds | null> {
 
 export function parseBinanceError(err: unknown): string | null {
   if (err instanceof Error) {
-    const match = err.message.match(/\{.+\}$/);
-    if (match) {
+    const msg = err.message;
+    const start = msg.lastIndexOf('{');
+    const end = msg.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
       try {
-        const body = JSON.parse(match[0]);
+        const body = JSON.parse(msg.slice(start, end + 1));
         if (typeof body.msg === 'string') return body.msg;
       } catch {}
     }
