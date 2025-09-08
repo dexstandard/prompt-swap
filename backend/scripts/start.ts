@@ -14,6 +14,9 @@ async function main() {
   const log = app.log;
 
   const schedules: Record<string, string> = {
+    '10m': '*/10 * * * *',
+    '15m': '*/15 * * * *',
+    '30m': '*/30 * * * *',
     '1h': '0 * * * *',
     '3h': '0 */3 * * *',
     '5h': '0 */5 * * *',
