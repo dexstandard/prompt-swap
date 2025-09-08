@@ -41,15 +41,29 @@ function AgentRow({
     balance !== null && agent.startBalanceUsd != null
       ? balance - agent.startBalanceUsd
       : null;
+  const pnlPercent =
+    pnl !== null && agent.startBalanceUsd
+      ? (pnl / agent.startBalanceUsd) * 100
+      : null;
   const pnlText =
     pnl === null
       ? '-'
       : isLoading
       ? 'Loading...'
-      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}`;
+      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}${
+          pnlPercent !== null
+            ? ` (${pnlPercent > 0 ? '+' : pnlPercent < 0 ? '-' : ''}${Math.abs(pnlPercent).toFixed(2)}%)`
+            : ''
+        }`;
   const pnlClass =
     pnl === null || isLoading
       ? ''
+      : pnlPercent !== null
+      ? pnlPercent <= -3
+        ? 'text-red-600'
+        : pnlPercent >= 3
+        ? 'text-green-600'
+        : 'text-gray-600'
       : pnl <= -0.03
       ? 'text-red-600'
       : pnl >= 0.03
@@ -60,7 +74,11 @@ function AgentRow({
       ? undefined
       : `PnL = $${balance!.toFixed(2)} - $${agent.startBalanceUsd!.toFixed(2)} = ${
           pnl > 0 ? '+' : pnl < 0 ? '-' : ''
-        }$${Math.abs(pnl).toFixed(2)}`;
+        }$${Math.abs(pnl).toFixed(2)}${
+          pnlPercent !== null
+            ? ` (${pnlPercent > 0 ? '+' : pnlPercent < 0 ? '-' : ''}${Math.abs(pnlPercent).toFixed(2)}%)`
+            : ''
+        }`;
   return (
     <tr key={agent.id}>
       <td>
@@ -123,15 +141,29 @@ function AgentBlock({
     balance !== null && agent.startBalanceUsd != null
       ? balance - agent.startBalanceUsd
       : null;
+  const pnlPercent =
+    pnl !== null && agent.startBalanceUsd
+      ? (pnl / agent.startBalanceUsd) * 100
+      : null;
   const pnlText =
     pnl === null
       ? '-'
       : isLoading
       ? 'Loading...'
-      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}`;
+      : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}${
+          pnlPercent !== null
+            ? ` (${pnlPercent > 0 ? '+' : pnlPercent < 0 ? '-' : ''}${Math.abs(pnlPercent).toFixed(2)}%)`
+            : ''
+        }`;
   const pnlClass =
     pnl === null || isLoading
       ? ''
+      : pnlPercent !== null
+      ? pnlPercent <= -3
+        ? 'text-red-600'
+        : pnlPercent >= 3
+        ? 'text-green-600'
+        : 'text-gray-600'
       : pnl <= -0.03
       ? 'text-red-600'
       : pnl >= 0.03
@@ -142,7 +174,11 @@ function AgentBlock({
       ? undefined
       : `PnL = $${balance!.toFixed(2)} - $${agent.startBalanceUsd!.toFixed(2)} = ${
           pnl > 0 ? '+' : pnl < 0 ? '-' : ''
-        }$${Math.abs(pnl).toFixed(2)}`;
+        }$${Math.abs(pnl).toFixed(2)}${
+          pnlPercent !== null
+            ? ` (${pnlPercent > 0 ? '+' : pnlPercent < 0 ? '-' : ''}${Math.abs(pnlPercent).toFixed(2)}%)`
+            : ''
+        }`;
   return (
     <div className="border rounded p-3 text-sm">
       <div className="mb-2 flex items-center gap-1 font-medium">
