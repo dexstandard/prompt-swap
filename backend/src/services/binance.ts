@@ -215,6 +215,9 @@ async function fetchSymbolData(symbol: string) {
   const lot = infoJson.symbols[0]?.filters.find(
     (f) => f.filterType === 'LOT_SIZE',
   );
+  if (!lot?.stepSize) {
+    throw new Error('missing step size for symbol');
+  }
   return {
     currentPrice: Number(priceJson.price),
     orderBook: {
@@ -223,7 +226,7 @@ async function fetchSymbolData(symbol: string) {
     },
     day: await dayRes.json(),
     year: yearJson,
-    stepSize: lot?.stepSize ? Number(lot.stepSize) : undefined,
+    stepSize: Number(lot.stepSize),
   };
 }
 

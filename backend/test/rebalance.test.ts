@@ -10,6 +10,7 @@ vi.mock('../src/services/binance.js', () => ({
   fetchPairData: vi.fn().mockResolvedValue({
     symbol: 'BTCUSDT',
     currentPrice: 100,
+    stepSize: 0.001,
   }),
   createLimitOrder: vi.fn().mockResolvedValue({ orderId: 1 }),
 }));
@@ -190,5 +191,43 @@ describe('createRebalanceLimitOrder', () => {
     const row = (await getLimitOrders())[0];
     expect(JSON.parse(row.planned_json)).toMatchObject({ quantity: 50.27 });
     expect(createLimitOrder).toHaveBeenCalledWith(userId, expect.objectContaining({ quantity: 50.27 }));
+  });
+
+  it('throws if step size is missing', async () => {
+    const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    const userId = await insertUser('5');
+    const agent = await insertAgent({
+      userId,
+      model: 'm',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'USDT', minAllocation: 10 },
+        { token: 'BTC', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    vi.mocked(fetchPairData).mockResolvedValueOnce({
+      symbol: 'BTCUSDT',
+      currentPrice: 1,
+    } as any);
+    await expect(
+      createRebalanceLimitOrder({
+        userId,
+        tokens: ['USDT', 'BTC'],
+        positions: [
+          { sym: 'USDT', value_usdt: 150 },
+          { sym: 'BTC', value_usdt: 50 },
+        ],
+        newAllocation: 50,
+        log,
+        reviewResultId,
+      }),
+    ).rejects.toThrow(/step size/);
   });
 });

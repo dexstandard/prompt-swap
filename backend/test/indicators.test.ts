@@ -30,6 +30,7 @@ describe('fetchTokenIndicators', () => {
             currentPrice: 400,
             day: {},
             year: makeYear(2),
+            stepSize: 0.001,
           };
         }
         return {
@@ -37,6 +38,7 @@ describe('fetchTokenIndicators', () => {
           currentPrice: 200,
           day: {},
           year: makeYear(1),
+          stepSize: 0.001,
         };
       },
     );

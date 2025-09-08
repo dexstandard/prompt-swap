@@ -18,8 +18,11 @@ export async function calcRebalanceOrder(opts: {
   const { currentPrice, symbol, stepSize } = pair as {
     currentPrice: number;
     symbol: string;
-    stepSize?: number;
+    stepSize: number | undefined;
   };
+  if (stepSize === undefined) {
+    throw new Error('missing step size for symbol');
+  }
   const total = pos1.value_usdt + pos2.value_usdt;
   const target1 = (newAllocation / 100) * total;
   const diff = target1 - pos1.value_usdt;
@@ -33,7 +36,7 @@ export async function calcRebalanceOrder(opts: {
     ? 'SELL'
     : 'BUY';
   const rawQty = Math.abs(diff) / currentPrice;
-  const step = stepSize ?? 0.000001;
+  const step = stepSize;
   const precision = String(step).includes('.')
     ? String(step).split('.')[1].replace(/0+$/, '').length
     : 0;
@@ -42,7 +45,7 @@ export async function calcRebalanceOrder(opts: {
   );
   const better = side === 'BUY' ? 0.999 : 1.001;
   const price = currentPrice * better;
-  return { side, quantity, price, symbol } as const;
+  return { side, quantity, price, symbol, stepSize } as const;
 }
 
 export async function createRebalanceLimitOrder(opts: {
@@ -72,10 +75,18 @@ export async function createRebalanceLimitOrder(opts: {
     log.info('no rebalance needed');
     return;
   }
+  const step = order.stepSize;
+  const precision = String(step).includes('.')
+    ? String(step).split('.')[1].replace(/0+$/, '').length
+    : 0;
+  const qty =
+    quantity !== undefined
+      ? Number((Math.floor(quantity / step) * step).toFixed(precision))
+      : order.quantity;
   const params = {
     symbol: order.symbol,
     side: order.side,
-    quantity: quantity ?? order.quantity,
+    quantity: qty,
     price: price ?? order.price,
   } as const;
   log.info({ order: params }, 'creating limit order');
