@@ -275,12 +275,24 @@ export default async function agentRoutes(app: FastifyInstance) {
           .code(400)
           .send(errorResponse('order value below minimum'));
       }
-      const finalPrice = body?.price ?? order.price;
+      const info = await binance.fetchPairInfo(token1, token2);
+      const wantMoreToken1 = order.diff > 0;
+      const side = info.baseAsset === token1
+        ? (wantMoreToken1 ? 'BUY' : 'SELL')
+        : (wantMoreToken1 ? 'SELL' : 'BUY');
+      const defaultPrice = order.currentPrice * (side === 'BUY' ? 0.999 : 1.001);
+      const finalPrice = body?.price ?? defaultPrice;
       const finalQuantity = body?.quantity ?? order.quantity;
-      const usdValue =
-        order.side === 'BUY'
-          ? finalPrice * finalQuantity * price2Data.currentPrice
-          : finalQuantity * price1Data.currentPrice;
+      const usdValue = (() => {
+        if (info.baseAsset === token1) {
+          return side === 'BUY'
+            ? finalPrice * finalQuantity * price2Data.currentPrice
+            : finalQuantity * price1Data.currentPrice;
+        }
+        return side === 'BUY'
+          ? finalPrice * finalQuantity * price1Data.currentPrice
+          : finalQuantity * price2Data.currentPrice;
+      })();
       if (usdValue < MIN_LIMIT_ORDER_USD) {
         log.error({ execLogId: logId }, 'order below minimum');
         return reply
@@ -378,8 +390,14 @@ export default async function agentRoutes(app: FastifyInstance) {
         log.error({ execLogId: logId }, 'no rebalance needed');
         return reply.code(400).send(errorResponse('no rebalance needed'));
       }
+      const info = await binance.fetchPairInfo(token1, token2);
+      const wantMoreToken1 = order.diff > 0;
+      const side = info.baseAsset === token1
+        ? (wantMoreToken1 ? 'BUY' : 'SELL')
+        : (wantMoreToken1 ? 'SELL' : 'BUY');
+      const price = order.currentPrice * (side === 'BUY' ? 0.999 : 1.001);
       log.info({ execLogId: logId }, 'previewed manual order');
-      return { order };
+      return { order: { side, quantity: order.quantity, price } };
     },
   );
 

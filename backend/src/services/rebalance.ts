@@ -19,11 +19,8 @@ export async function calcRebalanceOrder(opts: {
   const target1 = (newAllocation / 100) * total;
   const diff = target1 - pos1.value_usdt;
   if (!diff || Math.abs(diff) < MIN_LIMIT_ORDER_USD) return null;
-  const side = diff > 0 ? 'BUY' : 'SELL';
   const quantity = Math.abs(diff) / currentPrice;
-  const better = side === 'BUY' ? 0.999 : 1.001;
-  const price = currentPrice * better;
-  return { side, quantity, price } as const;
+  return { diff, quantity, currentPrice } as const;
 }
 
 export async function createRebalanceLimitOrder(opts: {
@@ -55,11 +52,15 @@ export async function createRebalanceLimitOrder(opts: {
     return;
   }
   const info = await fetchPairInfo(token1, token2);
+  const wantMoreToken1 = order.diff > 0;
+  const side = info.baseAsset === token1
+    ? (wantMoreToken1 ? 'BUY' : 'SELL')
+    : (wantMoreToken1 ? 'SELL' : 'BUY');
   const qty = quantity ?? order.quantity;
-  const prc = price ?? order.price;
+  const prc = price ?? order.currentPrice * (side === 'BUY' ? 0.999 : 1.001);
   const params = {
     symbol: info.symbol,
-    side: order.side,
+    side,
     quantity: Number(qty.toFixed(info.quantityPrecision)),
     price: Number(prc.toFixed(info.pricePrecision)),
   } as const;
