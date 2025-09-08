@@ -172,6 +172,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const { email } = req.body as { email: string };
       const target = await findUserByEmail(email);
       if (!target) return reply.code(404).send(errorResponse('user not found'));
+
       const agents = await getActiveAgentsByUser(target.id);
       for (const agent of agents) {
         removeAgentFromSchedule(agent.id);
