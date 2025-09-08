@@ -63,7 +63,14 @@ export async function setUserEmail(id: string, emailEnc: string): Promise<void> 
 
 export async function listUsers() {
   const { rows } = await db.query(
-    'SELECT id, role, is_enabled, email_enc, created_at FROM users',
+    "SELECT u.id, u.role, u.is_enabled, u.email_enc, u.created_at, " +
+      "(ak.id IS NOT NULL OR oak.id IS NOT NULL) AS has_ai_key, " +
+      "(ek.id IS NOT NULL) AS has_binance_key " +
+      "FROM users u " +
+      "LEFT JOIN ai_api_keys ak ON ak.user_id = u.id AND ak.provider = 'openai' " +
+      "LEFT JOIN ai_api_key_shares s ON s.target_user_id = u.id " +
+      "LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai' " +
+      "LEFT JOIN exchange_keys ek ON ek.user_id = u.id AND ek.provider = 'binance'",
   );
   return rows as {
     id: string;
@@ -71,6 +78,8 @@ export async function listUsers() {
     is_enabled: boolean;
     email_enc?: string;
     created_at: string;
+    has_ai_key: boolean;
+    has_binance_key: boolean;
   }[];
 }
 
@@ -112,26 +121,29 @@ export async function clearUserTotp(id: string): Promise<void> {
   );
 }
 
-export async function findUserByEmail(emailEnc: string) {
+export async function findUserByEmail(email: string) {
   const { rows } = await db.query(
-    'SELECT id, role, is_enabled, totp_secret_enc, is_totp_enabled FROM users WHERE email_enc = $1',
-    [emailEnc],
+    'SELECT id, role, is_enabled, totp_secret_enc, is_totp_enabled, email_enc FROM users',
   );
-  const row = rows[0] as {
+  for (const row of rows as {
     id: string;
     role: string;
     is_enabled: boolean;
     totp_secret_enc?: string;
     is_totp_enabled?: boolean;
-  } | undefined;
-  if (!row) return undefined;
-  return {
-    id: row.id,
-    role: row.role,
-    is_enabled: row.is_enabled,
-    totp_secret: row.totp_secret_enc
-      ? decrypt(row.totp_secret_enc, env.KEY_PASSWORD)
-      : undefined,
-    is_totp_enabled: row.is_totp_enabled,
-  };
+    email_enc?: string;
+  }[]) {
+    if (row.email_enc && decrypt(row.email_enc, env.KEY_PASSWORD) === email) {
+      return {
+        id: row.id,
+        role: row.role,
+        is_enabled: row.is_enabled,
+        totp_secret: row.totp_secret_enc
+          ? decrypt(row.totp_secret_enc, env.KEY_PASSWORD)
+          : undefined,
+        is_totp_enabled: row.is_totp_enabled,
+      };
+    }
+  }
+  return undefined;
 }

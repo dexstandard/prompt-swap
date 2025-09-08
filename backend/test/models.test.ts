@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
 import { insertUser } from './repos/users.js';
-import { setAiKey } from '../src/repos/api-keys.js';
+import { setAiKey, shareAiKey } from '../src/repos/api-keys.js';
 import { authCookies } from './helpers.js';
 
 describe('model routes', () => {
@@ -97,6 +97,36 @@ describe('model routes', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it('allows user to fetch models via shared key', async () => {
+    const app = await buildServer();
+    const adminId = await insertUser('5');
+    const userId = await insertUser('6');
+    const key = 'aikeyshared123456';
+    await setAiKey(adminId, encrypt(key, process.env.KEY_PASSWORD!));
+    await shareAiKey(adminId, userId);
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ id: 'gpt-5' }, { id: 'other' }] }),
+    });
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/users/${userId}/models`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ models: ['gpt-5'] });
+    expect(fetchMock).toHaveBeenCalledWith('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+
+    (globalThis as any).fetch = originalFetch;
     await app.close();
   });
 });

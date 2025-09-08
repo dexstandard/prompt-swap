@@ -11,7 +11,7 @@ export default function Keys() {
         Your API keys are encrypted using AES-256 and stored only on our server. They are
         decrypted solely when needed to call providers and are never shared.
       </div>
-      <AiApiKeySection label="OpenAI API Key" />
+      <AiApiKeySection label="OpenAI API Key" allowShare />
       <ExchangeApiKeySection
         exchange="binance"
         label={
