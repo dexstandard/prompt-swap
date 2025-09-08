@@ -42,7 +42,8 @@ describe('fetchPairData', () => {
     const yearData = Array.from({ length: 365 }, (_, i) => [i]);
     const fetchMock = vi
       .fn()
-      // initial invalid pair (4 calls)
+      // initial invalid pair (5 calls)
+      .mockResolvedValueOnce(errRes)
       .mockResolvedValueOnce(errRes)
       .mockResolvedValueOnce(errRes)
       .mockResolvedValueOnce(errRes)
