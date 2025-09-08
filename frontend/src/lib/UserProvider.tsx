@@ -18,7 +18,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const id = api.interceptors.response.use(
       (res) => res,
       (err) => {
-        if (err.response?.status === 401) setUser(null);
+        if ([401, 403].includes(err.response?.status)) setUser(null);
         return Promise.reject(err);
       }
     );
