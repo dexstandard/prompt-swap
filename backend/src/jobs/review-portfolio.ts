@@ -10,7 +10,11 @@ import {
   insertReviewResult,
   getRecentReviewResults,
 } from '../repos/agent-review-result.js';
-import { getRecentLimitOrders } from '../repos/limit-orders.js';
+import {
+  getRecentLimitOrders,
+  getOpenLimitOrdersForAgent,
+  updateLimitOrderStatus,
+} from '../repos/limit-orders.js';
 import { parseExecLog } from '../util/parse-exec-log.js';
 import { callRebalancingAgent } from '../util/ai.js';
 import {
@@ -18,6 +22,8 @@ import {
   fetchPairData,
   fetchMarketTimeseries,
   fetchPairInfo,
+  cancelOrder,
+  parseBinanceError,
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import {
@@ -120,6 +126,8 @@ async function prepareAgents(
       agentId: row.id,
     });
 
+    await cleanupAgentOpenOrders(row, log);
+
     const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
 
     const balances = await fetchBalances(row, log);
@@ -144,6 +152,31 @@ async function prepareAgents(
   }
 
   return prepared;
+}
+
+async function cleanupAgentOpenOrders(
+  row: ActiveAgentRow,
+  log: FastifyBaseLogger,
+) {
+  const orders = await getOpenLimitOrdersForAgent(row.id);
+  for (const o of orders) {
+    const planned = JSON.parse(o.planned_json);
+    try {
+      await cancelOrder(o.user_id, {
+        symbol: planned.symbol,
+        orderId: Number(o.order_id),
+      });
+      await updateLimitOrderStatus(o.user_id, o.order_id, 'canceled');
+      log.info({ orderId: o.order_id }, 'canceled stale order');
+    } catch (err) {
+      const msg = parseBinanceError(err);
+      if (msg && /UNKNOWN_ORDER/i.test(msg)) {
+        await updateLimitOrderStatus(o.user_id, o.order_id, 'filled');
+      } else {
+        log.error({ err }, 'failed to cancel order');
+      }
+    }
+  }
 }
 
 async function fetchBalances(
