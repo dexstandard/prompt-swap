@@ -54,12 +54,13 @@ export default function GoogleLoginButton() {
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: async (resp: CredentialResponse) => {
           try {
-            const res = await api.post(
+            await api.post(
               '/login',
               { token: resp.credential },
               { headers: { 'x-csrf-token': csrf } }
             );
-            setUser(res.data);
+            const session = await api.get('/login/session');
+            setUser(session.data);
             if (btnRef.current) btnRef.current.innerHTML = '';
           } catch (err: unknown) {
             if (
@@ -68,6 +69,8 @@ export default function GoogleLoginButton() {
             ) {
               setPendingCred(resp.credential);
               setOtpOpen(true);
+            } else {
+              toast.show('Login failed');
             }
           }
         },
@@ -88,7 +91,7 @@ export default function GoogleLoginButton() {
       script?.addEventListener('load', initialize);
       return () => script?.removeEventListener('load', initialize);
     }
-    }, [user, setUser, csrf]);
+    }, [user, setUser, csrf, toast]);
 
   if (user) {
     const email = user.email ?? '';

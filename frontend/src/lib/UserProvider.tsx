@@ -15,6 +15,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
+    if (!user) return;
+    api
+      .get('/login/session')
+      .then((res) => setUser(res.data))
+      .catch(() => setUser(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const id = api.interceptors.response.use(
       (res) => res,
       (err) => {

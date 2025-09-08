@@ -109,5 +109,37 @@ describe('login route', () => {
     await app.close();
   });
 
+  it('returns session info for authenticated request', async () => {
+    const app = await buildServer();
+    vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
+      getPayload: () => ({ sub: 'sess', email: 'sess@example.com' }),
+    } as any);
+
+    const loginRes = await app.inject({
+      method: 'POST',
+      url: '/api/login',
+      headers: { 'sec-fetch-site': 'same-origin' },
+      payload: { token: 't' },
+    });
+    const cookie = loginRes.headers['set-cookie'] as string;
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/login/session',
+      headers: { cookie },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as any;
+    expect(body.email).toBe('sess@example.com');
+    await app.close();
+  });
+
+  it('rejects requests without session', async () => {
+    const app = await buildServer();
+    const res = await app.inject({ method: 'GET', url: '/api/login/session' });
+    expect(res.statusCode).toBe(403);
+    await app.close();
+  });
+
   // db closed in test setup
 });
