@@ -36,6 +36,13 @@ vi.mock('../src/services/binance.js', () => ({
   }),
   fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
   fetchMarketTimeseries: vi.fn().mockResolvedValue(sampleTimeseries),
+  fetchPairInfo: vi.fn().mockResolvedValue({
+    symbol: 'BTCETH',
+    baseAsset: 'BTC',
+    quoteAsset: 'ETH',
+    quantityPrecision: 8,
+    pricePrecision: 8,
+  }),
 }));
 
 vi.mock('../src/services/indicators.js', () => ({
@@ -55,6 +62,7 @@ let callRebalancingAgent: any;
 let fetchAccount: any;
 let fetchPairData: any;
 let fetchMarketTimeseries: any;
+let fetchPairInfo: any;
 let fetchTokenIndicators: any;
 let createRebalanceLimitOrder: any;
 
@@ -63,9 +71,8 @@ beforeAll(async () => {
     '../src/jobs/review-portfolio.js'
   ));
   ({ callRebalancingAgent } = await import('../src/util/ai.js'));
-  ({ fetchAccount, fetchPairData, fetchMarketTimeseries } = await import(
-    '../src/services/binance.js'
-  ));
+  ({ fetchAccount, fetchPairData, fetchMarketTimeseries, fetchPairInfo } =
+    await import('../src/services/binance.js'));
   ({ fetchTokenIndicators } = await import('../src/services/indicators.js'));
   ({ createRebalanceLimitOrder } = await import('../src/services/rebalance.js'));
 });
