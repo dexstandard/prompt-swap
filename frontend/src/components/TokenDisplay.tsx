@@ -4,6 +4,7 @@ const ICONS: Record<string, string> = {
   ETH: '/tokens/ethereum-eth-logo.svg',
   SOL: '/tokens/solana-sol-logo.svg',
   USDT: '/tokens/tether-usdt-logo.svg',
+  USDC: '/tokens/usd-coin-usdc-logo.svg',
 };
 
 export default function TokenDisplay({ token, className = '' }: { token: string; className?: string }) {

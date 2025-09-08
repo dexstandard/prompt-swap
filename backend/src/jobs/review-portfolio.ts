@@ -241,7 +241,7 @@ async function fetchPromptData(
   }
 
   async function getPrice(sym: string): Promise<{ currentPrice: number }> {
-    if (sym === 'USDT') return { currentPrice: 1 };
+    if (sym === 'USDT' || sym === 'USDC') return { currentPrice: 1 };
     const key = `${sym}-USDT`;
     let val = cache.pairData.get(key);
     if (!val) {

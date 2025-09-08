@@ -242,10 +242,10 @@ export default async function agentRoutes(app: FastifyInstance) {
         return reply.code(400).send(errorResponse('failed to fetch balances'));
       }
       const [price1Data, price2Data] = await Promise.all([
-        token1 === 'USDT'
+        ['USDT', 'USDC'].includes(token1)
           ? Promise.resolve({ currentPrice: 1 })
           : binance.fetchPairData(token1, 'USDT'),
-        token2 === 'USDT'
+        ['USDT', 'USDC'].includes(token2)
           ? Promise.resolve({ currentPrice: 1 })
           : binance.fetchPairData(token2, 'USDT'),
       ]);
@@ -350,10 +350,10 @@ export default async function agentRoutes(app: FastifyInstance) {
         return reply.code(400).send(errorResponse('failed to fetch balances'));
       }
       const [price1Data, price2Data] = await Promise.all([
-        token1 === 'USDT'
+        ['USDT', 'USDC'].includes(token1)
           ? Promise.resolve({ currentPrice: 1 })
           : binance.fetchPairData(token1, 'USDT'),
-        token2 === 'USDT'
+        ['USDT', 'USDC'].includes(token2)
           ? Promise.resolve({ currentPrice: 1 })
           : binance.fetchPairData(token2, 'USDT'),
       ]);
