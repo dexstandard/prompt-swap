@@ -14,16 +14,38 @@ export async function calcRebalanceOrder(opts: {
   const pos1 = positions.find((p) => p.sym === token1);
   const pos2 = positions.find((p) => p.sym === token2);
   if (!pos1 || !pos2) return null;
-  const { currentPrice } = await fetchPairData(token1, token2);
+  const pair = await fetchPairData(token1, token2);
+  const { currentPrice, symbol, stepSize } = pair as {
+    currentPrice: number;
+    symbol: string;
+    stepSize: number | undefined;
+  };
+  if (stepSize === undefined) {
+    throw new Error('missing step size for symbol');
+  }
   const total = pos1.value_usdt + pos2.value_usdt;
   const target1 = (newAllocation / 100) * total;
   const diff = target1 - pos1.value_usdt;
   if (!diff || Math.abs(diff) < MIN_LIMIT_ORDER_USD) return null;
-  const side = diff > 0 ? 'BUY' : 'SELL';
-  const quantity = Math.abs(diff) / currentPrice;
+  const baseIsToken1 = symbol === `${token1}${token2}`.toUpperCase();
+  const side = baseIsToken1
+    ? diff > 0
+      ? 'BUY'
+      : 'SELL'
+    : diff > 0
+    ? 'SELL'
+    : 'BUY';
+  const rawQty = Math.abs(diff) / currentPrice;
+  const step = stepSize;
+  const precision = String(step).includes('.')
+    ? String(step).split('.')[1].replace(/0+$/, '').length
+    : 0;
+  const quantity = Number(
+    (Math.floor(rawQty / step) * step).toFixed(precision),
+  );
   const better = side === 'BUY' ? 0.999 : 1.001;
   const price = currentPrice * better;
-  return { side, quantity, price } as const;
+  return { side, quantity, price, symbol, stepSize, precision } as const;
 }
 
 export async function createRebalanceLimitOrder(opts: {
@@ -48,19 +70,25 @@ export async function createRebalanceLimitOrder(opts: {
     quantity,
     manuallyEdited,
   } = opts;
-  const [token1, token2] = tokens;
   const order = await calcRebalanceOrder({ tokens, positions, newAllocation });
   if (!order) {
     log.info('no rebalance needed');
     return;
   }
+  const step = order.stepSize;
+  const precision = order.precision;
+  const qty =
+    quantity !== undefined
+      ? Number((Math.floor(quantity / step) * step).toFixed(precision))
+      : order.quantity;
+  const qtyStr = Number(qty.toFixed(precision)).toString();
   const params = {
-    symbol: `${token1}${token2}`.toUpperCase(),
+    symbol: order.symbol,
     side: order.side,
-    quantity: quantity ?? order.quantity,
+    quantity: qtyStr,
     price: price ?? order.price,
   } as const;
-  log.info({ order: params }, 'creating limit order');
+  log.info({ order: { ...params, quantity: qty } }, 'creating limit order');
   try {
     const res = await createLimitOrder(userId, params);
     if (!res || res.orderId === undefined || res.orderId === null) {
@@ -69,7 +97,7 @@ export async function createRebalanceLimitOrder(opts: {
     }
     await insertLimitOrder({
       userId,
-      planned: { ...params, manuallyEdited: manuallyEdited ?? false },
+      planned: { ...params, quantity: qty, manuallyEdited: manuallyEdited ?? false },
       status: 'open' as LimitOrderStatus,
       reviewResultId,
       orderId: String(res.orderId),
