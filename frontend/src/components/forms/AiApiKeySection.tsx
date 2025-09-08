@@ -9,6 +9,7 @@ export default function AiApiKeySection({ label }: { label: ReactNode }) {
       label={label}
       queryKey="ai-key"
       getKeyPath={(id) => `/users/${id}/ai-key`}
+      sharePath={(id) => `/users/${id}/ai-key/share`}
       fields={aiFields}
       videoGuideUrl="https://www.youtube.com/watch?v=WjVf80HUvYg"
     />

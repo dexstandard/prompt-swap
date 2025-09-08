@@ -29,6 +29,7 @@ interface ApiKeySectionProps {
   balanceQueryKey?: string;
   getBalancePath?: (id: string) => string;
   whitelistHost?: string;
+  sharePath?: (id: string) => string;
 }
 
 const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
@@ -44,6 +45,7 @@ export default function ApiKeySection({
   balanceQueryKey,
   getBalancePath,
   whitelistHost,
+  sharePath,
 }: ApiKeySectionProps) {
   const { user } = useUser();
   const toast = useToast();
@@ -57,7 +59,7 @@ export default function ApiKeySection({
     mode: 'onChange',
   });
   const id = user!.id;
-  const query = useQuery<Record<string, string> | null>({
+  const query = useQuery<{ [key: string]: string; shared?: boolean } | null>({
     queryKey: [queryKey, id],
     enabled: !!user,
     queryFn: async () => {
@@ -72,8 +74,14 @@ export default function ApiKeySection({
   });
 
   useEffect(() => {
-    form.reset(query.data ?? defaultValues);
-  }, [query.data, defaultValues, form]);
+    const data = query.data
+      ? fields.reduce(
+          (acc, f) => ({ ...acc, [f.name]: query.data[f.name] ?? '' }),
+          {} as Record<string, string>,
+        )
+      : defaultValues;
+    form.reset(data);
+  }, [query.data, defaultValues, form, fields]);
 
   const [editing, setEditing] = useState(false);
   useEffect(() => {
@@ -105,6 +113,18 @@ export default function ApiKeySection({
       await api.delete(getKeyPath(id));
     },
     onSuccess: () => query.refetch(),
+  });
+
+  const shareMut = useMutation({
+    mutationFn: async (email: string) => {
+      await api.post(sharePath!(id), { email });
+    },
+  });
+
+  const revokeMut = useMutation({
+    mutationFn: async (email: string) => {
+      await api.delete(sharePath!(id), { data: { email } });
+    },
   });
 
   const balanceQuery = useQuery<{ totalUsd: number }>({
@@ -193,32 +213,69 @@ export default function ApiKeySection({
               data-lpignore="true"
               data-1p-ignore="true"
             />
-            <Button
-              type="button"
-              onClick={() => {
-                setEditing(true);
-                form.reset(defaultValues);
-              }}
-              disabled={delMut.isPending}
-            >
-              Edit
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              onClick={() => {
-                if (
-                  window.confirm(
-                    'Deleting this key will stop all active agents. Continue?',
-                  )
-                ) {
-                  delMut.mutate();
-                }
-              }}
-              disabled={delMut.isPending}
-            >
-              Delete
-            </Button>
+            {!query.data?.shared && (
+              <>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setEditing(true);
+                    form.reset(defaultValues);
+                  }}
+                  disabled={delMut.isPending}
+                >
+                  Edit
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        'Deleting this key will stop all active agents. Continue?',
+                      )
+                    ) {
+                      delMut.mutate();
+                    }
+                  }}
+                  disabled={delMut.isPending}
+                >
+                  Delete
+                </Button>
+              </>
+            )}
+            {query.data?.shared && (
+              <p className="text-sm text-gray-600 self-center">Shared by admin</p>
+            )}
+            {user?.role === 'admin' && sharePath && (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const email = window.prompt('Enter email to share with');
+                    if (email) shareMut.mutate(email);
+                  }}
+                  disabled={
+                    delMut.isPending || shareMut.isPending || revokeMut.isPending
+                  }
+                >
+                  Share
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const email = window.prompt('Enter email to revoke');
+                    if (email) revokeMut.mutate(email);
+                  }}
+                  disabled={
+                    delMut.isPending || shareMut.isPending || revokeMut.isPending
+                  }
+                >
+                  Revoke
+                </Button>
+              </>
+            )}
           </div>
           {balanceQueryKey && (
             balanceQuery.isLoading ? (

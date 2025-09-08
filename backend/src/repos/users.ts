@@ -112,26 +112,29 @@ export async function clearUserTotp(id: string): Promise<void> {
   );
 }
 
-export async function findUserByEmail(emailEnc: string) {
+export async function findUserByEmail(email: string) {
   const { rows } = await db.query(
-    'SELECT id, role, is_enabled, totp_secret_enc, is_totp_enabled FROM users WHERE email_enc = $1',
-    [emailEnc],
+    'SELECT id, role, is_enabled, totp_secret_enc, is_totp_enabled, email_enc FROM users',
   );
-  const row = rows[0] as {
+  for (const row of rows as {
     id: string;
     role: string;
     is_enabled: boolean;
     totp_secret_enc?: string;
     is_totp_enabled?: boolean;
-  } | undefined;
-  if (!row) return undefined;
-  return {
-    id: row.id,
-    role: row.role,
-    is_enabled: row.is_enabled,
-    totp_secret: row.totp_secret_enc
-      ? decrypt(row.totp_secret_enc, env.KEY_PASSWORD)
-      : undefined,
-    is_totp_enabled: row.is_totp_enabled,
-  };
+    email_enc?: string;
+  }[]) {
+    if (row.email_enc && decrypt(row.email_enc, env.KEY_PASSWORD) === email) {
+      return {
+        id: row.id,
+        role: row.role,
+        is_enabled: row.is_enabled,
+        totp_secret: row.totp_secret_enc
+          ? decrypt(row.totp_secret_enc, env.KEY_PASSWORD)
+          : undefined,
+        is_totp_enabled: row.is_totp_enabled,
+      };
+    }
+  }
+  return undefined;
 }
