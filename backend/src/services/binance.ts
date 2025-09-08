@@ -389,3 +389,20 @@ export async function fetchMarketTimeseries(symbol: string) {
     ),
   };
 }
+
+export type FearGreedIndex = { value: number; classification: string };
+
+export async function fetchFearGreedIndex(): Promise<FearGreedIndex> {
+  const res = await fetch('https://fapi.binance.com/fapi/v1/fngIndex');
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(
+      `failed to fetch fear & greed index: ${res.status} ${body}`,
+    );
+  }
+  const json = (await res.json()) as any;
+  const value = Number(json?.value ?? json?.data?.[0]?.value);
+  const classification =
+    json?.value_classification ?? json?.data?.[0]?.value_classification ?? '';
+  return { value, classification };
+}

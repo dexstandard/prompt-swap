@@ -24,6 +24,8 @@ import {
   fetchPairInfo,
   cancelOrder,
   parseBinanceError,
+  fetchFearGreedIndex,
+  type FearGreedIndex,
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import {
@@ -52,6 +54,7 @@ type PromptCache = {
   pairData: Map<string, PairCacheData>;
   indicators: Map<string, TokenIndicators>;
   timeseries: Map<string, MarketTimeseries>;
+  fearGreed?: FearGreedIndex;
 };
 
 export async function reviewAgentPortfolio(
@@ -82,7 +85,14 @@ async function runAgents(
     pairData: new Map(),
     indicators: new Map(),
     timeseries: new Map(),
+    fearGreed: undefined,
   };
+
+  try {
+    cache.fearGreed = await fetchFearGreedIndex();
+  } catch (err) {
+    log.error({ err }, 'failed to fetch fear & greed index');
+  }
 
   const prepared = await prepareAgents(agents, log, cache);
 
@@ -240,7 +250,15 @@ async function buildPrompt(
         },
         ...(await buildPreviousOrders(row.id)),
       },
-      marketData: assembleMarketData(row, pairData, ind1, ind2, ts1, ts2),
+      marketData: assembleMarketData(
+        row,
+        pairData,
+        ind1,
+        ind2,
+        ts1,
+        ts2,
+        cache.fearGreed,
+      ),
     };
   } catch (err) {
     const msg = 'failed to fetch market data';
@@ -383,11 +401,13 @@ function assembleMarketData(
   ind2?: TokenIndicators,
   ts1?: MarketTimeseries,
   ts2?: MarketTimeseries,
- ) {
+  fearGreed?: FearGreedIndex,
+) {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
   return {
     currentPrice: pairData.currentPrice,
+    ...(fearGreed ? { fearGreedIndex: fearGreed } : {}),
     ...(ind1 || ind2
       ? {
           indicators: {
@@ -424,6 +444,7 @@ async function executeAgent(
     const resultId = await insertReviewResult({
       agentId: row.id,
       log: parsed.text,
+      rawLogId: logId,
       ...(parsed.response
         ? {
             rebalance: parsed.response.rebalance,
@@ -459,8 +480,9 @@ async function saveFailure(
   message: string,
   prompt?: RebalancePrompt,
 ) {
+  let rawId: string | undefined;
   if (prompt) {
-    await insertReviewRawLog({
+    rawId = await insertReviewRawLog({
       agentId: row.id,
       prompt,
       response: { error: message },
@@ -470,6 +492,7 @@ async function saveFailure(
   await insertReviewResult({
     agentId: row.id,
     log: parsed.text,
+    ...(rawId ? { rawLogId: rawId } : {}),
     ...(parsed.response
       ? {
           rebalance: parsed.response.rebalance,

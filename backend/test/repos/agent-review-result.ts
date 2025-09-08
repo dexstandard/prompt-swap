@@ -9,5 +9,6 @@ export function insertReviewResult(entry: any) {
     newAllocation: entry.newAllocation,
     shortReport: entry.shortReport,
     error: entry.error,
+    rawLogId: entry.rawLogId,
   });
 }

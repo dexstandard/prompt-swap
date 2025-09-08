@@ -34,6 +34,7 @@ export interface RebalancePrompt {
     currentPrice: number;
     indicators?: Record<string, TokenIndicators>;
     market_timeseries?: Record<string, MarketTimeseries>;
+    fearGreedIndex?: { value: number; classification: string };
   };
   previous_responses?: string[];
 }
