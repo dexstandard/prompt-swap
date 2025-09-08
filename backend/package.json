@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc && mkdir -p dist/src/db && cp src/db/schema.sql dist/src/db/schema.sql",
     "start": "node dist/scripts/start.js",
-    "test": "vitest run"
+    "test": "KEY_PASSWORD=test GOOGLE_CLIENT_ID=test-client node --loader ts-node/esm --test test/**/*.ts"
   },
   "dependencies": {
     "@fastify/cookie": "9.4.0",
@@ -15,7 +15,6 @@
     "@fastify/rate-limit": "8.1.1",
     "dotenv": "16.6.1",
     "fastify": "4.29.1",
-    "google-auth-library": "10.2.1",
     "jsonwebtoken": "9.0.2",
     "node-cron": "3.0.2",
     "otplib": "12.0.1",
@@ -23,13 +22,16 @@
     "pino": "8.15.0",
     "zod": "3.22.4"
   },
+  "overrides": {
+    "debug": "4.3.4"
+  },
   "devDependencies": {
     "@types/jsonwebtoken": "9.0.10",
     "@types/node": "22.18.1",
     "@types/node-cron": "3.0.11",
     "@types/pg": "8.10.2",
-    "typescript": "5.2.2",
-    "vitest": "3.2.4"
+    "ts-node": "10.9.1",
+    "typescript": "5.2.2"
   },
   "engines": {
     "node": "22.19.0"

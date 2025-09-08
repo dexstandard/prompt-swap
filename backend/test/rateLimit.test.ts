@@ -1,4 +1,5 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import test from 'node:test';
+import assert from 'node:assert/strict';
 import { RATE_LIMITS } from '../src/rate-limit.js';
 import buildServer from '../src/server.js';
 
@@ -8,7 +9,7 @@ interface Endpoint {
   url: string;
   limit: number;
   payload?: Record<string, unknown>;
-  setup?: () => Promise<void> | void;
+  setup?: () => Promise<(() => void) | void> | (() => void) | void;
 }
 
 const endpoints: Endpoint[] = [
@@ -19,11 +20,19 @@ const endpoints: Endpoint[] = [
     url: '/api/login',
     payload: { token: 'test-token' },
     limit: RATE_LIMITS.VERY_TIGHT.max,
-    setup: async () => {
-      const { OAuth2Client } = await import('google-auth-library');
-      vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
-        getPayload: () => ({ sub: '1', email: 'user@example.com' }),
-      } as any);
+    setup: () => {
+      const orig = global.fetch;
+      global.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+          sub: '1',
+          email: 'user@example.com',
+          aud: 'test-client',
+        }),
+      }) as any;
+      return () => {
+        global.fetch = orig;
+      };
     },
   },
   { name: 'agents', method: 'GET', url: '/api/agents/paginated', limit: RATE_LIMITS.RELAXED.max },
@@ -39,35 +48,29 @@ const endpoints: Endpoint[] = [
   { name: 'twofa-setup', method: 'GET', url: '/api/2fa/setup', limit: RATE_LIMITS.TIGHT.max },
 ];
 
-describe('rate limiting', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  for (const ep of endpoints) {
-    it(`returns 429 after exceeding limit on ${ep.name}`, async () => {
-      if (ep.setup) await ep.setup();
-      const app = await buildServer();
-
-      const opts: any = { method: ep.method, url: ep.url };
-      if (ep.payload) opts.payload = ep.payload;
-      if (ep.name === 'login') {
-        opts.headers = { 'sec-fetch-site': 'same-origin' };
-      }
-
-      for (let i = 0; i < ep.limit; i++) {
-        await app.inject(opts);
-      }
-      const res = await app.inject(opts);
-
-      expect(res.statusCode).toBe(429);
-      const body = res.json();
-      expect(body).toMatchObject({
-        error: expect.stringContaining('Too many requests'),
-      });
-
-      await app.close();
+for (const ep of endpoints) {
+  test(`returns 429 after exceeding limit on ${ep.name}`, async (t) => {
+    let cleanup: (() => void) | void;
+    if (ep.setup) cleanup = await ep.setup();
+    const app = await buildServer();
+    t.after(() => {
+      cleanup?.();
+      return app.close();
     });
-  }
-});
 
+    const opts: any = { method: ep.method, url: ep.url };
+    if (ep.payload) opts.payload = ep.payload;
+    if (ep.name === 'login') {
+      opts.headers = { 'sec-fetch-site': 'same-origin' };
+    }
+
+    for (let i = 0; i < ep.limit; i++) {
+      await app.inject(opts);
+    }
+    const res = await app.inject(opts);
+
+    assert.equal(res.statusCode, 429);
+    const body = res.json() as any;
+    assert.ok(body.error.includes('Too many requests'));
+  });
+}

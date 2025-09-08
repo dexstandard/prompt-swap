@@ -1,5 +1,4 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 import { authenticator } from 'otplib';
 import { env } from '../util/env.js';
@@ -19,14 +18,22 @@ interface ValidationErr {
   body: ErrorResponse;
 }
 
-const client = new OAuth2Client();
-
 async function verifyToken(token: string) {
-  const ticket = await client.verifyIdToken({
-    idToken: token,
-    audience: env.GOOGLE_CLIENT_ID,
-  });
-  return ticket.getPayload();
+  try {
+    const res = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`,
+    );
+    if (!res.ok) return null;
+    const payload = (await res.json()) as {
+      aud?: string;
+      sub?: string;
+      email?: string;
+    };
+    if (payload.aud !== env.GOOGLE_CLIENT_ID) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 function setSessionCookie(reply: FastifyReply, id: string) {

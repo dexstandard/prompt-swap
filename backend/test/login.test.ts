@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { OAuth2Client } from 'google-auth-library';
+import test from 'node:test';
+import assert from 'node:assert/strict';
 import { authenticator } from 'otplib';
 import buildServer from '../src/server.js';
 import { encrypt, decrypt } from '../src/util/crypto.js';
@@ -7,139 +7,153 @@ import { env } from '../src/util/env.js';
 import { insertUser, getUserEmailEnc, setUserEnabled } from './repos/users.js';
 import { setUserTotpSecret } from '../src/repos/users.js';
 
-describe('login route', () => {
-  it('creates user on first login', async () => {
-    const app = await buildServer();
-    vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
-      getPayload: () => ({ sub: '123', email: 'user@example.com' }),
-    } as any);
+function stubFetch(payload: { sub: string; email: string }) {
+  const orig = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ ...payload, aud: 'test-client' }),
+  }) as any;
+  return () => {
+    global.fetch = orig;
+  };
+}
 
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/login',
-      headers: { 'sec-fetch-site': 'same-origin' },
-      payload: { token: 'test-token' },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.headers['set-cookie']).toBeDefined();
-    const body = res.json() as any;
-    expect(body.role).toBe('user');
-    const row = await getUserEmailEnc(body.id);
-    expect(row).toBeTruthy();
-    const email = decrypt(row!.email_enc!, env.KEY_PASSWORD);
-    expect(email).toBe('user@example.com');
-    await app.close();
+test('creates user on first login', async (t) => {
+  const restore = stubFetch({ sub: '123', email: 'user@example.com' });
+  const app = await buildServer();
+  t.after(() => {
+    restore();
+    return app.close();
   });
 
-  it('requires otp when 2fa enabled', async () => {
-    const app = await buildServer();
-    vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
-      getPayload: () => ({ sub: '2', email: 'user2@example.com' }),
-    } as any);
-    const secret = authenticator.generateSecret();
-    const id = await insertUser('2', encrypt('user2@example.com', env.KEY_PASSWORD));
-    await setUserTotpSecret(id, secret);
-
-    const res1 = await app.inject({
-      method: 'POST',
-      url: '/api/login',
-      headers: { 'sec-fetch-site': 'same-origin' },
-      payload: { token: 't1' },
-    });
-    expect(res1.statusCode).toBe(401);
-
-    const otp = authenticator.generate(secret);
-    const res2 = await app.inject({
-      method: 'POST',
-      url: '/api/login',
-      headers: { 'sec-fetch-site': 'same-origin' },
-      payload: { token: 't1', otp },
-    });
-    expect(res2.statusCode).toBe(200);
-    await app.close();
+  const res = await app.inject({
+    method: 'POST',
+    url: '/api/login',
+    headers: { 'sec-fetch-site': 'same-origin' },
+    payload: { token: 'test-token' },
   });
-
-  it('rejects disabled users', async () => {
-    const app = await buildServer();
-    vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
-      getPayload: () => ({ sub: '3', email: 'u3@example.com' }),
-    } as any);
-    const id = await insertUser('3', encrypt('u3@example.com', env.KEY_PASSWORD));
-    await setUserEnabled(id, false);
-
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/login',
-      headers: { 'sec-fetch-site': 'same-origin' },
-      payload: { token: 't' },
-    });
-    expect(res.statusCode).toBe(403);
-    await app.close();
-  });
-
-  it('requires csrf token for cross-site requests', async () => {
-    const app = await buildServer();
-    vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
-      getPayload: () => ({ sub: 'csrf', email: 'csrf@example.com' }),
-    } as any);
-
-    const res1 = await app.inject({
-      method: 'POST',
-      url: '/api/login',
-      headers: { 'sec-fetch-site': 'cross-site' },
-      payload: { token: 't' },
-    });
-    expect(res1.statusCode).toBe(403);
-
-    const tokenRes = await app.inject({ method: 'GET', url: '/api/login/csrf' });
-    const csrfToken = (tokenRes.json() as any).csrfToken;
-    const cookieHeader = (tokenRes.headers['set-cookie'] as string).split(';')[0];
-
-    const res2 = await app.inject({
-      method: 'POST',
-      url: '/api/login',
-      headers: {
-        'sec-fetch-site': 'cross-site',
-        'x-csrf-token': csrfToken,
-        cookie: cookieHeader,
-      },
-      payload: { token: 't' },
-    });
-    expect(res2.statusCode).toBe(200);
-    await app.close();
-  });
-
-  it('returns session info for authenticated request', async () => {
-    const app = await buildServer();
-    vi.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
-      getPayload: () => ({ sub: 'sess', email: 'sess@example.com' }),
-    } as any);
-
-    const loginRes = await app.inject({
-      method: 'POST',
-      url: '/api/login',
-      headers: { 'sec-fetch-site': 'same-origin' },
-      payload: { token: 't' },
-    });
-    const cookie = loginRes.headers['set-cookie'] as string;
-
-    const res = await app.inject({
-      method: 'GET',
-      url: '/api/login/session',
-      headers: { cookie },
-    });
-    expect(res.statusCode).toBe(200);
-    const body = res.json() as any;
-    expect(body.email).toBe('sess@example.com');
-    await app.close();
-  });
-
-  it('rejects requests without session', async () => {
-    const app = await buildServer();
-    const res = await app.inject({ method: 'GET', url: '/api/login/session' });
-    expect(res.statusCode).toBe(403);
-    await app.close();
-  });
-
-  // db closed in test setup
+  assert.equal(res.statusCode, 200);
+  assert.ok(res.headers['set-cookie']);
+  const body = res.json() as any;
+  assert.equal(body.role, 'user');
+  const row = await getUserEmailEnc(body.id);
+  assert.ok(row);
+  const email = decrypt(row!.email_enc!, env.KEY_PASSWORD);
+  assert.equal(email, 'user@example.com');
 });
+
+test('requires otp when 2fa enabled', async (t) => {
+  const restore = stubFetch({ sub: '2', email: 'user2@example.com' });
+  const app = await buildServer();
+  t.after(() => {
+    restore();
+    return app.close();
+  });
+  const secret = authenticator.generateSecret();
+  const id = await insertUser('2', encrypt('user2@example.com', env.KEY_PASSWORD));
+  await setUserTotpSecret(id, secret);
+
+  const res1 = await app.inject({
+    method: 'POST',
+    url: '/api/login',
+    headers: { 'sec-fetch-site': 'same-origin' },
+    payload: { token: 't1' },
+  });
+  assert.equal(res1.statusCode, 401);
+
+  const otp = authenticator.generate(secret);
+  const res2 = await app.inject({
+    method: 'POST',
+    url: '/api/login',
+    headers: { 'sec-fetch-site': 'same-origin' },
+    payload: { token: 't1', otp },
+  });
+  assert.equal(res2.statusCode, 200);
+});
+
+test('rejects disabled users', async (t) => {
+  const restore = stubFetch({ sub: '3', email: 'u3@example.com' });
+  const app = await buildServer();
+  t.after(() => {
+    restore();
+    return app.close();
+  });
+  const id = await insertUser('3', encrypt('u3@example.com', env.KEY_PASSWORD));
+  await setUserEnabled(id, false);
+
+  const res = await app.inject({
+    method: 'POST',
+    url: '/api/login',
+    headers: { 'sec-fetch-site': 'same-origin' },
+    payload: { token: 't' },
+  });
+  assert.equal(res.statusCode, 403);
+});
+
+test('requires csrf token for cross-site requests', async (t) => {
+  const restore = stubFetch({ sub: 'csrf', email: 'csrf@example.com' });
+  const app = await buildServer();
+  t.after(() => {
+    restore();
+    return app.close();
+  });
+
+  const res1 = await app.inject({
+    method: 'POST',
+    url: '/api/login',
+    headers: { 'sec-fetch-site': 'cross-site' },
+    payload: { token: 't' },
+  });
+  assert.equal(res1.statusCode, 403);
+
+  const tokenRes = await app.inject({ method: 'GET', url: '/api/login/csrf' });
+  const csrfToken = (tokenRes.json() as any).csrfToken;
+  const cookieHeader = (tokenRes.headers['set-cookie'] as string).split(';')[0];
+
+  const res2 = await app.inject({
+    method: 'POST',
+    url: '/api/login',
+    headers: {
+      'sec-fetch-site': 'cross-site',
+      'x-csrf-token': csrfToken,
+      cookie: cookieHeader,
+    },
+    payload: { token: 't' },
+  });
+  assert.equal(res2.statusCode, 200);
+});
+
+test('returns session info for authenticated request', async (t) => {
+  const restore = stubFetch({ sub: 'sess', email: 'sess@example.com' });
+  const app = await buildServer();
+  t.after(() => {
+    restore();
+    return app.close();
+  });
+
+  const loginRes = await app.inject({
+    method: 'POST',
+    url: '/api/login',
+    headers: { 'sec-fetch-site': 'same-origin' },
+    payload: { token: 't' },
+  });
+  const cookie = loginRes.headers['set-cookie'] as string;
+
+  const res = await app.inject({
+    method: 'GET',
+    url: '/api/login/session',
+    headers: { cookie },
+  });
+  assert.equal(res.statusCode, 200);
+  const body = res.json() as any;
+  assert.equal(body.email, 'sess@example.com');
+});
+
+test('rejects requests without session', async (t) => {
+  const app = await buildServer();
+  t.after(() => app.close());
+  const res = await app.inject({ method: 'GET', url: '/api/login/session' });
+  assert.equal(res.statusCode, 403);
+});
+
+// db closed in test setup
