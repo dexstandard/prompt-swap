@@ -5,12 +5,26 @@ import { env } from '../src/util/env.js';
 import { insertAdminUser, insertUser } from './repos/users.js';
 import { getUser } from '../src/repos/users.js';
 import { authCookies } from './helpers.js';
+import { setAiKey, setBinanceKey } from '../src/repos/api-keys.js';
 
 describe('admin user routes', () => {
   it('lists users for admin only', async () => {
     const app = await buildServer();
-    const adminId = await insertAdminUser('admin1', encrypt('admin@example.com', env.KEY_PASSWORD));
-    const userId = await insertUser('1', encrypt('user1@example.com', env.KEY_PASSWORD));
+    const adminId = await insertAdminUser(
+      'admin1',
+      encrypt('admin@example.com', env.KEY_PASSWORD),
+    );
+    const userId = await insertUser(
+      '1',
+      encrypt('user1@example.com', env.KEY_PASSWORD),
+    );
+
+    await setAiKey(userId, encrypt('openai-key', env.KEY_PASSWORD));
+    await setBinanceKey(
+      userId,
+      encrypt('binance-key', env.KEY_PASSWORD),
+      encrypt('binance-secret', env.KEY_PASSWORD),
+    );
 
     const resForbidden = await app.inject({
       method: 'GET',
@@ -29,6 +43,11 @@ describe('admin user routes', () => {
     const user = body.find((u) => u.id === userId);
     expect(user.email).toBe('user1@example.com');
     expect(typeof user.createdAt).toBe('string');
+    expect(user.hasAiKey).toBe(true);
+    expect(user.hasBinanceKey).toBe(true);
+    const admin = body.find((u) => u.id === adminId);
+    expect(admin.hasAiKey).toBe(false);
+    expect(admin.hasBinanceKey).toBe(false);
     await app.close();
   });
 
