@@ -12,14 +12,16 @@ vi.mock('../src/services/binance.js', async () => {
 });
 
 import buildServer from '../src/server.js';
-import { insertUser } from './repos/users.js';
+import { insertUser, insertAdminUser } from './repos/users.js';
 import {
   getAiKeyRow,
   getBinanceKeyRow,
   setAiKey,
   setBinanceKey,
+  shareAiKey,
 } from '../src/repos/api-keys.js';
 import { insertAgent } from './repos/agents.js';
+import { getUserApiKeys } from '../src/repos/agents.js';
 import { db } from '../src/db/index.js';
 import { encrypt } from '../src/util/crypto.js';
 import { removeAgentFromSchedule } from '../src/jobs/review-portfolio.js';
@@ -48,7 +50,7 @@ describe('AI API key routes', () => {
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
     let row = await getAiKeyRow(userId);
-    expect(row!.ai_api_key_enc).toBeNull();
+    expect(row!.ai_api_key_enc).toBeUndefined();
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
     res = await app.inject({
@@ -120,6 +122,76 @@ describe('AI API key routes', () => {
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
+  });
+
+  it('allows admin to share and revoke ai key', async () => {
+    const app = await buildServer();
+    const adminId = await insertAdminUser('admin1', encrypt('admin@example.com', process.env.KEY_PASSWORD!));
+    const userId = await insertUser('u1', encrypt('user@example.com', process.env.KEY_PASSWORD!));
+    const ai = encrypt('aikey1234567890', process.env.KEY_PASSWORD!);
+    await setAiKey(adminId, ai);
+
+    let res = await app.inject({
+      method: 'POST',
+      url: `/api/users/${adminId}/ai-key/share`,
+      cookies: authCookies(adminId),
+      payload: { email: 'user@example.com' },
+    });
+    expect(res.statusCode).toBe(200);
+
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/users/${userId}/ai-key`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ key: '<REDACTED>' });
+
+    let keyRow = await getUserApiKeys(userId);
+    expect(keyRow?.ai_api_key_enc).toBeDefined();
+
+    res = await app.inject({
+      method: 'POST',
+      url: `/api/users/${userId}/ai-key`,
+      cookies: authCookies(userId),
+      payload: { key: 'newkey1234567890' },
+    });
+    expect(res.statusCode).toBe(403);
+
+    res = await app.inject({
+      method: 'PUT',
+      url: `/api/users/${userId}/ai-key`,
+      cookies: authCookies(userId),
+      payload: { key: 'newkeyabcdefghij' },
+    });
+    expect(res.statusCode).toBe(403);
+
+    res = await app.inject({
+      method: 'DELETE',
+      url: `/api/users/${userId}/ai-key`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(403);
+
+    res = await app.inject({
+      method: 'DELETE',
+      url: `/api/users/${adminId}/ai-key/share`,
+      cookies: authCookies(adminId),
+      payload: { email: 'user@example.com' },
+    });
+    expect(res.statusCode).toBe(200);
+
+    keyRow = await getUserApiKeys(userId);
+    expect(keyRow?.ai_api_key_enc).toBeNull();
+
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/users/${userId}/ai-key`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(404);
+
+    await app.close();
   });
 
   it("forbids accessing another user's ai key", async () => {
@@ -346,6 +418,105 @@ describe('key deletion effects on agents', () => {
     expect(row.rows[0].model).toBeNull();
     expect(removeAgentFromSchedule).toHaveBeenCalledWith(agent.id);
     expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
+    await app.close();
+  });
+
+  it('drafts agents when shared ai key is revoked', async () => {
+    const app = await buildServer();
+    const adminId = await insertAdminUser(
+      'a5',
+      encrypt('admin@example.com', process.env.KEY_PASSWORD!),
+    );
+    const userId = await insertUser(
+      'u5',
+      encrypt('user@example.com', process.env.KEY_PASSWORD!),
+    );
+    const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
+    const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
+    const bs = encrypt('skey', process.env.KEY_PASSWORD!);
+    await setAiKey(adminId, ai);
+    await setBinanceKey(userId, bk, bs);
+    await shareAiKey(adminId, userId);
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt-5',
+      status: 'active',
+      startBalance: 100,
+      name: 'A3',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      manualRebalance: false,
+    });
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/users/${adminId}/ai-key/share`,
+      cookies: authCookies(adminId),
+      payload: { email: 'user@example.com' },
+    });
+    expect(res.statusCode).toBe(200);
+    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+      agent.id,
+    ]);
+    expect(row.rows[0].status).toBe('draft');
+    expect(row.rows[0].model).toBeNull();
+    expect(removeAgentFromSchedule).toHaveBeenCalledWith(agent.id);
+    expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
+    await app.close();
+  });
+
+  it('does not affect agents if no shared ai key exists', async () => {
+    const app = await buildServer();
+    const adminId = await insertAdminUser(
+      'a6',
+      encrypt('admin@example.com', process.env.KEY_PASSWORD!),
+    );
+    const userId = await insertUser(
+      'u6',
+      encrypt('user@example.com', process.env.KEY_PASSWORD!),
+    );
+    const aiAdmin = encrypt('aikey', process.env.KEY_PASSWORD!);
+    const aiUser = encrypt('userkey', process.env.KEY_PASSWORD!);
+    const bk = encrypt('bkey', process.env.KEY_PASSWORD!);
+    const bs = encrypt('skey', process.env.KEY_PASSWORD!);
+    await setAiKey(adminId, aiAdmin);
+    await setAiKey(userId, aiUser);
+    await setBinanceKey(userId, bk, bs);
+    const agent = await insertAgent({
+      userId,
+      model: 'gpt-5',
+      status: 'active',
+      startBalance: 100,
+      name: 'A4',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      manualRebalance: false,
+    });
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/users/${adminId}/ai-key/share`,
+      cookies: authCookies(adminId),
+      payload: { email: 'user@example.com' },
+    });
+    expect(res.statusCode).toBe(404);
+    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+      agent.id,
+    ]);
+    expect(row.rows[0].status).toBe('active');
+    expect(row.rows[0].model).toBe('gpt-5');
+    expect(removeAgentFromSchedule).not.toHaveBeenCalled();
+    expect(cancelOpenOrders).not.toHaveBeenCalled();
     await app.close();
   });
 });

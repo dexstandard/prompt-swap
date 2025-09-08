@@ -24,6 +24,12 @@ CREATE TABLE IF NOT EXISTS ai_api_keys(
   UNIQUE(user_id, provider)
 );
 
+CREATE TABLE IF NOT EXISTS ai_api_key_shares(
+  owner_user_id BIGINT NOT NULL REFERENCES users(id),
+  target_user_id BIGINT PRIMARY KEY REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
+);
+
 CREATE TABLE IF NOT EXISTS exchange_keys(
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id),

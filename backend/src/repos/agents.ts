@@ -47,16 +47,18 @@ const baseSelect = `
          COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
                   FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
          a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance,
-         ak.id AS ai_api_key_id, ek.id AS exchange_api_key_id
+         COALESCE(ak.id, oak.id) AS ai_api_key_id, ek.id AS exchange_api_key_id
     FROM agents a
     LEFT JOIN agent_tokens t ON t.agent_id = a.id
     LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
+    LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
+    LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
     LEFT JOIN exchange_keys ek ON ek.user_id = a.user_id AND ek.provider = 'binance'
 `;
 
 export async function getAgent(id: string): Promise<AgentRow | undefined> {
   const { rows } = await db.query(
-    `${baseSelect} WHERE a.id = $1 AND a.status != $2 GROUP BY a.id, ak.id, ek.id`,
+    `${baseSelect} WHERE a.id = $1 AND a.status != $2 GROUP BY a.id, ak.id, oak.id, ek.id`,
     [id, AgentStatus.Retired],
   );
   return rows[0] as AgentRow | undefined;
@@ -76,7 +78,7 @@ export async function getAgentsPaginated(
       [userId, status],
     );
     const { rows } = await db.query(
-      `${baseSelect} ${where} GROUP BY a.id, ak.id, ek.id LIMIT $3 OFFSET $4`,
+      `${baseSelect} ${where} GROUP BY a.id, ak.id, oak.id, ek.id LIMIT $3 OFFSET $4`,
       [userId, status, limit, offset],
     );
     return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
@@ -87,7 +89,7 @@ export async function getAgentsPaginated(
     [userId, AgentStatus.Retired],
   );
   const { rows } = await db.query(
-    `${baseSelect} ${where} GROUP BY a.id, ak.id, ek.id LIMIT $3 OFFSET $4`,
+    `${baseSelect} ${where} GROUP BY a.id, ak.id, oak.id, ek.id LIMIT $3 OFFSET $4`,
     [userId, AgentStatus.Retired, limit, offset],
   );
   return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
@@ -152,7 +154,7 @@ export async function findActiveTokenConflicts(
 
 export async function getUserApiKeys(userId: string) {
   const { rows } = await db.query(
-    "SELECT ak.api_key_enc AS ai_api_key_enc, ek.api_key_enc AS binance_api_key_enc, ek.api_secret_enc AS binance_api_secret_enc FROM users u LEFT JOIN ai_api_keys ak ON ak.user_id = u.id AND ak.provider = 'openai' LEFT JOIN exchange_keys ek ON ek.user_id = u.id AND ek.provider = 'binance' WHERE u.id = $1",
+    "SELECT COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, ek.api_key_enc AS binance_api_key_enc, ek.api_secret_enc AS binance_api_secret_enc FROM users u LEFT JOIN ai_api_keys ak ON ak.user_id = u.id AND ak.provider = 'openai' LEFT JOIN ai_api_key_shares s ON s.target_user_id = u.id LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai' LEFT JOIN exchange_keys ek ON ek.user_id = u.id AND ek.provider = 'binance' WHERE u.id = $1",
     [userId],
   );
   return rows[0] as
@@ -295,14 +297,16 @@ export async function getActiveAgents(options?: {
                       COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
                                FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
-                      ak.api_key_enc AS ai_api_key_enc, a.manual_rebalance
+                      COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance
                  FROM agents a
                  LEFT JOIN agent_tokens t ON t.agent_id = a.id
                  LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
+                 LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
+                 LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
                 WHERE a.status = 'active'
                   AND ($1::bigint IS NULL OR a.id = $1)
                   AND ($2::text IS NULL OR a.review_interval = $2)
-             GROUP BY a.id, ak.api_key_enc`;
+             GROUP BY a.id, ak.api_key_enc, oak.api_key_enc`;
   const { rows } = await db.query(sql, [
     options?.agentId ?? null,
     options?.interval ?? null,
@@ -317,12 +321,14 @@ export async function getActiveAgentsByUser(
                       COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
                                FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
-                      ak.api_key_enc AS ai_api_key_enc, a.manual_rebalance
+                      COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance
                  FROM agents a
                  LEFT JOIN agent_tokens t ON t.agent_id = a.id
                  LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
+                 LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
+                 LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
                 WHERE a.status = 'active' AND a.user_id = $1
-             GROUP BY a.id, ak.api_key_enc`;
+             GROUP BY a.id, ak.api_key_enc, oak.api_key_enc`;
   const { rows } = await db.query(sql, [userId]);
   return rows as ActiveAgentRow[];
 }
