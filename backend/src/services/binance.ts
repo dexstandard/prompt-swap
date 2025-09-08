@@ -180,22 +180,52 @@ export async function cancelOpenOrders(
   return res.json();
 }
 
+type ExchangeInfo = {
+  symbols: { filters: { filterType: string; stepSize?: string }[] }[];
+};
+
+const exchangeInfoCache = new Map<string, Promise<ExchangeInfo>>();
+
+async function fetchExchangeInfo(symbol: string): Promise<ExchangeInfo> {
+  let infoPromise = exchangeInfoCache.get(symbol);
+  if (!infoPromise) {
+    infoPromise = fetch(
+      `https://api.binance.com/api/v3/exchangeInfo?symbol=${symbol}`,
+    )
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`failed to fetch info data: ${res.status} ${body}`);
+        }
+        return (res.json() as Promise<ExchangeInfo>);
+      })
+      .catch((err) => {
+        exchangeInfoCache.delete(symbol);
+        throw err;
+      });
+    exchangeInfoCache.set(symbol, infoPromise);
+  }
+  return infoPromise;
+}
+
+export function __clearExchangeInfoCache() {
+  exchangeInfoCache.clear();
+}
+
 async function fetchSymbolData(symbol: string) {
-  const [priceRes, depthRes, dayRes, yearRes, infoRes] = await Promise.all([
+  const [priceRes, depthRes, dayRes, yearRes] = await Promise.all([
     fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`),
     fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=5`),
     fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`),
     fetch(
       `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=365`,
     ),
-    fetch(`https://api.binance.com/api/v3/exchangeInfo?symbol=${symbol}`),
   ]);
   const responses = {
     price: priceRes,
     depth: depthRes,
     day: dayRes,
     year: yearRes,
-    info: infoRes,
   } as const;
   for (const [name, res] of Object.entries(responses)) {
     if (!res.ok) {
@@ -209,9 +239,7 @@ async function fetchSymbolData(symbol: string) {
     asks: [string, string][];
   };
   const yearJson = (await yearRes.json()) as unknown[];
-  const infoJson = (await infoRes.json()) as {
-    symbols: { filters: { filterType: string; stepSize?: string }[] }[];
-  };
+  const infoJson = await fetchExchangeInfo(symbol);
   const lot = infoJson.symbols[0]?.filters.find(
     (f) => f.filterType === 'LOT_SIZE',
   );

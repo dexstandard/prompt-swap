@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { fetchPairData } from '../src/services/binance.js';
+import { fetchPairData, __clearExchangeInfoCache } from '../src/services/binance.js';
 
 describe('fetchPairData', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    __clearExchangeInfoCache();
   });
 
   it('fetches yearly klines and omits week/month slices', async () => {
@@ -69,5 +70,35 @@ describe('fetchPairData', () => {
     expect(fetchMock).toHaveBeenCalledTimes(10);
     expect(data.symbol).toBe('BTCUSDT');
     expect(data.year).toEqual(yearData);
+  });
+
+  it('caches exchange info per symbol', async () => {
+    const yearData = Array.from({ length: 365 }, (_, i) => [i]);
+    const fetchMock = vi
+      .fn()
+      // first call
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ price: '1' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ bids: [], asks: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => yearData })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          symbols: [
+            { filters: [{ filterType: 'LOT_SIZE', stepSize: '0.00100000' }] },
+          ],
+        }),
+      })
+      // second call (no exchange info)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ price: '1' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ bids: [], asks: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => yearData });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    await fetchPairData('BTC', 'USDT');
+    await fetchPairData('BTC', 'USDT');
+
+    expect(fetchMock).toHaveBeenCalledTimes(9);
   });
 });
