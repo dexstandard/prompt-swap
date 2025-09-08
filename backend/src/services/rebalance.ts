@@ -14,16 +14,24 @@ export async function calcRebalanceOrder(opts: {
   const pos1 = positions.find((p) => p.sym === token1);
   const pos2 = positions.find((p) => p.sym === token2);
   if (!pos1 || !pos2) return null;
-  const { currentPrice } = await fetchPairData(token1, token2);
+  const pair = await fetchPairData(token1, token2);
+  const { currentPrice, symbol } = pair;
   const total = pos1.value_usdt + pos2.value_usdt;
   const target1 = (newAllocation / 100) * total;
   const diff = target1 - pos1.value_usdt;
   if (!diff || Math.abs(diff) < MIN_LIMIT_ORDER_USD) return null;
-  const side = diff > 0 ? 'BUY' : 'SELL';
+  const baseIsToken1 = symbol === `${token1}${token2}`.toUpperCase();
+  const side = baseIsToken1
+    ? diff > 0
+      ? 'BUY'
+      : 'SELL'
+    : diff > 0
+    ? 'SELL'
+    : 'BUY';
   const quantity = Math.abs(diff) / currentPrice;
   const better = side === 'BUY' ? 0.999 : 1.001;
   const price = currentPrice * better;
-  return { side, quantity, price } as const;
+  return { side, quantity, price, symbol } as const;
 }
 
 export async function createRebalanceLimitOrder(opts: {
@@ -48,14 +56,13 @@ export async function createRebalanceLimitOrder(opts: {
     quantity,
     manuallyEdited,
   } = opts;
-  const [token1, token2] = tokens;
   const order = await calcRebalanceOrder({ tokens, positions, newAllocation });
   if (!order) {
     log.info('no rebalance needed');
     return;
   }
   const params = {
-    symbol: `${token1}${token2}`.toUpperCase(),
+    symbol: order.symbol,
     side: order.side,
     quantity: quantity ?? order.quantity,
     price: price ?? order.price,

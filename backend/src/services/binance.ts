@@ -226,7 +226,8 @@ export async function fetchPairData(token1: string, token2: string) {
   let lastErr: unknown;
   for (const symbol of symbols) {
     try {
-      return await fetchSymbolData(symbol);
+      const data = await fetchSymbolData(symbol);
+      return { symbol, ...data };
     } catch (err) {
       lastErr = err;
       if (err instanceof Error && /Invalid symbol/i.test(err.message)) {

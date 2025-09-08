@@ -18,6 +18,7 @@ describe('fetchPairData', () => {
 
     const data = await fetchPairData('BTC', 'USDT');
     expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(data.symbol).toBe('BTCUSDT');
     expect(data.year).toEqual(yearData);
     expect('week' in data).toBe(false);
     expect('month' in data).toBe(false);
@@ -48,6 +49,7 @@ describe('fetchPairData', () => {
 
     const data = await fetchPairData('USDT', 'BTC');
     expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(data.symbol).toBe('BTCUSDT');
     expect(data.year).toEqual(yearData);
   });
 });
