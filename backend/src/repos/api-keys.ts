@@ -2,10 +2,17 @@ import { db } from '../db/index.js';
 
 export async function getAiKeyRow(id: string) {
   const { rows } = await db.query(
-    "SELECT ak.id, ak.api_key_enc AS ai_api_key_enc FROM users u LEFT JOIN ai_api_keys ak ON ak.user_id = u.id AND ak.provider = 'openai' WHERE u.id = $1",
+    "SELECT ak.id AS own_id, ak.api_key_enc AS own_enc, oak.id AS shared_id FROM users u LEFT JOIN ai_api_keys ak ON ak.user_id = u.id AND ak.provider = 'openai' LEFT JOIN ai_api_key_shares s ON s.target_user_id = u.id LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai' WHERE u.id = $1",
     [id],
   );
-  return rows[0] as { id?: string; ai_api_key_enc?: string } | undefined;
+  const row = rows[0] as
+    | { own_id?: string; own_enc?: string; shared_id?: string }
+    | undefined;
+  if (!row) return undefined;
+  if (row.own_id)
+    return { id: row.own_id, ai_api_key_enc: row.own_enc, is_shared: false };
+  if (row.shared_id) return { id: row.shared_id, is_shared: true };
+  return { is_shared: false };
 }
 
 export async function setAiKey(id: string, enc: string) {
@@ -19,6 +26,20 @@ export async function clearAiKey(id: string) {
   await db.query(
     "DELETE FROM ai_api_keys WHERE user_id = $1 AND provider = 'openai'",
     [id],
+  );
+}
+
+export async function shareAiKey(ownerId: string, targetId: string) {
+  await db.query(
+    "INSERT INTO ai_api_key_shares (owner_user_id, target_user_id) VALUES ($1, $2) ON CONFLICT (target_user_id) DO UPDATE SET owner_user_id = EXCLUDED.owner_user_id",
+    [ownerId, targetId],
+  );
+}
+
+export async function revokeAiKeyShare(ownerId: string, targetId: string) {
+  await db.query(
+    'DELETE FROM ai_api_key_shares WHERE owner_user_id = $1 AND target_user_id = $2',
+    [ownerId, targetId],
   );
 }
 
