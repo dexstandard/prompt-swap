@@ -15,7 +15,11 @@ export async function calcRebalanceOrder(opts: {
   const pos2 = positions.find((p) => p.sym === token2);
   if (!pos1 || !pos2) return null;
   const pair = await fetchPairData(token1, token2);
-  const { currentPrice, symbol } = pair;
+  const { currentPrice, symbol, stepSize } = pair as {
+    currentPrice: number;
+    symbol: string;
+    stepSize?: number;
+  };
   const total = pos1.value_usdt + pos2.value_usdt;
   const target1 = (newAllocation / 100) * total;
   const diff = target1 - pos1.value_usdt;
@@ -28,7 +32,14 @@ export async function calcRebalanceOrder(opts: {
     : diff > 0
     ? 'SELL'
     : 'BUY';
-  const quantity = Math.abs(diff) / currentPrice;
+  const rawQty = Math.abs(diff) / currentPrice;
+  const step = stepSize ?? 0.000001;
+  const precision = String(step).includes('.')
+    ? String(step).split('.')[1].replace(/0+$/, '').length
+    : 0;
+  const quantity = Number(
+    (Math.floor(rawQty / step) * step).toFixed(precision),
+  );
   const better = side === 'BUY' ? 0.999 : 1.001;
   const price = currentPrice * better;
   return { side, quantity, price, symbol } as const;

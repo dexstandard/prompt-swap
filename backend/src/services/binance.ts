@@ -181,19 +181,21 @@ export async function cancelOpenOrders(
 }
 
 async function fetchSymbolData(symbol: string) {
-  const [priceRes, depthRes, dayRes, yearRes] = await Promise.all([
+  const [priceRes, depthRes, dayRes, yearRes, infoRes] = await Promise.all([
     fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`),
     fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=5`),
     fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`),
     fetch(
       `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=365`,
     ),
+    fetch(`https://api.binance.com/api/v3/exchangeInfo?symbol=${symbol}`),
   ]);
   const responses = {
     price: priceRes,
     depth: depthRes,
     day: dayRes,
     year: yearRes,
+    info: infoRes,
   } as const;
   for (const [name, res] of Object.entries(responses)) {
     if (!res.ok) {
@@ -207,6 +209,12 @@ async function fetchSymbolData(symbol: string) {
     asks: [string, string][];
   };
   const yearJson = (await yearRes.json()) as unknown[];
+  const infoJson = (await infoRes.json()) as {
+    symbols: { filters: { filterType: string; stepSize?: string }[] }[];
+  };
+  const lot = infoJson.symbols[0]?.filters.find(
+    (f) => f.filterType === 'LOT_SIZE',
+  );
   return {
     currentPrice: Number(priceJson.price),
     orderBook: {
@@ -215,6 +223,7 @@ async function fetchSymbolData(symbol: string) {
     },
     day: await dayRes.json(),
     year: yearJson,
+    stepSize: lot?.stepSize ? Number(lot.stepSize) : undefined,
   };
 }
 
