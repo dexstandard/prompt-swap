@@ -31,6 +31,24 @@ export async function getUser(id: string) {
   };
 }
 
+export async function getUserAuthInfo(id: string) {
+  const { rows } = await db.query(
+    'SELECT email_enc, role, is_enabled FROM users WHERE id = $1',
+    [id],
+  );
+  const row = rows[0] as {
+    email_enc?: string;
+    role: string;
+    is_enabled: boolean;
+  } | undefined;
+  if (!row) return undefined;
+  return {
+    email: row.email_enc ? decrypt(row.email_enc, env.KEY_PASSWORD) : undefined,
+    role: row.role,
+    is_enabled: row.is_enabled,
+  };
+}
+
 export async function insertUser(emailEnc: string | null): Promise<string> {
   const { rows } = await db.query(
     "INSERT INTO users (role, is_enabled, email_enc) VALUES ('user', true, $1) RETURNING id",

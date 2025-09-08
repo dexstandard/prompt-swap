@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authenticator } from 'otplib';
 import { env } from '../util/env.js';
 import { RATE_LIMITS } from '../rate-limit.js';
-import { insertUser, setUserEmail } from '../repos/users.js';
+import { insertUser, setUserEmail, getUserAuthInfo } from '../repos/users.js';
 import {
   findUserByIdentity,
   insertUserIdentity,
@@ -12,6 +12,7 @@ import {
 import { encrypt } from '../util/crypto.js';
 import { errorResponse, type ErrorResponse } from '../util/errorMessages.js';
 import jwt from 'jsonwebtoken';
+import { requireUserId } from '../util/auth.js';
 
 interface ValidationErr {
   code: number;
@@ -92,6 +93,21 @@ export default async function loginRoutes(app: FastifyInstance) {
       setSessionCookie(reply, id);
       return { id, email: payload.email, role: row.role };
     }
+  );
+
+  app.get(
+    '/login/session',
+    { config: { rateLimit: RATE_LIMITS.LAX } },
+    async (req, reply) => {
+      const id = requireUserId(req, reply);
+      if (!id) return;
+      const info = await getUserAuthInfo(id);
+      if (!info)
+        return reply.code(404).send(errorResponse('user not found'));
+      if (!info.is_enabled)
+        return reply.code(403).send(errorResponse('user disabled'));
+      return { id, email: info.email, role: info.role };
+    },
   );
 }
 
