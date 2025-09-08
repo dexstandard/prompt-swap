@@ -34,7 +34,11 @@ vi.mock('../src/services/binance.js', () => ({
       { asset: 'ETH', free: '2', locked: '0' },
     ],
   }),
-  fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 100 }),
+  fetchPairData: vi.fn().mockResolvedValue({
+    symbol: 'BTCUSDT',
+    currentPrice: 100,
+    stepSize: 0.001,
+  }),
   fetchMarketTimeseries: vi.fn().mockResolvedValue(sampleTimeseries),
 }));
 

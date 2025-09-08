@@ -180,6 +180,38 @@ export async function cancelOpenOrders(
   return res.json();
 }
 
+type ExchangeInfo = {
+  symbols: { filters: { filterType: string; stepSize?: string }[] }[];
+};
+
+const exchangeInfoCache = new Map<string, Promise<ExchangeInfo>>();
+
+async function fetchExchangeInfo(symbol: string): Promise<ExchangeInfo> {
+  let infoPromise = exchangeInfoCache.get(symbol);
+  if (!infoPromise) {
+    infoPromise = fetch(
+      `https://api.binance.com/api/v3/exchangeInfo?symbol=${symbol}`,
+    )
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`failed to fetch info data: ${res.status} ${body}`);
+        }
+        return (res.json() as Promise<ExchangeInfo>);
+      })
+      .catch((err) => {
+        exchangeInfoCache.delete(symbol);
+        throw err;
+      });
+    exchangeInfoCache.set(symbol, infoPromise);
+  }
+  return infoPromise;
+}
+
+export function __clearExchangeInfoCache() {
+  exchangeInfoCache.clear();
+}
+
 async function fetchSymbolData(symbol: string) {
   const [priceRes, depthRes, dayRes, yearRes] = await Promise.all([
     fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`),
@@ -207,6 +239,13 @@ async function fetchSymbolData(symbol: string) {
     asks: [string, string][];
   };
   const yearJson = (await yearRes.json()) as unknown[];
+  const infoJson = await fetchExchangeInfo(symbol);
+  const lot = infoJson.symbols[0]?.filters.find(
+    (f) => f.filterType === 'LOT_SIZE',
+  );
+  if (!lot?.stepSize) {
+    throw new Error('missing step size for symbol');
+  }
   return {
     currentPrice: Number(priceJson.price),
     orderBook: {
@@ -215,6 +254,7 @@ async function fetchSymbolData(symbol: string) {
     },
     day: await dayRes.json(),
     year: yearJson,
+    stepSize: Number(lot.stepSize),
   };
 }
 
@@ -226,7 +266,8 @@ export async function fetchPairData(token1: string, token2: string) {
   let lastErr: unknown;
   for (const symbol of symbols) {
     try {
-      return await fetchSymbolData(symbol);
+      const data = await fetchSymbolData(symbol);
+      return { symbol, ...data };
     } catch (err) {
       lastErr = err;
       if (err instanceof Error && /Invalid symbol/i.test(err.message)) {
