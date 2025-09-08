@@ -7,6 +7,8 @@ user's encrypted API keys. A Fastify backend schedules agents and records
 results while a React dashboard lets users manage agents and inspect their
 activity.
 
+**Try the beta server:** [https://ps.dexstandard.com/](https://ps.dexstandard.com/)
+
 ## User flow
 
 1. Sign in with Google and add your Binance API key pair.
