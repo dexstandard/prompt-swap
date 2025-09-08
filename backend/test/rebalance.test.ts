@@ -77,6 +77,52 @@ describe('createRebalanceLimitOrder', () => {
     });
   });
 
+  it('handles pairs where second token is the base asset', async () => {
+    const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    const userId = await insertUser('5');
+    const agent = await insertAgent({
+      userId,
+      model: 'm',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'ETH', minAllocation: 10 },
+        { token: 'BTC', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    await createRebalanceLimitOrder({
+      userId,
+      tokens: ['ETH', 'BTC'],
+      positions: [
+        { sym: 'ETH', value_usdt: 50 },
+        { sym: 'BTC', value_usdt: 150 },
+      ],
+      newAllocation: 50,
+      log,
+      reviewResultId,
+    });
+    const row = (await getLimitOrders())[0];
+    expect(JSON.parse(row.planned_json)).toMatchObject({
+      symbol: 'BTCETH',
+      side: 'SELL',
+      quantity: 0.5,
+      price: 100.1,
+      manuallyEdited: false,
+    });
+    expect(createLimitOrder).toHaveBeenCalledWith(userId, {
+      symbol: 'BTCETH',
+      side: 'SELL',
+      quantity: 0.5,
+      price: 100.1,
+    });
+  });
+
   it('allows manual overrides and sets flag', async () => {
     const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     const userId = await insertUser('2');
