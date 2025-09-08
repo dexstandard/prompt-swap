@@ -16,6 +16,9 @@ export const riskOptions = [
 ];
 
 export const reviewIntervalOptions = [
+    {value: '10m', label: '10 Minutes'},
+    {value: '15m', label: '15 Minutes'},
+    {value: '30m', label: '30 Minutes'},
     {value: '1h', label: '1 Hour'},
     {value: '3h', label: '3 Hours'},
     {value: '5h', label: '5 Hours'},
@@ -42,7 +45,18 @@ export const createAgentSchema = z
             )
             .length(2),
         risk: z.enum(['low', 'medium', 'high']),
-        reviewInterval: z.enum(['1h', '3h', '5h', '12h', '24h', '3d', '1w']),
+        reviewInterval: z.enum([
+            '10m',
+            '15m',
+            '30m',
+            '1h',
+            '3h',
+            '5h',
+            '12h',
+            '24h',
+            '3d',
+            '1w',
+        ]),
     })
     .refine((data) => data.tokens[0].token !== data.tokens[1].token, {
         message: 'Tokens must be different',
@@ -65,6 +79,6 @@ export const createAgentDefaults: CreateAgentFormValues = {
         {token: 'SOL', minAllocation: 30},
     ],
     risk: 'low',
-    reviewInterval: '1h',
+    reviewInterval: '30m',
 };
 

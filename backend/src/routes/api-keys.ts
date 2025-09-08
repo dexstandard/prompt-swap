@@ -134,8 +134,17 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       if (err) return reply.code(err.code).send(err.body);
       err = ensureKeyAbsent(row, ['binance_api_key_enc', 'binance_api_secret_enc']);
       if (err) return reply.code(err.code).send(err.body);
-      if (!(await verifyApiKey(ApiKeyType.Binance, key, secret)))
-        return reply.code(400).send(errorResponse('verification failed'));
+      const verRes = await verifyApiKey(ApiKeyType.Binance, key, secret);
+      if (verRes !== true)
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              `verification failed${
+                typeof verRes === 'string' ? `: ${verRes}` : ''
+              }`,
+            ),
+          );
       const encKey = encryptKey(key);
       const encSecret = encryptKey(secret);
       await setBinanceKey(id, encKey, encSecret);
@@ -178,8 +187,17 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         'binance_api_secret_enc',
       ]);
       if (err) return reply.code(err.code).send(err.body);
-      if (!(await verifyApiKey(ApiKeyType.Binance, key, secret)))
-        return reply.code(400).send(errorResponse('verification failed'));
+      const verRes = await verifyApiKey(ApiKeyType.Binance, key, secret);
+      if (verRes !== true)
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              `verification failed${
+                typeof verRes === 'string' ? `: ${verRes}` : ''
+              }`,
+            ),
+          );
       const encKey = encryptKey(key);
       const encSecret = encryptKey(secret);
       await setBinanceKey(id, encKey, encSecret);

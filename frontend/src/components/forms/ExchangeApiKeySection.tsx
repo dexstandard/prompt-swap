@@ -1,4 +1,6 @@
 import { type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../lib/axios';
 import ApiKeySection from './ApiKeySection';
 
 const videoGuideLinks: Record<string, string> = {
@@ -26,10 +28,19 @@ export default function ExchangeApiKeySection({ exchange, label }: Props) {
     getBalancePath: (id: string) => `/users/${id}/${exchange}-balance`,
   } as const;
 
+  const whitelistQuery = useQuery<string>({
+    queryKey: ['output-ip'],
+    enabled: exchange === 'binance',
+    queryFn: async () => {
+      const res = await api.get('/ip');
+      return (res.data as { ip: string }).ip;
+    },
+  });
+
   return exchange === 'binance' ? (
     <ApiKeySection
       {...commonProps}
-      whitelistHost={import.meta.env.VITE_DO_SSH_HOST}
+      whitelistHost={whitelistQuery.data}
     />
   ) : (
     <ApiKeySection {...commonProps} />

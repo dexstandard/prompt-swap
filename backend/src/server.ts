@@ -8,6 +8,7 @@ import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { RATE_LIMITS } from './rate-limit.js';
 import { errorResponse } from './util/errorMessages.js';
+import { fetchOutputIp } from './util/output-ip.js';
 
 export default async function buildServer(
   routesDir: string = path.join(process.cwd(), 'src/routes'),
@@ -46,6 +47,8 @@ export default async function buildServer(
       ...errorResponse(`Too many requests, please try again in ${context.after}.`),
     }),
   });
+
+  await fetchOutputIp();
 
   for (const file of fs.readdirSync(routesDir)) {
     if (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) {

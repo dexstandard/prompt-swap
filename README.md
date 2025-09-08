@@ -1,67 +1,28 @@
 # prompt-swap
 
-Currently swaps tokens via Binance using user-provided API keys.
+Prompt Swap is a playground for experimenting with AI‑assisted crypto trading
+agents. Users write natural‑language prompts that describe a strategy, and an
+OpenAI model plans token swaps accordingly. Trades execute on Binance using the
+user's encrypted API keys. A Fastify backend schedules agents and records
+results while a React dashboard lets users manage agents and inspect their
+activity.
 
-## Run locally
+**Try the beta server:** [https://ps.dexstandard.com/](https://ps.dexstandard.com/)
 
-1. Install dependencies:
+## User flow
 
-   ```bash
-   npm --prefix backend install
-   npm --prefix frontend install
-   ```
+1. Sign in with Google and add your Binance API key pair.
+2. Create an agent by choosing a token pair, setting a spend limit, and writing
+   a prompt that explains how the agent should trade.
+3. The scheduler periodically loads active agents, plans a swap with OpenAI,
+   simulates the trade, executes it on Binance, and stores the outcome and model
+   logs.
+4. Use the dashboard to review trades, inspect prompt/response logs, or pause
+   and delete agents.
 
-2. Configure environment variables:
+## Features
 
-   - Copy `backend/.env.example` to `backend/.env` and set values for `KEY_PASSWORD` and `GOOGLE_CLIENT_ID`.
-   - Copy `frontend/.env.example` to `frontend/.env` and set `VITE_GOOGLE_CLIENT_ID` (should match `GOOGLE_CLIENT_ID`).
-   - In Google Cloud Console, add `http://localhost:5173` to your OAuth client’s Authorized JavaScript origins.
-
-3. Start the development servers:
-
-   ```bash
-   npm run dev
-   ```
-
-## Testing
-
-Backend tests require a local PostgreSQL server. Start one with Docker:
-
-```bash
-docker run --rm --name promptswap-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=promptswap_test -p 5432:5432 -d postgres:16
-```
-
-Run the tests:
-
-```bash
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/promptswap_test npm test
-```
-
-When you're done, stop the database:
-
-```bash
-docker stop promptswap-pg
-```
-
-## Continuous Integration
-
-A GitHub Actions workflow (`.github/workflows/ci.yml`) installs dependencies, lints the frontend, runs backend tests, and builds the TypeScript backend. On pushes to `main`, the workflow deploys the project to a DigitalOcean droplet with Docker Compose.
-
-## Production deployment
-
-The project includes a Docker Compose setup for deploying to a DigitalOcean droplet. It builds the backend service and a Caddy server that serves the frontend and proxies API requests.
-
-1. Set a `DOMAIN` environment variable to your droplet's domain.
-2. Run `docker compose up -d` on the droplet to build and start the containers.
-3. Caddy will automatically obtain TLS certificates for the provided domain.
-
-For automated deployments, configure GitHub repository secrets:
- - `DO_SSH_HOST`: droplet IP or hostname.
- - `DO_SSH_USER`: SSH username.
- - `DO_SSH_PRIVATE_KEY`: private key for SSH access.
- - `DOMAIN`: domain name for TLS certificates.
- - `KEY_PASSWORD`: password for encrypting sensitive keys.
- - `GOOGLE_CLIENT_ID`: OAuth client ID used by both backend and frontend.
- - `DB_CONNECTION_STR`: PostgreSQL connection string used by the backend.
-
-The CI workflow injects these secrets as environment variables when running `docker compose` during deployment.
+- Encrypted storage of Binance API keys secured with a user password.
+- Allow‑listed token pairs and trade limits to reduce risk.
+- Detailed logs for plan, simulation, and execution steps.
+- Web dashboard for creating, pausing, and deleting agents.
