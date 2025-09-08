@@ -194,17 +194,24 @@ export default function ApiKeySection({
               {query.data ? 'Update' : 'Save'}
             </Button>
             {query.data && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setEditing(false);
-                  form.reset(query.data ?? defaultValues);
-                }}
-                disabled={saveMut.isPending}
-              >
-                Cancel
-              </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setEditing(false);
+                    const data = fields.reduce(
+                      (acc, f) => ({
+                        ...acc,
+                        [f.name]: (query.data?.[f.name] as string | undefined) ?? '',
+                      }),
+                      {} as Record<string, string>,
+                    );
+                    form.reset(data);
+                  }}
+                  disabled={saveMut.isPending}
+                >
+                  Cancel
+                </Button>
             )}
           </div>
         </div>
@@ -213,7 +220,11 @@ export default function ApiKeySection({
           <div className="flex gap-2">
             <input
               type="text"
-              value={query.data ? query.data[fields[0].name] ?? '' : ''}
+              value={
+                query.data
+                  ? ((query.data[fields[0].name] as string | undefined) ?? '')
+                  : ''
+              }
               disabled
               className="border rounded px-2 py-1 w-full"
               style={textSecurityStyle}
