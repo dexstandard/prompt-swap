@@ -261,6 +261,13 @@ describe('agent exec log routes', () => {
     vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
       currentPrice: 100,
     } as any);
+    vi.spyOn(binance, 'fetchPairInfo').mockResolvedValue({
+      symbol: 'BTCETH',
+      baseAsset: 'BTC',
+      quoteAsset: 'ETH',
+      quantityPrecision: 8,
+      pricePrecision: 8,
+    } as any);
     vi.spyOn(binance, 'createLimitOrder').mockResolvedValue({ orderId: 1 } as any);
     let res = await app.inject({
       method: 'POST',
@@ -317,6 +324,13 @@ describe('agent exec log routes', () => {
     vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
       currentPrice: 100,
     } as any);
+    vi.spyOn(binance, 'fetchPairInfo').mockResolvedValue({
+      symbol: 'BTCETH',
+      baseAsset: 'BTC',
+      quoteAsset: 'ETH',
+      quantityPrecision: 8,
+      pricePrecision: 8,
+    } as any);
     const spy = vi
       .spyOn(binance, 'createLimitOrder')
       .mockResolvedValue({ orderId: 1 } as any);
@@ -369,6 +383,13 @@ describe('agent exec log routes', () => {
     vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
       currentPrice: 100,
     } as any);
+    vi.spyOn(binance, 'fetchPairInfo').mockResolvedValue({
+      symbol: 'BTCETH',
+      baseAsset: 'BTC',
+      quoteAsset: 'ETH',
+      quantityPrecision: 8,
+      pricePrecision: 8,
+    } as any);
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance/preview`,
@@ -417,6 +438,13 @@ describe('agent exec log routes', () => {
     } as any);
     vi.spyOn(binance, 'fetchPairData').mockResolvedValue({
       currentPrice: 100,
+    } as any);
+    vi.spyOn(binance, 'fetchPairInfo').mockResolvedValue({
+      symbol: 'BTCETH',
+      baseAsset: 'BTC',
+      quoteAsset: 'ETH',
+      quantityPrecision: 8,
+      pricePrecision: 8,
     } as any);
     vi.spyOn(binance, 'createLimitOrder').mockRejectedValue(
       new Error(

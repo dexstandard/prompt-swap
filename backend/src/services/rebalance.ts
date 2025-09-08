@@ -1,6 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { insertLimitOrder, type LimitOrderStatus } from '../repos/limit-orders.js';
-import { fetchPairData, createLimitOrder } from './binance.js';
+import { fetchPairData, fetchPairInfo, createLimitOrder } from './binance.js';
 
 export const MIN_LIMIT_ORDER_USD = 0.02;
 
@@ -54,11 +54,14 @@ export async function createRebalanceLimitOrder(opts: {
     log.info('no rebalance needed');
     return;
   }
+  const info = await fetchPairInfo(token1, token2);
+  const qty = quantity ?? order.quantity;
+  const prc = price ?? order.price;
   const params = {
-    symbol: `${token1}${token2}`.toUpperCase(),
+    symbol: info.symbol,
     side: order.side,
-    quantity: quantity ?? order.quantity,
-    price: price ?? order.price,
+    quantity: Number(qty.toFixed(info.quantityPrecision)),
+    price: Number(prc.toFixed(info.pricePrecision)),
   } as const;
   log.info({ order: params }, 'creating limit order');
   try {
