@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Eye, Trash } from 'lucide-react';
+import { Eye, Trash, Clock } from 'lucide-react';
 import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
@@ -23,6 +23,7 @@ interface Agent {
   status: 'active' | 'inactive' | 'draft';
   tokens?: { token: string }[];
   startBalanceUsd?: number | null;
+  reviewInterval: string;
 }
 
 function AgentRow({
@@ -82,6 +83,12 @@ function AgentRow({
         {pnlText}
       </td>
       <td>{agent.model || '-'}</td>
+      <td>
+        <span className="inline-flex items-center gap-1">
+          <Clock className="w-4 h-4" />
+          {agent.reviewInterval}
+        </span>
+      </td>
       <td>
         <AgentStatusLabel status={agent.status} />
       </td>
@@ -178,7 +185,7 @@ function AgentBlock({
           </Link>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2 items-center">
+      <div className="grid grid-cols-4 gap-2 items-center">
         <div>
           <div className="text-xs text-gray-500">Status</div>
           <AgentStatusLabel status={agent.status} />
@@ -186,6 +193,13 @@ function AgentBlock({
         <div>
           <div className="text-xs text-gray-500">Model</div>
           {agent.model || '-'}
+        </div>
+        <div>
+          <div className="text-xs text-gray-500">Interval</div>
+          <span className="inline-flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            {agent.reviewInterval}
+          </span>
         </div>
         <div className="flex justify-end">
           <button
@@ -296,6 +310,7 @@ export default function Dashboard() {
                     <th className="text-left">Balance (USD)</th>
                     <th className="text-left">PnL (USD)</th>
                     <th className="text-left">Model</th>
+                    <th className="text-left">Interval</th>
                     <th className="text-left">Status</th>
                     <th></th>
                   </tr>
