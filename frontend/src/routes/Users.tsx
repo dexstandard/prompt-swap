@@ -9,6 +9,8 @@ interface AdminUser {
   email: string | null;
   createdAt: number;
   isEnabled: boolean;
+  hasAiKey: boolean;
+  hasBinanceKey: boolean;
 }
 
 export default function Users() {
@@ -46,6 +48,8 @@ export default function Users() {
             <th className="text-left">ID</th>
             <th className="text-left">Email</th>
             <th className="text-left">Role</th>
+            <th className="text-left">OpenAI Key</th>
+            <th className="text-left">Binance Key</th>
             <th className="text-left">Created</th>
             <th className="text-left">Enabled</th>
           </tr>
@@ -56,6 +60,8 @@ export default function Users() {
               <td>{u.id}</td>
               <td>{u.email ?? '-'}</td>
               <td>{u.role}</td>
+              <td>{u.hasAiKey ? 'Yes' : 'No'}</td>
+              <td>{u.hasBinanceKey ? 'Yes' : 'No'}</td>
               <td>
                 <FormattedDate date={u.createdAt} />
               </td>

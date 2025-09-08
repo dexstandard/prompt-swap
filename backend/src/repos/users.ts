@@ -63,7 +63,14 @@ export async function setUserEmail(id: string, emailEnc: string): Promise<void> 
 
 export async function listUsers() {
   const { rows } = await db.query(
-    'SELECT id, role, is_enabled, email_enc, created_at FROM users',
+    "SELECT u.id, u.role, u.is_enabled, u.email_enc, u.created_at, " +
+      "(ak.id IS NOT NULL OR oak.id IS NOT NULL) AS has_ai_key, " +
+      "(ek.id IS NOT NULL) AS has_binance_key " +
+      "FROM users u " +
+      "LEFT JOIN ai_api_keys ak ON ak.user_id = u.id AND ak.provider = 'openai' " +
+      "LEFT JOIN ai_api_key_shares s ON s.target_user_id = u.id " +
+      "LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai' " +
+      "LEFT JOIN exchange_keys ek ON ek.user_id = u.id AND ek.provider = 'binance'",
   );
   return rows as {
     id: string;
@@ -71,6 +78,8 @@ export async function listUsers() {
     is_enabled: boolean;
     email_enc?: string;
     created_at: string;
+    has_ai_key: boolean;
+    has_binance_key: boolean;
   }[];
 }
 
