@@ -99,6 +99,16 @@ describe('reviewPortfolio', () => {
         ['1', 'ignore', 1, i, `short-${i}`, new Date(base.getTime() + i * 1000)],
       );
     }
+    const { rows: rrRows } = await db.query(
+      'SELECT id FROM agent_review_result WHERE agent_id = $1 ORDER BY created_at ASC',
+      ['1'],
+    );
+    for (let i = 0; i < 5; i++) {
+      await db.query(
+        'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
+        ['1', JSON.stringify({ allocation: i }), 'open', rrRows[i].id, `ord-${i}`],
+      );
+    }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewAgentPortfolio(log, '1');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
@@ -112,13 +122,20 @@ describe('reviewPortfolio', () => {
       { rebalance: true, newAllocation: 1, shortReport: 'short-1' },
     ]);
     const cfg = args[1].config;
-    const btcPos = cfg.portfolio.positions.find((p: any) => p.sym === 'BTC');
-    const ethPos = cfg.portfolio.positions.find((p: any) => p.sym === 'ETH');
+    const btcPos = cfg.currentStatePortfolio.positions.find((p: any) => p.sym === 'BTC');
+    const ethPos = cfg.currentStatePortfolio.positions.find((p: any) => p.sym === 'ETH');
     expect(btcPos.qty).toBe(1.5);
     expect(ethPos.qty).toBe(2);
     expect(cfg.policy.floorPercents).toEqual({ BTC: 10, ETH: 20 });
-    expect(cfg.portfolio.weights.BTC).toBeCloseTo(150 / 350);
-    expect(cfg.portfolio.weights.ETH).toBeCloseTo(200 / 350);
+    expect(cfg.currentStatePortfolio.currentWeights.BTC).toBeCloseTo(150 / 350);
+    expect(cfg.currentStatePortfolio.currentWeights.ETH).toBeCloseTo(200 / 350);
+    expect(cfg.previousLimitOrders.map((o: any) => o.planned.allocation)).toEqual([
+      4,
+      3,
+      2,
+      1,
+      0,
+    ]);
     expect(args[1].marketData).toEqual({
       currentPrice: 100,
       indicators: { BTC: sampleIndicators, ETH: sampleIndicators },
@@ -159,7 +176,7 @@ describe('reviewPortfolio', () => {
       instructions: 'inst',
       config: {
         policy: { floorPercents: { BTC: 10, ETH: 20 } },
-        portfolio: {
+        currentStatePortfolio: {
           positions: [
             expect.objectContaining({ sym: 'BTC', qty: 1.5 }),
             expect.objectContaining({ sym: 'ETH', qty: 2 }),

@@ -1,5 +1,5 @@
 const developerInstructions =
-  "You assist a real trader in taking decisions on a given tokens configuration. Users may deposit or withdraw funds between runs; if the current balance doesn't match previous executions, treat the session as new. The user's comment may be found in the trading instructions field. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not. Fit report comment in 255 characters. If you suggest rebalancing, provide the new allocation in percentage (0-100) for the first token in the pair. If you don't suggest rebalancing, set rebalance to false and provide a short report comment. If you encounter an error, return an object with an error message.";
+  "You assist a real trader in taking decisions on a given tokens configuration. Users may deposit or withdraw funds between runs; if the current balance doesn't match previous executions, treat the session as new. The user's comment may be found in the trading instructions field. You must determine the target allocation based on current market conditions and the provided portfolio state. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not. Fit report comment in 255 characters. If you suggest rebalancing, provide the new allocation in percentage (0-100) for the first token in the pair. If you don't suggest rebalancing, set rebalance to false and provide a short report comment. If you encounter an error, return an object with an error message.";
 
 import type { TokenIndicators } from '../services/indicators.js';
 
@@ -20,11 +20,15 @@ export interface RebalancePrompt {
   instructions: string;
   config: {
     policy: { floorPercents: Record<string, number> };
-    portfolio: {
+    currentStatePortfolio: {
       ts: string;
       positions: RebalancePosition[];
-      weights: Record<string, number>;
+      currentWeights: Record<string, number>;
     };
+    previousLimitOrders?: {
+      planned: Record<string, unknown>;
+      status: string;
+    }[];
   };
   marketData: {
     currentPrice: number;
