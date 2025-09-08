@@ -24,19 +24,24 @@ async function runMigrations() {
     .filter((f) => f.endsWith('.sql'))
     .sort();
 
-  for (const file of files) {
-    const id = file;
-    const applied = await db.query('SELECT 1 FROM migrations WHERE id=$1', [id]);
-    if (applied.rowCount > 0) continue;
-    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
-    await db.query('BEGIN');
-    try {
-      await db.query(sql);
-      await db.query('INSERT INTO migrations(id) VALUES ($1)', [id]);
-      await db.query('COMMIT');
-    } catch (err) {
-      await db.query('ROLLBACK');
-      throw err;
+  const client = await db.connect();
+  try {
+    for (const file of files) {
+      const id = file;
+      const applied = await client.query('SELECT 1 FROM migrations WHERE id=$1', [id]);
+      if (applied.rowCount > 0) continue;
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      await client.query('BEGIN');
+      try {
+        await client.query(sql);
+        await client.query('INSERT INTO migrations(id) VALUES ($1)', [id]);
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      }
     }
+  } finally {
+    client.release();
   }
 }
