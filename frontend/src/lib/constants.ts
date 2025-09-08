@@ -7,6 +7,7 @@ export const tokens = [
     {value: 'ETH', label: 'ETH'},
     {value: 'SOL', label: 'SOL'},
     {value: 'USDT', label: 'USDT'},
+    {value: 'USDC', label: 'USDC'},
 ];
 
 export const riskOptions = [

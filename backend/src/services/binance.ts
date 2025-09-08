@@ -116,7 +116,7 @@ export async function fetchTotalBalanceUsd(id: string) {
   for (const b of account.balances) {
     const amount = Number(b.free) + Number(b.locked);
     if (!amount) continue;
-    if (b.asset === 'USDT') {
+    if (b.asset === 'USDT' || b.asset === 'USDC') {
       total += amount;
       continue;
     }
@@ -139,7 +139,7 @@ export async function fetchTokensBalanceUsd(id: string, tokens: string[]) {
     if (!wanted.has(b.asset.toUpperCase())) continue;
     const amount = Number(b.free) + Number(b.locked);
     if (!amount) continue;
-    if (b.asset === 'USDT') {
+    if (b.asset === 'USDT' || b.asset === 'USDC') {
       total += amount;
       continue;
     }
