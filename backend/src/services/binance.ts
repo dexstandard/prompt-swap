@@ -247,6 +247,30 @@ export async function cancelOpenOrders(
   return res.json();
 }
 
+export async function fetchOpenOrders(
+  id: string,
+  opts: { symbol?: string },
+) {
+  const creds = await getUserCreds(id);
+  if (!creds) return null;
+  const timestamp = Date.now();
+  const params = new URLSearchParams({ timestamp: String(timestamp) });
+  if (opts.symbol) params.append('symbol', opts.symbol.toUpperCase());
+  const signature = createHmac('sha256', creds.secret)
+    .update(params.toString())
+    .digest('hex');
+  params.append('signature', signature);
+  const res = await fetch(
+    `https://api.binance.com/api/v3/openOrders?${params.toString()}`,
+    { headers: { 'X-MBX-APIKEY': creds.key } },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`failed to fetch open orders: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
 async function fetchSymbolData(symbol: string) {
   const [priceRes, depthRes, dayRes, yearRes] = await Promise.all([
     fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`),

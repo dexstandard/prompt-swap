@@ -3,6 +3,7 @@ import buildServer from '../src/server.js';
 import '../src/util/env.js';
 import { migrate } from '../src/db/index.js';
 import reviewPortfolios from '../src/jobs/review-portfolio.js';
+import checkOpenOrders from '../src/jobs/check-open-orders.js';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +15,7 @@ async function main() {
   const log = app.log;
 
   const schedules: Record<string, string> = {
+    openOrders: '*/3 * * * *',
     '10m': '*/10 * * * *',
     '15m': '*/15 * * * *',
     '30m': '*/30 * * * *',
@@ -26,7 +28,9 @@ async function main() {
     '1w': '0 0 * * 0',
   };
   for (const [interval, cronExp] of Object.entries(schedules)) {
-    schedule(cronExp, () => reviewPortfolios(log, interval));
+    if (interval === 'openOrders')
+      schedule(cronExp, () => checkOpenOrders(log));
+    else schedule(cronExp, () => reviewPortfolios(log, interval));
   }
 
   try {

@@ -99,4 +99,6 @@ CREATE INDEX IF NOT EXISTS idx_users_email_enc ON users(email_enc);
 CREATE INDEX IF NOT EXISTS idx_agents_user_id_status ON agents(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_agents_status_review_interval ON agents(status, review_interval);
 CREATE INDEX IF NOT EXISTS idx_limit_order_review_result_id_status ON limit_order(review_result_id, status);
+CREATE INDEX IF NOT EXISTS idx_limit_order_user_id_status ON limit_order(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_limit_order_order_id ON limit_order(order_id);
 CREATE INDEX IF NOT EXISTS idx_agent_review_raw_log_agent_id ON agent_review_raw_log(agent_id);
