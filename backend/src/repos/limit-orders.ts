@@ -50,3 +50,16 @@ export async function getLimitOrdersByReviewResult(
   );
   return rows as { planned_json: string; status: LimitOrderStatus }[];
 }
+
+export async function getRecentLimitOrders(agentId: string, limit: number) {
+  const { rows } = await db.query(
+    `SELECT e.planned_json, e.status
+       FROM limit_order e
+       JOIN agent_review_result r ON e.review_result_id = r.id
+      WHERE r.agent_id = $1
+      ORDER BY e.created_at DESC
+      LIMIT $2`,
+    [agentId, limit],
+  );
+  return rows as { planned_json: string; status: LimitOrderStatus }[];
+}

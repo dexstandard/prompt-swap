@@ -11,12 +11,12 @@ describe('callRebalancingAgent structured output', () => {
       instructions: 'inst',
       config: {
         policy: { floorPercents: { USDT: 20 } },
-        portfolio: {
+        currentStatePortfolio: {
           ts: new Date().toISOString(),
           positions: [
             { sym: 'USDT', qty: 1, price_usdt: 1, value_usdt: 1 },
           ],
-          weights: { USDT: 1 },
+          currentWeights: { USDT: 1 },
         },
       },
       marketData: { currentPrice: 1 },
@@ -27,6 +27,7 @@ describe('callRebalancingAgent structured output', () => {
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);
     expect(body.instructions).toMatch(/assist a real trader/i);
+    expect(body.instructions).toMatch(/determine the target allocation/i);
     const parsedInput = JSON.parse(body.input);
     expect(parsedInput.previous_responses).toEqual(['p1', 'p2']);
     expect(body.text.format.type).toBe('json_schema');
