@@ -16,6 +16,7 @@ import {
   fetchAccount,
   fetchPairData,
   fetchMarketTimeseries,
+  fetchPairInfo,
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import {
@@ -36,8 +37,12 @@ export function removeAgentFromSchedule(id: string) {
   runningAgents.delete(id);
 }
 
+type PairCacheData = Awaited<ReturnType<typeof fetchPairInfo>> & {
+  currentPrice: number;
+};
+
 type PromptCache = {
-  pairData: Map<string, { currentPrice: number }>;
+  pairData: Map<string, PairCacheData>;
   indicators: Map<string, TokenIndicators>;
   timeseries: Map<string, MarketTimeseries>;
 };
@@ -214,7 +219,7 @@ async function fetchPromptData(
   row: ActiveAgentRow,
   cache: PromptCache,
 ): Promise<{
-  pairData: { currentPrice: number };
+  pairData: PairCacheData;
   price1: number;
   price2: number;
   ind1?: TokenIndicators;
@@ -227,7 +232,11 @@ async function fetchPromptData(
   const pairKey = `${token1}-${token2}`;
   let pairData = cache.pairData.get(pairKey);
   if (!pairData) {
-    pairData = await fetchPairData(token1, token2);
+    const [data, info] = await Promise.all([
+      fetchPairData(token1, token2),
+      fetchPairInfo(token1, token2),
+    ]);
+    pairData = { ...data, ...info } as PairCacheData;
     cache.pairData.set(pairKey, pairData);
   }
 
@@ -236,7 +245,11 @@ async function fetchPromptData(
     const key = `${sym}-USDT`;
     let val = cache.pairData.get(key);
     if (!val) {
-      val = await fetchPairData(sym, 'USDT');
+      const [data, info] = await Promise.all([
+        fetchPairData(sym, 'USDT'),
+        fetchPairInfo(sym, 'USDT'),
+      ]);
+      val = { ...data, ...info } as PairCacheData;
       cache.pairData.set(key, val);
     }
     return val;
@@ -319,12 +332,12 @@ function computePortfolioValues(
 
 function assembleMarketData(
   row: ActiveAgentRow,
-  pairData: { currentPrice: number },
+  pairData: PairCacheData,
   ind1?: TokenIndicators,
   ind2?: TokenIndicators,
   ts1?: MarketTimeseries,
   ts2?: MarketTimeseries,
-) {
+ ) {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
   return {

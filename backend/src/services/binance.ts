@@ -5,6 +5,73 @@ import { getBinanceKeyRow } from '../repos/api-keys.js';
 
 type UserCreds = { key: string; secret: string };
 
+export type PairInfo = {
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  quantityPrecision: number;
+  pricePrecision: number;
+};
+
+const pairInfoCache = new Map<string, PairInfo>();
+
+function precisionFromStep(step: string): number {
+  if (!step.includes('.')) return 0;
+  return step.split('.')[1].replace(/0+$/, '').length;
+}
+
+export async function fetchPairInfo(
+  token1: string,
+  token2: string,
+): Promise<PairInfo> {
+  const key = [token1.toUpperCase(), token2.toUpperCase()].sort().join('-');
+  const cached = pairInfoCache.get(key);
+  if (cached) return cached;
+  const symbols = [
+    `${token1}${token2}`.toUpperCase(),
+    `${token2}${token1}`.toUpperCase(),
+  ];
+  let lastErr: Error | undefined;
+  for (const symbol of symbols) {
+    const res = await fetch(
+      `https://api.binance.com/api/v3/exchangeInfo?symbol=${symbol}`,
+    );
+    if (!res.ok) {
+      const body = await res.text();
+      lastErr = new Error(`failed to fetch exchange info: ${res.status} ${body}`);
+      if (/Invalid symbol/i.test(body)) continue;
+      throw lastErr;
+    }
+    const json = (await res.json()) as { symbols?: any[] };
+    const info = json.symbols?.[0];
+    if (!info) continue;
+    const lot = info.filters?.find((f: any) => f.filterType === 'LOT_SIZE');
+    const priceF = info.filters?.find(
+      (f: any) => f.filterType === 'PRICE_FILTER',
+    );
+    const pair: PairInfo = {
+      symbol: info.symbol,
+      baseAsset: info.baseAsset,
+      quoteAsset: info.quoteAsset,
+      quantityPrecision:
+        typeof info.quantityPrecision === 'number'
+          ? info.quantityPrecision
+          : lot
+          ? precisionFromStep(lot.stepSize)
+          : 8,
+      pricePrecision:
+        typeof info.pricePrecision === 'number'
+          ? info.pricePrecision
+          : priceF
+          ? precisionFromStep(priceF.tickSize)
+          : 8,
+    };
+    pairInfoCache.set(key, pair);
+    return pair;
+  }
+  throw lastErr ?? new Error('failed to fetch exchange info');
+}
+
 async function getUserCreds(id: string): Promise<UserCreds | null> {
   const row = await getBinanceKeyRow(id);
   if (!row?.binance_api_key_enc || !row.binance_api_secret_enc) return null;
