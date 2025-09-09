@@ -73,6 +73,10 @@ export interface RebalancePrompt {
     openInterest?: number;
     fundingRate?: number;
     orderBook?: { bid: [number, number]; ask: [number, number] };
+    /**
+     * News analyst report for each token.
+     */
+    newsReports?: Record<string, string>;
   };
   previous_responses?: PreviousResponse[];
 }

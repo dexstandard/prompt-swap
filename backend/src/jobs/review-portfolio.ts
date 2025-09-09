@@ -38,6 +38,7 @@ import {
   fetchTokenIndicators,
   type TokenIndicators,
 } from '../services/indicators.js';
+import { getTokenNewsSummary } from '../services/news-analyst.js';
 import { isStablecoin } from '../util/tokens.js';
 import type { RebalancePrompt, PreviousResponse } from '../util/ai.js';
 
@@ -152,7 +153,7 @@ async function prepareAgents(
       continue;
     }
 
-    const prompt = await buildPrompt(row, balances, log, cache);
+    const prompt = await buildPrompt(row, balances, log, cache, key);
     if (!prompt) {
       runningAgents.delete(row.id);
       continue;
@@ -236,6 +237,7 @@ async function buildPrompt(
   balances: { token1Balance: number; token2Balance: number },
   log: FastifyBaseLogger,
   cache: PromptCache,
+  apiKey: string,
 ): Promise<RebalancePrompt | undefined> {
   try {
     const {
@@ -257,6 +259,34 @@ async function buildPrompt(
       price2,
     );
     const prevOrders = await buildPreviousOrders(row.id);
+    const token1 = row.tokens[0].token;
+    const token2 = row.tokens[1].token;
+    const [news1, news2] = await Promise.all([
+      getTokenNewsSummary(token1, row.model, apiKey).catch((err) => {
+        log.error({ err, token: token1 }, 'failed to fetch news summary');
+        return '';
+      }),
+      getTokenNewsSummary(token2, row.model, apiKey).catch((err) => {
+        log.error({ err, token: token2 }, 'failed to fetch news summary');
+        return '';
+      }),
+    ]);
+    const marketData = assembleMarketData(
+      row,
+      pairData,
+      ind1,
+      ind2,
+      ts1,
+      ts2,
+      cache.fearGreed,
+      openInterest,
+      fundingRate,
+      orderBook,
+    );
+    const news: Record<string, string> = {};
+    if (news1) news[token1] = news1;
+    if (news2) news[token2] = news2;
+    if (Object.keys(news).length) (marketData as any).newsReports = news;
     return {
       instructions: row.agent_instructions,
       policy: { floor },
@@ -265,18 +295,7 @@ async function buildPrompt(
         positions,
       },
       ...prevOrders,
-      marketData: assembleMarketData(
-        row,
-        pairData,
-        ind1,
-        ind2,
-        ts1,
-        ts2,
-        cache.fearGreed,
-        openInterest,
-        fundingRate,
-        orderBook,
-      ),
+      marketData,
     };
   } catch (err) {
     const msg = 'failed to fetch market data';

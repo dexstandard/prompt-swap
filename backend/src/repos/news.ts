@@ -18,3 +18,24 @@ export async function insertNews(items: NewsItem[]) {
     params as any[],
   );
 }
+
+export interface NewsRow {
+  title: string;
+  link: string;
+  pub_date: string | null;
+}
+
+export async function getNewsByToken(
+  token: string,
+  limit = 20,
+): Promise<NewsRow[]> {
+  const { rows } = await db.query(
+    `SELECT title, link, pub_date
+       FROM news
+      WHERE tokens @> ARRAY[$1]::text[]
+   ORDER BY pub_date DESC NULLS LAST
+      LIMIT $2`,
+    [token, limit],
+  );
+  return rows as NewsRow[];
+}
