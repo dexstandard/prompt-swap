@@ -27,6 +27,12 @@ import {
   fetchFearGreedIndex,
   type FearGreedIndex,
 } from '../services/binance.js';
+
+import {
+  fetchOpenInterest,
+  fetchFundingRate,
+  fetchOrderBook,
+} from '../services/derivatives.js'; 
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import {
   fetchTokenIndicators,
@@ -240,7 +246,10 @@ async function buildPrompt(
       ind2,
       ts1,
       ts2,
-    } = await fetchPromptData(row, cache);
+      openInterest,
+      fundingRate,
+      orderBook,
+    } = await fetchPromptData(row, cache, log);
     const { floor, positions } = computePortfolioValues(
       row,
       balances,
@@ -264,6 +273,9 @@ async function buildPrompt(
         ts1,
         ts2,
         cache.fearGreed,
+        openInterest,
+        fundingRate,
+        orderBook,
       ),
     };
   } catch (err) {
@@ -277,6 +289,7 @@ async function buildPrompt(
 async function fetchPromptData(
   row: ActiveAgentRow,
   cache: PromptCache,
+  log: FastifyBaseLogger,
 ): Promise<{
   pairData: PairCacheData;
   price1: number;
@@ -285,6 +298,9 @@ async function fetchPromptData(
   ind2?: TokenIndicators;
   ts1?: MarketTimeseries;
   ts2?: MarketTimeseries;
+  openInterest?: number;
+  fundingRate?: number;
+  orderBook?: { bid: [number, number]; ask: [number, number] };
 }> {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
@@ -340,6 +356,33 @@ async function fetchPromptData(
     getTimeseries(token2),
   ]);
 
+  let openInterest: number | undefined;
+  let fundingRate: number | undefined;
+  let orderBook: { bid: [number, number]; ask: [number, number] } | undefined;
+  const derivatives = await Promise.allSettled([
+    fetchOpenInterest(pairData.symbol),
+    fetchFundingRate(pairData.symbol),
+    fetchOrderBook(pairData.symbol),
+  ]);
+  if (derivatives[0].status === 'fulfilled') openInterest = derivatives[0].value;
+  else
+    log.error(
+      { err: derivatives[0].reason, symbol: pairData.symbol },
+      'failed to fetch open interest',
+    );
+  if (derivatives[1].status === 'fulfilled') fundingRate = derivatives[1].value;
+  else
+    log.error(
+      { err: derivatives[1].reason, symbol: pairData.symbol },
+      'failed to fetch funding rate',
+    );
+  if (derivatives[2].status === 'fulfilled') orderBook = derivatives[2].value;
+  else
+    log.error(
+      { err: derivatives[2].reason, symbol: pairData.symbol },
+      'failed to fetch order book',
+    );
+
   return {
     pairData,
     price1: price1Data.currentPrice,
@@ -348,6 +391,9 @@ async function fetchPromptData(
     ind2,
     ts1,
     ts2,
+    openInterest,
+    fundingRate,
+    orderBook,
   };
 }
 
@@ -415,6 +461,9 @@ function assembleMarketData(
   ts1?: MarketTimeseries,
   ts2?: MarketTimeseries,
   fearGreed?: FearGreedIndex,
+  openInterest?: number,
+  fundingRate?: number,
+  orderBook?: { bid: [number, number]; ask: [number, number] },
 ) {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
@@ -425,6 +474,9 @@ function assembleMarketData(
   return {
     currentPrice: pairData.currentPrice,
     ...(fearGreed ? { fearGreedIndex: fearGreed } : {}),
+    ...(typeof openInterest === 'number' ? { openInterest } : {}),
+    ...(typeof fundingRate === 'number' ? { fundingRate } : {}),
+    ...(orderBook ? { orderBook } : {}),
     ...(ind1Flat || ind2Flat
       ? {
           indicators: {
