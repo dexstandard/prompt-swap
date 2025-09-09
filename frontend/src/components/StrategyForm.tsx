@@ -3,6 +3,7 @@ import TextInput from './forms/TextInput';
 import SelectInput from './forms/SelectInput';
 import FormField from './forms/FormField';
 import { tokens, riskOptions, reviewIntervalOptions, stableCoins } from '../lib/constants';
+import { useTranslation } from '../lib/i18n';
 
 interface StrategyData {
   tokens: { token: string; minAllocation: number }[];
@@ -18,6 +19,7 @@ interface Props {
 
 
 export default function StrategyForm({ data, onChange, disabled = false }: Props) {
+  const t = useTranslation();
   const { tokens: tokenData, risk, reviewInterval } = data;
   const token1 = tokenData[0];
   const token2 = tokenData[1];
@@ -25,7 +27,7 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Token 1" htmlFor="token1">
+        <FormField label={t('token1')} htmlFor="token1">
           <TokenSelect
             id="token1"
             value={token1.token}
@@ -45,7 +47,7 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
             disabled={disabled}
           />
         </FormField>
-        <FormField label="Token 2" htmlFor="token2">
+        <FormField label={t('token2')} htmlFor="token2">
           <TokenSelect
             id="token2"
             value={token2.token}
@@ -68,7 +70,7 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
       </div>
       <div className="grid grid-cols-2 gap-4">
         <FormField
-          label={`Min ${token1.token.toUpperCase()} allocation`}
+          label={t('min_token_allocation').replace('{token}', token1.token.toUpperCase())}
           htmlFor="minToken1Allocation"
         >
           <TextInput
@@ -87,7 +89,7 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
           />
         </FormField>
         <FormField
-          label={`Min ${token2.token.toUpperCase()} allocation`}
+          label={t('min_token_allocation').replace('{token}', token2.token.toUpperCase())}
           htmlFor="minToken2Allocation"
         >
           <TextInput
@@ -107,7 +109,7 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Risk Tolerance" htmlFor="risk">
+        <FormField label={t('risk_tolerance')} htmlFor="risk">
           <SelectInput
             id="risk"
             value={risk}
@@ -117,15 +119,15 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
           />
         </FormField>
         <FormField
-          label="Review Interval"
+          label={t('review_interval')}
           htmlFor="reviewInterval"
-          tooltip="How often the agent will review the portfolio; it may not rebalance every time."
+          tooltip={t('review_interval_tooltip')}
         >
           <SelectInput
             id="reviewInterval"
             value={reviewInterval}
             onChange={(v) => onChange('reviewInterval', v)}
-            options={reviewIntervalOptions}
+            options={reviewIntervalOptions(t)}
             disabled={disabled}
           />
         </FormField>

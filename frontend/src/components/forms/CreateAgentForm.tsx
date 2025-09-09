@@ -214,7 +214,7 @@ export default function CreateAgentForm({
                                     id="reviewInterval"
                                     value={field.value}
                                     onChange={field.onChange}
-                                    options={reviewIntervalOptions}
+                                    options={reviewIntervalOptions(t)}
                                 />
                             )}
                         />

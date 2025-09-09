@@ -26,17 +26,17 @@ export const riskOptions = [
     {value: 'high', label: createElement(RiskDisplay, {risk: 'high'})},
 ];
 
-export const reviewIntervalOptions = [
-    {value: '10m', label: '10 Minutes'},
-    {value: '15m', label: '15 Minutes'},
-    {value: '30m', label: '30 Minutes'},
-    {value: '1h', label: '1 Hour'},
-    {value: '3h', label: '3 Hours'},
-    {value: '5h', label: '5 Hours'},
-    {value: '12h', label: '12 Hours'},
-    {value: '24h', label: '1 Day'},
-    {value: '3d', label: '3 Days'},
-    {value: '1w', label: '1 Week'},
+export const reviewIntervalOptions = (t: (key: string) => string) => [
+    {value: '10m', label: t('review_interval_10m')},
+    {value: '15m', label: t('review_interval_15m')},
+    {value: '30m', label: t('review_interval_30m')},
+    {value: '1h', label: t('review_interval_1h')},
+    {value: '3h', label: t('review_interval_3h')},
+    {value: '5h', label: t('review_interval_5h')},
+    {value: '12h', label: t('review_interval_12h')},
+    {value: '24h', label: t('review_interval_24h')},
+    {value: '3d', label: t('review_interval_3d')},
+    {value: '1w', label: t('review_interval_1w')},
 ];
 
 export const DEFAULT_AGENT_INSTRUCTIONS =
