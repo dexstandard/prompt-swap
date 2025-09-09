@@ -10,13 +10,13 @@ const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
 
 export default function SharedAiApiKeySection({ label }: { label: ReactNode }) {
   const { user } = useUser();
-  const query = useQuery<{ key: string } | null>({
+  const query = useQuery<{ key: string; model?: string } | null>({
     queryKey: ['ai-key-shared', user?.id],
     enabled: !!user,
     queryFn: async () => {
       try {
         const res = await api.get(`/users/${user!.id}/ai-key/shared`);
-        return res.data as { key: string };
+        return res.data as { key: string; model?: string };
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 404) return null;
         throw err;
@@ -39,7 +39,9 @@ export default function SharedAiApiKeySection({ label }: { label: ReactNode }) {
           data-lpignore="true"
           data-1p-ignore="true"
         />
-        <p className="text-sm text-gray-600 self-center">Shared by admin</p>
+        <p className="text-sm text-gray-600 self-center">
+          Shared by admin{query.data.model ? ` (${query.data.model})` : ''}
+        </p>
       </div>
     </div>
   );

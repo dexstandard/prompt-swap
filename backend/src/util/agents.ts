@@ -4,6 +4,7 @@ import {
   findIdenticalDraftAgent,
   findActiveTokenConflicts,
 } from '../repos/agents.js';
+import { getAiKeyRow } from '../repos/api-keys.js';
 import {
   errorResponse,
   lengthMessage,
@@ -78,6 +79,12 @@ async function validateAgentInput(
   } else if (body.model.length > 50) {
     log.error('model too long');
     return { code: 400, body: errorResponse(lengthMessage('model', 50)) };
+  } else {
+    const keyRow = await getAiKeyRow(body.userId);
+    if (!keyRow?.own && keyRow?.shared?.model && body.model !== keyRow.shared.model) {
+      log.error('model not allowed');
+      return { code: 400, body: errorResponse('model not allowed') };
+    }
   }
   if (body.status === AgentStatus.Draft) {
     const dupDraft = await findIdenticalDraftAgent(
