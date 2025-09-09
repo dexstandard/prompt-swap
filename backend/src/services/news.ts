@@ -3,9 +3,12 @@ import { TOKENS } from '../util/tokens.js';
 
 const parser = new Parser();
 
-const FEEDS = [
+export const FEEDS = [
   'https://www.coindesk.com/arc/outboundfeeds/rss/',
   'https://cointelegraph.com/rss',
+  'https://bitcoinist.com/feed/',
+  'https://cryptopotato.com/feed/',
+  'https://news.bitcoin.com/feed/',
 ];
 
 export interface NewsItem {
@@ -33,19 +36,30 @@ export function tagTokens(text: string): string[] {
   return matches;
 }
 
-export async function fetchNews(): Promise<NewsItem[]> {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function isRecent(pubDate?: string, now: Date = new Date()): boolean {
+  if (!pubDate) return false;
+  const date = new Date(pubDate);
+  if (isNaN(date.getTime())) return false;
+  const cutoff = new Date(now.getTime() - DAY_MS);
+  return date >= cutoff;
+}
+
+export async function fetchNews(now: Date = new Date()): Promise<NewsItem[]> {
   const items: NewsItem[] = [];
   for (const url of FEEDS) {
     try {
       const feed = await parser.parseURL(url);
       for (const item of feed.items) {
         if (!item.title || !item.link) continue;
+        if (!isRecent(item.pubDate, now)) continue;
         const tokens = tagTokens(item.title);
         if (!tokens.length) continue;
         items.push({
           title: item.title,
           link: item.link,
-          pubDate: item.pubDate,
+          pubDate: new Date(item.pubDate!).toISOString(),
           tokens,
         });
       }
