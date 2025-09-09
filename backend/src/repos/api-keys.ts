@@ -9,15 +9,14 @@ export async function getAiKeyRow(id: string) {
     | { own_id?: string; own_enc?: string; shared_id?: string; shared_enc?: string }
     | undefined;
   if (!row) return undefined;
-  if (row.own_id)
-    return { id: row.own_id, ai_api_key_enc: row.own_enc, is_shared: false };
-  if (row.shared_id)
-    return {
-      id: row.shared_id,
-      ai_api_key_enc: row.shared_enc,
-      is_shared: true,
-    };
-  return { is_shared: false };
+  return {
+    own: row.own_id
+      ? { id: row.own_id, ai_api_key_enc: row.own_enc }
+      : null,
+    shared: row.shared_id
+      ? { id: row.shared_id, ai_api_key_enc: row.shared_enc }
+      : null,
+  };
 }
 
 export async function setAiKey(id: string, enc: string) {

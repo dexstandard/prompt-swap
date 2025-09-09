@@ -1,14 +1,12 @@
 import { schedule } from 'node-cron';
 import buildServer from '../src/server.js';
 import '../src/util/env.js';
-import { migrate } from '../src/db/index.js';
 import reviewPortfolios from '../src/jobs/review-portfolio.js';
 import checkOpenOrders from '../src/jobs/check-open-orders.js';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 async function main() {
-  await migrate();
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const routesDir = path.join(__dirname, '../src/routes');
   const app = await buildServer(routesDir);

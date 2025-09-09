@@ -50,7 +50,7 @@ describe('AI API key routes', () => {
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'verification failed' });
     let row = await getAiKeyRow(userId);
-    expect(row!.ai_api_key_enc).toBeUndefined();
+    expect(row?.own?.ai_api_key_enc).toBeUndefined();
 
     fetchMock.mockResolvedValueOnce({ ok: true } as any);
     res = await app.inject({
@@ -62,7 +62,7 @@ describe('AI API key routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ key: '<REDACTED>' });
     row = await getAiKeyRow(userId);
-    expect(row!.ai_api_key_enc).not.toBe(key1);
+    expect(row?.own?.ai_api_key_enc).not.toBe(key1);
 
     res = await app.inject({
       method: 'GET',
@@ -126,6 +126,10 @@ describe('AI API key routes', () => {
 
   it('allows admin to share and revoke ai key', async () => {
     const app = await buildServer();
+    const fetchMock = vi.fn();
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+    fetchMock.mockResolvedValue({ ok: true } as any);
     const adminId = await insertAdminUser('admin1', encrypt('admin@example.com', process.env.KEY_PASSWORD!));
     const userId = await insertUser('u1', encrypt('user@example.com', process.env.KEY_PASSWORD!));
     const ai = encrypt('aikey1234567890', process.env.KEY_PASSWORD!);
@@ -141,11 +145,11 @@ describe('AI API key routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/users/${userId}/ai-key`,
+      url: `/api/users/${userId}/ai-key/shared`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: '<REDACTED>' });
+    expect(res.json()).toMatchObject({ key: '<REDACTED>', shared: true });
 
     let keyRow = await getUserApiKeys(userId);
     expect(keyRow?.ai_api_key_enc).toBeDefined();
@@ -156,7 +160,7 @@ describe('AI API key routes', () => {
       cookies: authCookies(userId),
       payload: { key: 'newkey1234567890' },
     });
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(200);
 
     res = await app.inject({
       method: 'PUT',
@@ -164,14 +168,28 @@ describe('AI API key routes', () => {
       cookies: authCookies(userId),
       payload: { key: 'newkeyabcdefghij' },
     });
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(200);
 
     res = await app.inject({
       method: 'DELETE',
       url: `/api/users/${userId}/ai-key`,
       cookies: authCookies(userId),
     });
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(200);
+
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/users/${userId}/ai-key`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(404);
+
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/users/${userId}/ai-key/shared`,
+      cookies: authCookies(userId),
+    });
+    expect(res.statusCode).toBe(200);
 
     res = await app.inject({
       method: 'DELETE',
@@ -186,12 +204,13 @@ describe('AI API key routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/users/${userId}/ai-key`,
+      url: `/api/users/${userId}/ai-key/shared`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(404);
 
     await app.close();
+    (globalThis as any).fetch = originalFetch;
   });
 
   it("forbids accessing another user's ai key", async () => {

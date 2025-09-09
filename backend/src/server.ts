@@ -9,10 +9,12 @@ import { pathToFileURL } from 'node:url';
 import { RATE_LIMITS } from './rate-limit.js';
 import { errorResponse } from './util/errorMessages.js';
 import { fetchOutputIp } from './util/output-ip.js';
+import { migrate } from './db/index.js';
 
 export default async function buildServer(
   routesDir: string = path.join(process.cwd(), 'src/routes'),
 ): Promise<FastifyInstance> {
+  await migrate();
   const app = Fastify({ logger: true });
 
   await app.register(cookie);

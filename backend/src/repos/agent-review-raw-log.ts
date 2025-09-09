@@ -13,3 +13,16 @@ export async function insertReviewRawLog(entry: ReviewRawLogInsert): Promise<str
   );
   return rows[0].id as string;
 }
+
+export async function getPromptForReviewResult(
+  agentId: string,
+  resultId: string,
+): Promise<string | null> {
+  const { rows } = await db.query(
+    `SELECT rl.prompt FROM agent_review_result rr
+     JOIN agent_review_raw_log rl ON rr.raw_log_id = rl.id
+     WHERE rr.id = $1 AND rr.agent_id = $2`,
+    [resultId, agentId],
+  );
+  return rows[0]?.prompt ?? null;
+}
