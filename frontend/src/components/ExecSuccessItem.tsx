@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Eye } from 'lucide-react';
 import Modal from './ui/Modal';
 
@@ -13,9 +13,10 @@ interface Props {
     newAllocation?: number;
     shortReport: string;
   };
+  promptIcon?: ReactNode;
 }
 
-export default function ExecSuccessItem({ response }: Props) {
+export default function ExecSuccessItem({ response, promptIcon }: Props) {
   const [showJson, setShowJson] = useState(false);
   const { rebalance, newAllocation, shortReport } = response;
   const color = rebalance
@@ -33,6 +34,7 @@ export default function ExecSuccessItem({ response }: Props) {
           <span className="ml-1">(new allocation: {newAllocation})</span>
         )}
       </div>
+      {promptIcon}
       <Eye
         className="h-4 w-4 cursor-pointer"
         onClick={() => setShowJson(true)}
