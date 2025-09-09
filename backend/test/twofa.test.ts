@@ -15,7 +15,8 @@ describe('2fa routes', () => {
       cookies: authCookies(userId),
     });
     expect(setupRes.statusCode).toBe(200);
-    const { secret } = setupRes.json() as { secret: string };
+    const { secret, qr } = setupRes.json() as { secret: string; qr: string };
+    expect(qr.startsWith('data:image/png;base64,')).toBe(true);
 
     const token = authenticator.generate(secret);
     const enableRes = await app.inject({
