@@ -42,6 +42,7 @@ vi.mock('../src/services/binance.js', () => ({
     quoteAsset: 'ETH',
     quantityPrecision: 8,
     pricePrecision: 8,
+    minNotional: 0,
   }),
   cancelOrder: vi.fn().mockResolvedValue(undefined),
   parseBinanceError: vi.fn().mockReturnValue(null),

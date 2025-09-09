@@ -58,11 +58,17 @@ export async function createRebalanceLimitOrder(opts: {
     : (wantMoreToken1 ? 'SELL' : 'BUY');
   const qty = quantity ?? order.quantity;
   const prc = price ?? order.currentPrice * (side === 'BUY' ? 0.999 : 1.001);
+  const roundedQty = Number(qty.toFixed(info.quantityPrecision));
+  const roundedPrice = Number(prc.toFixed(info.pricePrecision));
+  if (roundedQty * roundedPrice < info.minNotional) {
+    log.info('order below min notional');
+    return;
+  }
   const params = {
     symbol: info.symbol,
     side,
-    quantity: Number(qty.toFixed(info.quantityPrecision)),
-    price: Number(prc.toFixed(info.pricePrecision)),
+    quantity: roundedQty,
+    price: roundedPrice,
   } as const;
   log.info({ order: params }, 'creating limit order');
   try {
