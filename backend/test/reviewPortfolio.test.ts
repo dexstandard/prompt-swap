@@ -89,6 +89,11 @@ vi.mock('../src/services/indicators.js', () => ({
 vi.mock('../src/services/rebalance.js', () => ({
   createRebalanceLimitOrder: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('../src/services/news-analyst.js', () => ({
+  getTokenNewsSummary: vi
+    .fn()
+    .mockImplementation((token: string) => Promise.resolve(`${token} news`)),
+}));
 
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let reviewPortfolios: (
@@ -103,6 +108,7 @@ let fetchPairInfo: any;
 let fetchTokenIndicators: any;
 let createRebalanceLimitOrder: any;
 let fetchFearGreedIndex: any;
+let getTokenNewsSummary: any;
 
 beforeAll(async () => {
   ({ reviewAgentPortfolio, default: reviewPortfolios } = await import(
@@ -118,6 +124,7 @@ beforeAll(async () => {
   } = await import('../src/services/binance.js'));
   ({ fetchTokenIndicators } = await import('../src/services/indicators.js'));
   ({ createRebalanceLimitOrder } = await import('../src/services/rebalance.js'));
+  ({ getTokenNewsSummary } = await import('../src/services/news-analyst.js'));
 });
 
 describe('reviewPortfolio', () => {
@@ -203,6 +210,7 @@ describe('reviewPortfolio', () => {
       fearGreedIndex: { value: 50, classification: 'Neutral' },
       indicators: { BTC: flatIndicators, ETH: flatIndicators },
       market_timeseries: { BTCUSDT: flatTimeseries, ETHUSDT: flatTimeseries },
+      newsReports: { BTC: 'BTC news', ETH: 'ETH news' },
     });
     expect(JSON.stringify(args[1].marketData)).not.toContain('minute_60');
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(2);
@@ -467,12 +475,39 @@ describe('reviewPortfolio', () => {
       fearGreedIndex: { value: 50, classification: 'Neutral' },
       indicators: { ETH: flatIndicators },
       market_timeseries: { ETHUSDT: flatTimeseries },
+      newsReports: { USDT: 'USDT news', ETH: 'ETH news' },
     });
     expect(JSON.stringify(args[1].marketData)).not.toContain('minute_60');
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(1);
     expect(fetchTokenIndicators).toHaveBeenCalledWith('ETH');
     expect(fetchMarketTimeseries).toHaveBeenCalledTimes(1);
     expect(fetchMarketTimeseries).toHaveBeenCalledWith('ETHUSDT');
+  });
+
+  it('continues when news summary fails', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(getTokenNewsSummary).mockClear();
+    vi.mocked(getTokenNewsSummary)
+      .mockImplementationOnce(() => Promise.reject(new Error('fail')))
+      .mockImplementationOnce((token: string) => Promise.resolve(`${token} news`));
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['9']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['9', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent9', 'low', '1h', 'inst', false)",
+      ['9', '9'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['9'],
+    );
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewAgentPortfolio(log, '9');
+    expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
+    const args = (callRebalancingAgent as any).mock.calls[0];
+    expect(args[1].marketData.newsReports).toEqual({ ETH: 'ETH news' });
   });
 
   it('logs error when token balances missing and skips callRebalancingAgent', async () => {
