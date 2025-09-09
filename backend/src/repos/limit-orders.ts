@@ -53,7 +53,7 @@ export async function getLimitOrdersByReviewResult(
 
 export async function getRecentLimitOrders(agentId: string, limit: number) {
   const { rows } = await db.query(
-    `SELECT e.planned_json, e.status
+    `SELECT e.planned_json, e.status, e.created_at
        FROM limit_order e
        JOIN agent_review_result r ON e.review_result_id = r.id
       WHERE r.agent_id = $1
@@ -61,7 +61,11 @@ export async function getRecentLimitOrders(agentId: string, limit: number) {
       LIMIT $2`,
     [agentId, limit],
   );
-  return rows as { planned_json: string; status: LimitOrderStatus }[];
+  return rows as {
+    planned_json: string;
+    status: LimitOrderStatus;
+    created_at: Date;
+  }[];
 }
 
 export async function getOpenLimitOrdersForAgent(agentId: string) {

@@ -391,15 +391,27 @@ function computePortfolioValues(
   return { floorPercents, positions, currentWeights };
 }
 
+/**
+ * Serialize minimal information about the most recent limit orders. The prompt
+ * doesn't need the entire planning payload, so we only include the attributes
+ * that are relevant for providing context: symbol, side, quantity, timestamp
+ * and final status.
+ */
 async function buildPreviousOrders(agentId: string) {
   const rows = await getRecentLimitOrders(agentId, 5);
   if (!rows.length) return {};
   return {
-    previousLimitOrders: rows.map((r) => ({
-      planned: JSON.parse(r.planned_json),
-      status: r.status,
-    })),
-  };
+    previousLimitOrders: rows.map((r) => {
+      const planned = JSON.parse(r.planned_json) as Record<string, any>;
+      return {
+        symbol: planned.symbol,
+        side: planned.side,
+        amount: planned.quantity,
+        datetime: new Date(r.created_at).toISOString(),
+        status: r.status,
+      };
+    }),
+  } as const;
 }
 
 function assembleMarketData(

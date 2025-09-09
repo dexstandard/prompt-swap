@@ -145,8 +145,15 @@ describe('reviewPortfolio', () => {
     );
     for (let i = 0; i < 5; i++) {
       await db.query(
-        'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
-        ['1', JSON.stringify({ allocation: i }), 'open', rrRows[i].id, `ord-${i}`],
+        'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
+        [
+          '1',
+          JSON.stringify({ symbol: 'BTCETH', side: 'BUY', quantity: i }),
+          'open',
+          rrRows[i].id,
+          `ord-${i}`,
+          new Date(base.getTime() + i * 1000),
+        ],
       );
     }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
@@ -169,7 +176,12 @@ describe('reviewPortfolio', () => {
     expect(cfg.policy.floorPercents).toEqual({ BTC: 10, ETH: 20 });
     expect(cfg.currentStatePortfolio.currentWeights.BTC).toBeCloseTo(150 / 350);
     expect(cfg.currentStatePortfolio.currentWeights.ETH).toBeCloseTo(200 / 350);
-    expect(cfg.previousLimitOrders.map((o: any) => o.planned.allocation)).toEqual([
+    expect(cfg.previousLimitOrders[0]).toMatchObject({
+      symbol: 'BTCETH',
+      side: 'BUY',
+      status: 'canceled',
+    });
+    expect(cfg.previousLimitOrders.map((o: any) => o.amount)).toEqual([
       4,
       3,
       2,

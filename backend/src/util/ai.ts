@@ -56,8 +56,15 @@ export interface RebalancePrompt {
       positions: RebalancePosition[];
       currentWeights: Record<string, number>;
     };
+    /**
+     * Summary of recent limit orders placed by the agent. Only essential
+     * attributes are included to minimize token usage in the prompt.
+     */
     previousLimitOrders?: {
-      planned: Record<string, unknown>;
+      symbol: string;
+      side: string;
+      amount: number;
+      datetime: string;
       status: string;
     }[];
   };
