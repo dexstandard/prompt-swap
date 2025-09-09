@@ -9,15 +9,12 @@ describe('callRebalancingAgent structured output', () => {
     const { callRebalancingAgent } = await import('../src/util/ai.js');
     const prompt: RebalancePrompt = {
       instructions: 'inst',
-      config: {
-        policy: { floorPercents: { USDT: 20 } },
-        currentStatePortfolio: {
-          ts: new Date().toISOString(),
-          positions: [
-            { sym: 'USDT', qty: 1, price_usdt: 1, value_usdt: 1 },
-          ],
-          currentWeights: { USDT: 1 },
-        },
+      policy: { floor: { USDT: 20 } },
+      portfolio: {
+        ts: new Date().toISOString(),
+        positions: [
+          { sym: 'USDT', qty: 1, price_usdt: 1, value_usdt: 1 },
+        ],
       },
       marketData: { currentPrice: 1 },
       previous_responses: [

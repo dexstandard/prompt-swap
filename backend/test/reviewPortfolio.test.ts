@@ -168,20 +168,26 @@ describe('reviewPortfolio', () => {
       { rebalance: true, newAllocation: 2, shortReport: 'short-2' },
       { rebalance: true, newAllocation: 1, shortReport: 'short-1' },
     ]);
-    const cfg = args[1].config;
-    const btcPos = cfg.currentStatePortfolio.positions.find((p: any) => p.sym === 'BTC');
-    const ethPos = cfg.currentStatePortfolio.positions.find((p: any) => p.sym === 'ETH');
+    const portfolio = args[1].portfolio;
+    const policy = args[1].policy;
+    const prevOrders = args[1].prev_orders;
+    const btcPos = portfolio.positions.find((p: any) => p.sym === 'BTC');
+    const ethPos = portfolio.positions.find((p: any) => p.sym === 'ETH');
     expect(btcPos.qty).toBe(1.5);
     expect(ethPos.qty).toBe(2);
-    expect(cfg.policy.floorPercents).toEqual({ BTC: 10, ETH: 20 });
-    expect(cfg.currentStatePortfolio.currentWeights.BTC).toBeCloseTo(150 / 350);
-    expect(cfg.currentStatePortfolio.currentWeights.ETH).toBeCloseTo(200 / 350);
-    expect(cfg.previousLimitOrders[0]).toMatchObject({
+    expect(policy.floor).toEqual({ BTC: 10, ETH: 20 });
+    const total = portfolio.positions.reduce(
+      (sum: number, p: any) => sum + p.value_usdt,
+      0,
+    );
+    expect(btcPos.value_usdt / total).toBeCloseTo(150 / 350);
+    expect(ethPos.value_usdt / total).toBeCloseTo(200 / 350);
+    expect(prevOrders[0]).toMatchObject({
       symbol: 'BTCETH',
       side: 'BUY',
       status: 'canceled',
     });
-    expect(cfg.previousLimitOrders.map((o: any) => o.amount)).toEqual([
+    expect(prevOrders.map((o: any) => o.amount)).toEqual([
       4,
       3,
       2,
@@ -226,14 +232,12 @@ describe('reviewPortfolio', () => {
     expect(rowsTyped).toHaveLength(1);
     expect(JSON.parse(rowsTyped[0].prompt!)).toMatchObject({
       instructions: 'inst',
-      config: {
-        policy: { floorPercents: { BTC: 10, ETH: 20 } },
-        currentStatePortfolio: {
-          positions: [
-            expect.objectContaining({ sym: 'BTC', qty: 1.5 }),
-            expect.objectContaining({ sym: 'ETH', qty: 2 }),
-          ],
-        },
+      policy: { floor: { BTC: 10, ETH: 20 } },
+      portfolio: {
+        positions: [
+          expect.objectContaining({ sym: 'BTC', qty: 1.5 }),
+          expect.objectContaining({ sym: 'ETH', qty: 2 }),
+        ],
       },
     });
     const respEntry = JSON.parse(rowsTyped[0].response!);
