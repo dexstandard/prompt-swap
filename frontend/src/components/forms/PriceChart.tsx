@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from '../../lib/i18n';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { createChart, LineSeries } from 'lightweight-charts';
@@ -38,6 +39,7 @@ export default function PriceChart({ tokens }: { tokens: string[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const seriesARef = useRef<ISeriesApi<'Line'> | null>(null);
   const seriesBRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const t = useTranslation();
 
   const query = useQuery<{ [key: string]: PricePoint[] }>({
     queryKey: ['price-history', token1, token2],
@@ -107,17 +109,17 @@ export default function PriceChart({ tokens }: { tokens: string[] }) {
 
   return (
     <div className="bg-white shadow-md border border-gray-200 rounded p-6 flex-1 min-w-0 flex flex-col">
-      <h2 className="text-xl font-bold mb-4">Price History</h2>
+      <h2 className="text-xl font-bold mb-4">{t('price_history')}</h2>
       <div className="flex-1 relative">
         <div ref={containerRef} className="absolute inset-0" />
         {query.isLoading && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-            Loading...
+            {t('loading')}
           </div>
         )}
         {query.isError && (
           <div className="absolute inset-0 flex items-center justify-center text-red-500">
-            Failed to load price data
+            {t('failed_load_price_data')}
           </div>
         )}
       </div>

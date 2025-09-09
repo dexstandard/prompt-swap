@@ -14,6 +14,7 @@ import ApiKeyProviderSelector from './forms/ApiKeyProviderSelector';
 import WalletBalances from './WalletBalances';
 import { usePrerequisites } from '../lib/usePrerequisites';
 import SelectInput from './forms/SelectInput';
+import { useTranslation } from '../lib/i18n';
 
 interface Props {
   agent: Agent;
@@ -24,6 +25,7 @@ interface Props {
 
 export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Props) {
   const toast = useToast();
+  const t = useTranslation();
   const [data, setData] = useState({
     tokens: agent.tokens,
     risk: agent.risk,
@@ -82,7 +84,7 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
       if (axios.isAxiosError(err) && err.response?.data?.error) {
         toast.show(err.response.data.error);
       } else {
-        toast.show('Failed to update agent');
+        toast.show(t('failed_update_agent'));
       }
     },
   });
@@ -91,7 +93,7 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
 
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-xl font-bold mb-2">Update Agent</h2>
+      <h2 className="text-xl font-bold mb-2">{t('update_agent')}</h2>
       <div className="max-w-2xl">
         <StrategyForm
           data={data}
@@ -120,13 +122,13 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
           <div>
             <ApiKeyProviderSelector
               type="ai"
-              label="AI Provider"
+              label={t('ai_provider')}
               value={aiProvider}
               onChange={setAiProvider}
             />
             {hasOpenAIKey && (models.length || agent.model) && (
               <div className="mt-2">
-                <h2 className="text-md font-bold">Model</h2>
+                <h2 className="text-md font-bold">{t('model')}</h2>
                 <SelectInput
                   id="update-model"
                   value={model}
@@ -143,7 +145,7 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
           <div>
             <ApiKeyProviderSelector
               type="exchange"
-              label="Exchange"
+              label={t('exchange')}
               value={exchangeProvider}
               onChange={setExchangeProvider}
             />
@@ -154,21 +156,21 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
         </div>
       </div>
       <div className="mt-4 flex justify-end gap-2">
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('cancel')}</Button>
         <Button
           disabled={updateMut.isPending}
           loading={updateMut.isPending}
           onClick={() => setConfirmOpen(true)}
         >
-          Confirm
+          {t('confirm')}
         </Button>
       </div>
       <ConfirmDialog
         open={confirmOpen}
         message={
           agent.status === 'active'
-            ? 'Update running agent?'
-            : 'Update agent?'
+            ? t('update_running_agent_prompt')
+            : t('update_agent_prompt')
         }
         onConfirm={() => {
           setConfirmOpen(false);
