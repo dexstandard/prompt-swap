@@ -4,8 +4,16 @@ import RiskDisplay from '../components/RiskDisplay';
 
 export const tokens = [
     {value: 'BTC', label: 'BTC'},
+    {value: 'BNB', label: 'BNB'},
+    {value: 'DOGE', label: 'DOGE'},
     {value: 'ETH', label: 'ETH'},
+    {value: 'HBAR', label: 'HBAR'},
+    {value: 'PEPE', label: 'PEPE'},
+    {value: 'SHIB', label: 'SHIB'},
     {value: 'SOL', label: 'SOL'},
+    {value: 'TON', label: 'TON'},
+    {value: 'TRX', label: 'TRX'},
+    {value: 'XRP', label: 'XRP'},
     {value: 'USDT', label: 'USDT'},
     {value: 'USDC', label: 'USDC'},
 ];
