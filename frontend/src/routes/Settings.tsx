@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import axios from 'axios';
+import { Copy } from 'lucide-react';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import Button from '../components/ui/Button';
@@ -118,13 +119,22 @@ export default function Settings() {
         <form onSubmit={enable} className="space-y-2">
           <p>Scan this QR code with Google Authenticator and enter the code.</p>
           <img src={setup.qr} alt="QR code" className="w-40 h-40" />
-          <p className="break-all text-sm">Secret: {setup.secret}</p>
-          <a
-            className="text-blue-600 underline break-all text-sm"
-            href={setup.otpauthUrl}
-          >
-            Open in Authenticator
-          </a>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="break-all">
+              Secret: <span className="font-mono">{setup.secret}</span>
+            </span>
+            <button
+              type="button"
+              className="p-1 border rounded"
+              onClick={() => {
+                navigator.clipboard.writeText(setup.secret);
+                toast.show('Copied to clipboard');
+              }}
+              aria-label="Copy secret"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          </div>
           <input
             className="border p-1 w-40"
             placeholder="Code"
