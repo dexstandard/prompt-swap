@@ -7,6 +7,7 @@ import Button from './ui/Button';
 import Modal from './ui/Modal';
 import TextInput from './forms/TextInput';
 import { useToast } from '../lib/useToast';
+import { useTranslation } from '../lib/i18n';
 
 type CredentialResponse = { credential: string };
 
@@ -34,6 +35,7 @@ export default function GoogleLoginButton() {
   const btnRef = useRef<HTMLDivElement>(null);
   const { user, setUser } = useUser();
   const toast = useToast();
+  const t = useTranslation();
   const [otpOpen, setOtpOpen] = useState(false);
   const [otp, setOtp] = useState('');
   const [pendingCred, setPendingCred] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export default function GoogleLoginButton() {
               setPendingCred(resp.credential);
               setOtpOpen(true);
             } else {
-              toast.show('Login failed');
+              toast.show(t('login_failed'));
             }
           }
         },
@@ -91,7 +93,7 @@ export default function GoogleLoginButton() {
       script?.addEventListener('load', initialize);
       return () => script?.removeEventListener('load', initialize);
     }
-    }, [user, setUser, csrf, toast]);
+    }, [user, setUser, csrf, toast, t]);
 
   if (user) {
     const email = user.email ?? '';
@@ -125,7 +127,7 @@ export default function GoogleLoginButton() {
           setPendingCred(null);
         }}
       >
-        <h2 className="text-lg font-bold mb-2">Enter 2FA code</h2>
+        <h2 className="text-lg font-bold mb-2">{t('enter_2fa_code')}</h2>
         <TextInput
           value={otp}
           onChange={(e) => setOtp(e.target.value)}
@@ -140,7 +142,7 @@ export default function GoogleLoginButton() {
               setPendingCred(null);
             }}
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             onClick={async () => {
@@ -163,12 +165,12 @@ export default function GoogleLoginButton() {
                 if (axios.isAxiosError(err) && err.response?.data?.error) {
                   toast.show(err.response.data.error);
                 } else {
-                  toast.show('Login failed');
+                  toast.show(t('login_failed'));
                 }
               }
             }}
           >
-            Confirm
+            {t('confirm')}
           </Button>
         </div>
       </Modal>

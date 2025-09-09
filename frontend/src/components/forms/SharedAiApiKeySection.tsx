@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../../lib/axios';
 import { useUser } from '../../lib/useUser';
+import { useTranslation } from '../../lib/i18n';
 
 const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
   WebkitTextSecurity: 'disc',
@@ -10,6 +11,7 @@ const textSecurityStyle: CSSProperties & { WebkitTextSecurity: string } = {
 
 export default function SharedAiApiKeySection({ label }: { label: ReactNode }) {
   const { user } = useUser();
+  const t = useTranslation();
   const query = useQuery<{ key: string; model?: string } | null>({
     queryKey: ['ai-key-shared', user?.id],
     enabled: !!user,
@@ -40,7 +42,8 @@ export default function SharedAiApiKeySection({ label }: { label: ReactNode }) {
           data-1p-ignore="true"
         />
         <p className="text-sm text-gray-600 self-center">
-          Shared by admin{query.data.model ? ` (${query.data.model})` : ''}
+          {t('shared_by_admin')}
+          {query.data.model ? ` (${query.data.model})` : ''}
         </p>
       </div>
     </div>

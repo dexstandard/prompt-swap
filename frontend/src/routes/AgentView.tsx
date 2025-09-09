@@ -16,6 +16,7 @@ import AgentDetailsDesktop from '../components/AgentDetailsDesktop';
 import AgentDetailsMobile from '../components/AgentDetailsMobile';
 import Toggle from '../components/ui/Toggle';
 import { usePrerequisites } from '../lib/usePrerequisites';
+import { useTranslation } from '../lib/i18n';
 
 export default function AgentView() {
   const { id } = useParams();
@@ -25,6 +26,7 @@ export default function AgentView() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const { hasOpenAIKey, hasBinanceKey } = usePrerequisites([]);
+  const t = useTranslation();
 
   const reviewMut = useMutation({
     mutationFn: async (agentId: string) => {
@@ -61,7 +63,7 @@ export default function AgentView() {
     enabled: !!id && !!user,
   });
 
-  if (!data) return <div className="p-4">Loading...</div>;
+  if (!data) return <div className="p-4">{t('loading')}</div>;
   if (data.status === 'draft') return <AgentPreview draft={data} />;
 
     const isActive = data.status === 'active';
