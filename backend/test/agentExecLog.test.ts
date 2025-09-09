@@ -36,7 +36,7 @@ describe('agent exec log routes', () => {
       'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
       [
         user1Id,
-        JSON.stringify({ side: 'BUY', quantity: 1, price: 100 }),
+        JSON.stringify({ side: 'BUY', quantity: 1, price: 100, symbol: 'BTCETH' }),
         'open',
         reviewResultId,
         '1',
@@ -50,7 +50,14 @@ describe('agent exec log routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
       orders: [
-        { side: 'BUY', quantity: 1, price: 100, status: 'open' },
+        {
+          id: '1',
+          side: 'BUY',
+          quantity: 1,
+          price: 100,
+          status: 'open',
+          createdAt: expect.any(Number),
+        },
       ],
     });
     res = await app.inject({
@@ -59,6 +66,61 @@ describe('agent exec log routes', () => {
       cookies: authCookies(user2Id),
     });
     expect(res.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it('cancels open order and enforces ownership', async () => {
+    const app = await buildServer();
+    const user1Id = await insertUser('12');
+    const user2Id = await insertUser('13');
+    const agent = await insertAgent({
+      userId: user1Id,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    await db.query(
+      'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
+      [
+        user1Id,
+        JSON.stringify({ side: 'BUY', quantity: 1, price: 100, symbol: 'BTCETH' }),
+        'open',
+        reviewResultId,
+        '2',
+      ],
+    );
+    const spy = vi.spyOn(binance, 'cancelOrder').mockResolvedValue({} as any);
+    let res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders/2/cancel`,
+      cookies: authCookies(user1Id),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(spy).toHaveBeenCalledWith(user1Id, {
+      symbol: 'BTCETH',
+      orderId: 2,
+    });
+    let row = await db.query('SELECT status FROM limit_order WHERE order_id=$1', ['2']);
+    expect(row.rows[0].status).toBe('canceled');
+    res = await app.inject({
+      method: 'POST',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders/2/cancel`,
+      cookies: authCookies(user2Id),
+    });
+    expect(res.statusCode).toBe(403);
+    row = await db.query('SELECT status FROM limit_order WHERE order_id=$1', ['2']);
+    expect(row.rows[0].status).toBe('canceled');
+    spy.mockRestore();
     await app.close();
   });
 
