@@ -89,6 +89,11 @@ vi.mock('../src/services/indicators.js', () => ({
 vi.mock('../src/services/rebalance.js', () => ({
   createRebalanceLimitOrder: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('../src/services/news-analyst.js', () => ({
+  getTokenNewsSummary: vi
+    .fn()
+    .mockImplementation((token: string) => Promise.resolve(`${token} news`)),
+}));
 
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let reviewPortfolios: (
@@ -203,6 +208,7 @@ describe('reviewPortfolio', () => {
       fearGreedIndex: { value: 50, classification: 'Neutral' },
       indicators: { BTC: flatIndicators, ETH: flatIndicators },
       market_timeseries: { BTCUSDT: flatTimeseries, ETHUSDT: flatTimeseries },
+      newsReports: { BTC: 'BTC news', ETH: 'ETH news' },
     });
     expect(JSON.stringify(args[1].marketData)).not.toContain('minute_60');
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(2);
@@ -467,6 +473,7 @@ describe('reviewPortfolio', () => {
       fearGreedIndex: { value: 50, classification: 'Neutral' },
       indicators: { ETH: flatIndicators },
       market_timeseries: { ETHUSDT: flatTimeseries },
+      newsReports: { USDT: 'USDT news', ETH: 'ETH news' },
     });
     expect(JSON.stringify(args[1].marketData)).not.toContain('minute_60');
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(1);
