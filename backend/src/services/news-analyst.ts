@@ -57,7 +57,8 @@ export async function getTokenNewsSummary(
   cache.set(cacheKey, { promise, expires: now + FIVE_MINUTES });
   try {
     const summary = await promise;
-    cache.set(cacheKey, { summary, expires: Date.now() + FIVE_MINUTES });
+    if (summary) cache.set(cacheKey, { summary, expires: Date.now() + FIVE_MINUTES });
+    else cache.delete(cacheKey);
     return summary;
   } catch (err) {
     cache.delete(cacheKey);

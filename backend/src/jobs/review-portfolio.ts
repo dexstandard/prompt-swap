@@ -285,8 +285,13 @@ async function buildPrompt(
     );
     const news: Record<string, string> = {};
     if (news1) news[token1] = news1;
+    else log.info({ token: token1 }, 'no news summary');
     if (news2) news[token2] = news2;
-    if (Object.keys(news).length) (marketData as any).newsReports = news;
+    else log.info({ token: token2 }, 'no news summary');
+    if (Object.keys(news).length) {
+      (marketData as any).newsReports = news;
+      log.info({ tokens: Object.keys(news) }, 'attached news reports');
+    }
     return {
       instructions: row.agent_instructions,
       policy: { floor },

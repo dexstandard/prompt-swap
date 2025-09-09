@@ -47,4 +47,22 @@ describe('news analyst', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
+
+  it('does not cache empty summaries', async () => {
+    const orig = globalThis.fetch;
+    const fetchMock = vi.fn();
+    (globalThis as any).fetch = fetchMock;
+    const first = await getTokenNewsSummary('DOGE', 'gpt', 'key');
+    expect(first).toBe('');
+    expect(fetchMock).not.toHaveBeenCalled();
+    await db.query(
+      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t', 'l', NOW(), ARRAY['DOGE'])",
+    );
+    const fetchMock2 = vi.fn().mockResolvedValue({ text: async () => responseJson });
+    (globalThis as any).fetch = fetchMock2;
+    const second = await getTokenNewsSummary('DOGE', 'gpt', 'key');
+    expect(second).toBe('summary text');
+    expect(fetchMock2).toHaveBeenCalledTimes(1);
+    (globalThis as any).fetch = orig;
+  });
 });
