@@ -3,6 +3,7 @@ import buildServer from '../src/server.js';
 import '../src/util/env.js';
 import reviewPortfolios from '../src/jobs/review-portfolio.js';
 import checkOpenOrders from '../src/jobs/check-open-orders.js';
+import fetchNews from '../src/jobs/fetch-news.js';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,6 +12,8 @@ async function main() {
   const routesDir = path.join(__dirname, '../src/routes');
   const app = await buildServer(routesDir);
   const log = app.log;
+
+  schedule('*/10 * * * *', () => fetchNews(log));
 
   const schedules: Record<string, string> = {
     openOrders: '*/3 * * * *',
