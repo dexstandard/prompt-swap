@@ -303,8 +303,17 @@ export default async function agentRoutes(app: FastifyInstance) {
         ? (wantMoreToken1 ? 'BUY' : 'SELL')
         : (wantMoreToken1 ? 'SELL' : 'BUY');
       const defaultPrice = order.currentPrice * (side === 'BUY' ? 0.999 : 1.001);
-      const finalPrice = body?.price ?? defaultPrice;
-      const finalQuantity = body?.quantity ?? order.quantity;
+      const finalPriceRaw = body?.price ?? defaultPrice;
+      const finalQuantityRaw = body?.quantity ?? order.quantity;
+      const finalPrice = Number(finalPriceRaw.toFixed(info.pricePrecision));
+      const finalQuantity = Number(finalQuantityRaw.toFixed(info.quantityPrecision));
+      const notional = finalPrice * finalQuantity;
+      if (notional < info.minNotional) {
+        log.error({ execLogId: logId }, 'order below minimum');
+        return reply
+          .code(400)
+          .send(errorResponse('order value below minimum'));
+      }
       const usdValue = (() => {
         if (info.baseAsset === token1) {
           return side === 'BUY'
@@ -329,9 +338,9 @@ export default async function agentRoutes(app: FastifyInstance) {
           newAllocation: result.newAllocation,
           reviewResultId: logId,
           log,
-          ...(body?.price ? { price: body.price } : {}),
-          ...(body?.quantity ? { quantity: body.quantity } : {}),
-          ...(body?.manuallyEdited ? { manuallyEdited: body.manuallyEdited } : {}),
+          price: finalPrice,
+          quantity: finalQuantity,
+          manuallyEdited: body?.manuallyEdited,
         });
       } catch (err) {
         const msg = parseBinanceError(err) || 'failed to create limit order';

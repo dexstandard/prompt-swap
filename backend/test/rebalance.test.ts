@@ -14,12 +14,13 @@ vi.mock('../src/services/binance.js', () => ({
     quoteAsset: 'ETH',
     quantityPrecision: 8,
     pricePrecision: 8,
+    minNotional: 0,
   }),
   createLimitOrder: vi.fn().mockResolvedValue({ orderId: 1 }),
 }));
 
 import { createRebalanceLimitOrder } from '../src/services/rebalance.js';
-import { createLimitOrder } from '../src/services/binance.js';
+import { createLimitOrder, fetchPairData, fetchPairInfo } from '../src/services/binance.js';
 
 describe('createRebalanceLimitOrder', () => {
   beforeEach(async () => {
@@ -202,6 +203,51 @@ describe('createRebalanceLimitOrder', () => {
     expect(createLimitOrder).not.toHaveBeenCalled();
   });
 
+  it('skips orders below exchange min notional', async () => {
+    const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    const userId = await insertUser('7');
+    const agent = await insertAgent({
+      userId,
+      model: 'm',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'USDT', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    vi.mocked(fetchPairData).mockResolvedValueOnce({ currentPrice: 1 });
+    vi.mocked(fetchPairInfo).mockResolvedValueOnce({
+      symbol: 'BTCUSDT',
+      baseAsset: 'BTC',
+      quoteAsset: 'USDT',
+      quantityPrecision: 8,
+      pricePrecision: 8,
+      minNotional: 10,
+    });
+    vi.mocked(createLimitOrder).mockClear();
+    await createRebalanceLimitOrder({
+      userId,
+      tokens: ['BTC', 'USDT'],
+      positions: [
+        { sym: 'BTC', value_usdt: 95 },
+        { sym: 'USDT', value_usdt: 105 },
+      ],
+      newAllocation: 50,
+      log,
+      reviewResultId,
+    });
+    const rows = await getLimitOrders();
+    expect(rows).toHaveLength(0);
+    expect(createLimitOrder).not.toHaveBeenCalled();
+  });
+
   it('rounds price and quantity to exchange precision', async () => {
     const log = { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     const userId = await insertUser('4');
@@ -221,13 +267,13 @@ describe('createRebalanceLimitOrder', () => {
       manualRebalance: false,
     });
     const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
-    const { fetchPairInfo } = await import('../src/services/binance.js');
     vi.mocked(fetchPairInfo).mockResolvedValueOnce({
       symbol: 'BTCETH',
       baseAsset: 'BTC',
       quoteAsset: 'ETH',
       quantityPrecision: 3,
       pricePrecision: 2,
+      minNotional: 0,
     });
     await createRebalanceLimitOrder({
       userId,
