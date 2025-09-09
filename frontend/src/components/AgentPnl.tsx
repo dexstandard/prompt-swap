@@ -1,4 +1,5 @@
 import { useAgentBalanceUsd } from '../lib/useAgentBalanceUsd';
+import { useTranslation } from '../lib/i18n';
 
 interface Props {
   tokens: string[];
@@ -6,9 +7,10 @@ interface Props {
 }
 
 export default function AgentPnl({ tokens, startBalanceUsd }: Props) {
+  const t = useTranslation();
   const { balance, isLoading } = useAgentBalanceUsd(tokens);
   const balanceText =
-    balance === null ? '-' : isLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
+    balance === null ? '-' : isLoading ? t('loading') : `$${balance.toFixed(2)}`;
   const pnl =
     balance !== null && startBalanceUsd != null ? balance - startBalanceUsd : null;
   const pnlPercent =
@@ -17,7 +19,7 @@ export default function AgentPnl({ tokens, startBalanceUsd }: Props) {
     pnl === null
       ? '-'
       : isLoading
-      ? 'Loading...'
+      ? t('loading')
       : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}${
           pnlPercent !== null
             ? ` (${pnlPercent > 0 ? '+' : pnlPercent < 0 ? '-' : ''}${Math.abs(pnlPercent).toFixed(2)}%)`
@@ -40,7 +42,7 @@ export default function AgentPnl({ tokens, startBalanceUsd }: Props) {
   const pnlTooltip =
     pnl === null || isLoading
       ? undefined
-      : `PnL = $${balance!.toFixed(2)} - $${startBalanceUsd!.toFixed(2)} = ${
+      : `${t('pnl')} = $${balance!.toFixed(2)} - $${startBalanceUsd!.toFixed(2)} = ${
           pnl > 0 ? '+' : pnl < 0 ? '-' : ''
         }$${Math.abs(pnl).toFixed(2)}${
           pnlPercent !== null
@@ -49,9 +51,9 @@ export default function AgentPnl({ tokens, startBalanceUsd }: Props) {
         }`;
   return (
     <p className="mt-2">
-      <strong>Balance (USD):</strong> {balanceText}
+      <strong>{t('balance_usd')}:</strong> {balanceText}
       <span className="ml-4">
-        <strong>PnL (USD):</strong>{' '}
+        <strong>{t('pnl_usd')}:</strong>{' '}
         <span className={pnlClass} title={pnlTooltip}>
           {pnlText}
         </span>

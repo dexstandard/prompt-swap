@@ -15,6 +15,7 @@ import PriceChart from '../components/forms/PriceChart';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useToast } from '../lib/useToast';
 import Toggle from '../components/ui/Toggle';
+import { useTranslation } from '../lib/i18n';
 
 interface Agent {
   id: string;
@@ -33,11 +34,12 @@ function AgentRow({
   agent: Agent;
   onDelete: (id: string) => void;
 }) {
+  const t = useTranslation();
   const { balance, isLoading } = useAgentBalanceUsd(
     agent.tokens ? agent.tokens.map((t) => t.token) : [],
   );
   const balanceText =
-    balance === null ? '-' : isLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
+    balance === null ? '-' : isLoading ? t('loading') : `$${balance.toFixed(2)}`;
   const pnl =
     balance !== null && agent.startBalanceUsd != null
       ? balance - agent.startBalanceUsd
@@ -50,7 +52,7 @@ function AgentRow({
     pnl === null
       ? '-'
       : isLoading
-      ? 'Loading...'
+      ? t('loading')
       : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}${
           pnlPercent !== null
             ? ` (${pnlPercent > 0 ? '+' : pnlPercent < 0 ? '-' : ''}${Math.abs(pnlPercent).toFixed(2)}%)`
@@ -73,7 +75,7 @@ function AgentRow({
   const pnlTooltip =
     pnl === null || isLoading
       ? undefined
-      : `PnL = $${balance!.toFixed(2)} - $${agent.startBalanceUsd!.toFixed(2)} = ${
+      : `${t('pnl')} = $${balance!.toFixed(2)} - $${agent.startBalanceUsd!.toFixed(2)} = ${
           pnl > 0 ? '+' : pnl < 0 ? '-' : ''
         }$${Math.abs(pnl).toFixed(2)}${
           pnlPercent !== null
@@ -115,14 +117,14 @@ function AgentRow({
           <Link
             className="text-blue-600 underline inline-flex"
             to={`/agents/${agent.id}`}
-            aria-label="View agent"
+            aria-label={t('view_agent')}
           >
             <Eye className="w-4 h-4" />
           </Link>
           <button
             className="text-red-600"
             onClick={() => onDelete(agent.id)}
-            aria-label="Delete agent"
+            aria-label={t('delete_agent')}
           >
             <Trash className="w-4 h-4" />
           </button>
@@ -139,11 +141,12 @@ function AgentBlock({
   agent: Agent;
   onDelete: (id: string) => void;
 }) {
+  const t = useTranslation();
   const { balance, isLoading } = useAgentBalanceUsd(
     agent.tokens ? agent.tokens.map((t) => t.token) : [],
   );
   const balanceText =
-    balance === null ? '-' : isLoading ? 'Loading...' : `$${balance.toFixed(2)}`;
+    balance === null ? '-' : isLoading ? t('loading') : `$${balance.toFixed(2)}`;
   const pnl =
     balance !== null && agent.startBalanceUsd != null
       ? balance - agent.startBalanceUsd
@@ -156,7 +159,7 @@ function AgentBlock({
     pnl === null
       ? '-'
       : isLoading
-      ? 'Loading...'
+      ? t('loading')
       : `${pnl > 0 ? '+' : pnl < 0 ? '-' : ''}$${Math.abs(pnl).toFixed(2)}${
           pnlPercent !== null
             ? ` (${pnlPercent > 0 ? '+' : pnlPercent < 0 ? '-' : ''}${Math.abs(pnlPercent).toFixed(2)}%)`
@@ -179,7 +182,7 @@ function AgentBlock({
   const pnlTooltip =
     pnl === null || isLoading
       ? undefined
-      : `PnL = $${balance!.toFixed(2)} - $${agent.startBalanceUsd!.toFixed(2)} = ${
+      : `${t('pnl')} = $${balance!.toFixed(2)} - $${agent.startBalanceUsd!.toFixed(2)} = ${
           pnl > 0 ? '+' : pnl < 0 ? '-' : ''
         }$${Math.abs(pnl).toFixed(2)}${
           pnlPercent !== null
@@ -204,18 +207,18 @@ function AgentBlock({
       </div>
       <div className="grid grid-cols-3 gap-2 mb-2 items-center">
         <div>
-          <div className="text-xs text-gray-500">Balance</div>
+          <div className="text-xs text-gray-500">{t('balance')}</div>
           {balanceText}
         </div>
         <div className={pnlClass} title={pnlTooltip}>
-          <div className="text-xs text-gray-500">PnL</div>
+          <div className="text-xs text-gray-500">{t('pnl')}</div>
           {pnlText}
         </div>
         <div className="flex justify-end">
           <Link
             className="text-blue-600 underline inline-flex"
             to={`/agents/${agent.id}`}
-            aria-label="View agent"
+            aria-label={t('view_agent')}
           >
             <Eye className="w-5 h-5" />
           </Link>
@@ -223,15 +226,15 @@ function AgentBlock({
       </div>
       <div className="grid grid-cols-4 gap-2 items-center">
         <div>
-          <div className="text-xs text-gray-500">Status</div>
+          <div className="text-xs text-gray-500">{t('status')}</div>
           <AgentStatusLabel status={agent.status} />
         </div>
         <div>
-          <div className="text-xs text-gray-500">Model</div>
+          <div className="text-xs text-gray-500">{t('model')}</div>
           {agent.model || '-'}
         </div>
         <div>
-          <div className="text-xs text-gray-500">Interval</div>
+          <div className="text-xs text-gray-500">{t('interval')}</div>
           <span className="inline-flex items-center gap-1">
             <Clock className="w-4 h-4" />
             {agent.reviewInterval}
@@ -241,7 +244,7 @@ function AgentBlock({
           <button
             className="text-red-600"
             onClick={() => onDelete(agent.id)}
-            aria-label="Delete agent"
+            aria-label={t('delete_agent')}
           >
             <Trash className="w-5 h-5" />
           </button>
@@ -258,6 +261,7 @@ export default function Dashboard() {
   const [onlyActive, setOnlyActive] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToast();
+  const t = useTranslation();
 
   const handleTokensChange = useCallback((newTokens: string[]) => {
     setTokens((prev) =>
@@ -300,12 +304,12 @@ export default function Dashboard() {
     try {
       await api.delete(`/agents/${deleteId}`);
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.show('Agent deleted', 'success');
+      toast.show(t('agent_deleted'), 'success');
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data?.error) {
         toast.show(err.response.data.error);
       } else {
-        toast.show('Failed to delete agent');
+        toast.show(t('failed_delete_agent'));
       }
     } finally {
       setDeleteId(null);
@@ -326,28 +330,28 @@ export default function Dashboard() {
       <ErrorBoundary>
         <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">My Agents</h2>
+            <h2 className="text-xl font-bold">{t('my_agents')}</h2>
             <Toggle
-              label="Only Active"
+              label={t('only_active')}
               checked={onlyActive}
               onChange={setOnlyActive}
             />
           </div>
           {!user ? (
-            <p>Please log in to view your agents.</p>
+            <p>{t('please_log_in_agents')}</p>
           ) : items.length === 0 ? (
-            <p>You don't have any agents yet.</p>
+            <p>{t('no_agents_yet')}</p>
           ) : (
             <>
               <table className="w-full mb-4 hidden md:table">
                 <thead>
                   <tr>
-                    <th className="text-left">Tokens</th>
-                    <th className="text-left">Balance (USD)</th>
-                    <th className="text-left">PnL (USD)</th>
-                    <th className="text-left">Model</th>
-                    <th className="text-left">Interval</th>
-                    <th className="text-left">Status</th>
+                    <th className="text-left">{t('tokens')}</th>
+                    <th className="text-left">{t('balance_usd')}</th>
+                    <th className="text-left">{t('pnl_usd')}</th>
+                    <th className="text-left">{t('model')}</th>
+                    <th className="text-left">{t('interval')}</th>
+                    <th className="text-left">{t('status')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -378,7 +382,7 @@ export default function Dashboard() {
                     disabled={page <= 1}
                     onClick={() => setPage((p) => p - 1)}
                   >
-                    Prev
+                    {t('prev')}
                   </Button>
                   <span>
                     {page} / {totalPages}
@@ -389,7 +393,7 @@ export default function Dashboard() {
                     disabled={page >= totalPages}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    Next
+                    {t('next')}
                   </Button>
                 </div>
               )}
@@ -400,7 +404,7 @@ export default function Dashboard() {
     </div>
     <ConfirmDialog
       open={deleteId !== null}
-      message="Delete this agent?"
+      message={t('delete_agent_prompt')}
       confirmVariant="danger"
       onConfirm={confirmDelete}
       onCancel={() => setDeleteId(null)}

@@ -16,6 +16,7 @@ import AgentDetailsDesktop from '../components/AgentDetailsDesktop';
 import AgentDetailsMobile from '../components/AgentDetailsMobile';
 import Toggle from '../components/ui/Toggle';
 import { usePrerequisites } from '../lib/usePrerequisites';
+import { useTranslation } from '../lib/i18n';
 
 export default function AgentView() {
   const { id } = useParams();
@@ -25,6 +26,7 @@ export default function AgentView() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const { hasOpenAIKey, hasBinanceKey } = usePrerequisites([]);
+  const t = useTranslation();
 
   const reviewMut = useMutation({
     mutationFn: async (agentId: string) => {
@@ -36,7 +38,7 @@ export default function AgentView() {
       if (axios.isAxiosError(err) && err.response?.data?.error) {
         toast.show(err.response.data.error);
       } else {
-        toast.show('Failed to run review');
+        toast.show(t('failed_run_review'));
       }
     },
   });
@@ -61,7 +63,7 @@ export default function AgentView() {
     enabled: !!id && !!user,
   });
 
-  if (!data) return <div className="p-4">Loading...</div>;
+  if (!data) return <div className="p-4">{t('loading')}</div>;
   if (data.status === 'draft') return <AgentPreview draft={data} />;
 
     const isActive = data.status === 'active';
@@ -75,32 +77,32 @@ export default function AgentView() {
         </div>
         {isActive ? (
           <div className="mt-4 flex gap-2">
-            <Button onClick={() => setShowUpdate(true)}>Update Agent</Button>
+            <Button onClick={() => setShowUpdate(true)}>{t('update_agent')}</Button>
             <Button
               disabled={stopMut.isPending}
               loading={stopMut.isPending}
               onClick={() => stopMut.mutate()}
             >
-              Stop Agent
+              {t('stop_agent')}
             </Button>
             <Button
               disabled={reviewMut.isPending}
               loading={reviewMut.isPending}
               onClick={() => id && reviewMut.mutate(id)}
             >
-              Run Review
+              {t('run_review')}
             </Button>
           </div>
         ) : (
           <div className="mt-4 flex gap-2">
-            <Button onClick={() => setShowUpdate(true)}>Update Agent</Button>
+            <Button onClick={() => setShowUpdate(true)}>{t('update_agent')}</Button>
             {hasOpenAIKey && hasBinanceKey && (
               <Button
                 disabled={startMut.isPending}
                 loading={startMut.isPending}
                 onClick={() => startMut.mutate()}
               >
-                Start Agent
+                {t('start_agent')}
               </Button>
             )}
           </div>
@@ -108,15 +110,15 @@ export default function AgentView() {
         {logData && (
             <div className="mt-6">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xl font-bold">Execution Log</h2>
+                <h2 className="text-xl font-bold">{t('execution_log')}</h2>
                 <Toggle
-                  label="Only Rebalances"
+                  label={t('only_rebalances')}
                   checked={onlyRebalance}
                   onChange={setOnlyRebalance}
                 />
               </div>
               {logData.items.length === 0 ? (
-                  <p>No logs yet.</p>
+                  <p>{t('no_logs_yet')}</p>
               ) : (
                   <>
                     <table className="w-full mb-2 table-fixed hidden md:table">
@@ -126,8 +128,8 @@ export default function AgentView() {
                       </colgroup>
                       <thead>
                         <tr>
-                          <th className="text-left">Time</th>
-                          <th className="text-left">Log</th>
+                          <th className="text-left">{t('time')}</th>
+                          <th className="text-left">{t('log')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -168,7 +170,7 @@ export default function AgentView() {
                           disabled={logPage === 1}
                           onClick={() => setLogPage((p) => Math.max(p - 1, 1))}
                       >
-                        Prev
+                        {t('prev')}
                       </Button>
                       <span>
                   Page {logData.page} of{' '}
@@ -178,7 +180,7 @@ export default function AgentView() {
                           disabled={logData.page * logData.pageSize >= logData.total}
                           onClick={() => setLogPage((p) => p + 1)}
                       >
-                        Next
+                        {t('next')}
                       </Button>
                     </div>
                   </>

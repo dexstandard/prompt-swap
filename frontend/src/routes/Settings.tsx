@@ -5,10 +5,13 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import Button from '../components/ui/Button';
 import { useToast } from '../lib/useToast';
+import { useTranslation, useLanguage, type Lang } from '../lib/i18n';
 
 export default function Settings() {
   const { user } = useUser();
   const toast = useToast();
+  const t = useTranslation();
+  const { lang, setLang } = useLanguage();
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [setup, setSetup] =
     useState<{ secret: string; otpauthUrl: string; qr: string } | null>(null);
@@ -22,8 +25,8 @@ export default function Settings() {
     api.get('/2fa/status').then((res) => setEnabled(res.data.enabled));
   }, [user]);
 
-  if (!user) return <p>Please log in.</p>;
-  if (enabled === null) return <p>Loading...</p>;
+  if (!user) return <p>{t('please_log_in')}</p>;
+  if (enabled === null) return <p>{t('loading')}</p>;
 
   const startSetup = async () => {
     setLoadingSetup(true);
@@ -35,12 +38,12 @@ export default function Settings() {
         if (err.response?.data?.error) {
           toast.show(err.response.data.error);
         } else if (err.response?.status === 429) {
-          toast.show('Too many requests. Please try again later.');
+          toast.show(t('too_many_requests'));
         } else {
-          toast.show('Failed to start 2FA setup');
+          toast.show(t('failed_start_2fa_setup'));
         }
       } else {
-        toast.show('Failed to start 2FA setup');
+        toast.show(t('failed_start_2fa_setup'));
       }
     } finally {
       setLoadingSetup(false);
@@ -56,18 +59,18 @@ export default function Settings() {
       setEnabled(true);
       setSetup(null);
       setCode('');
-      toast.show('2FA enabled', 'success');
+      toast.show(t('twofa_enabled_success'), 'success');
     } catch (err) {
       if (axios.isAxiosError(err)) {
         if (err.response?.data?.error) {
           toast.show(err.response.data.error);
         } else if (err.response?.status === 429) {
-          toast.show('Too many requests. Please try again later.');
+          toast.show(t('too_many_requests'));
         } else {
-          toast.show('Failed to enable 2FA');
+          toast.show(t('failed_enable_2fa'));
         }
       } else {
-        toast.show('Failed to enable 2FA');
+        toast.show(t('failed_enable_2fa'));
       }
     } finally {
       setLoadingEnable(false);
@@ -81,18 +84,18 @@ export default function Settings() {
       await api.post('/2fa/disable', { token: code });
       setEnabled(false);
       setCode('');
-      toast.show('2FA disabled', 'success');
+      toast.show(t('twofa_disabled_success'), 'success');
     } catch (err) {
       if (axios.isAxiosError(err)) {
         if (err.response?.data?.error) {
           toast.show(err.response.data.error);
         } else if (err.response?.status === 429) {
-          toast.show('Too many requests. Please try again later.');
+          toast.show(t('too_many_requests'));
         } else {
-          toast.show('Failed to disable 2FA');
+          toast.show(t('failed_disable_2fa'));
         }
       } else {
-        toast.show('Failed to disable 2FA');
+        toast.show(t('failed_disable_2fa'));
       }
     } finally {
       setLoadingDisable(false);
@@ -101,55 +104,69 @@ export default function Settings() {
 
   return (
     <div className="space-y-4 max-w-md">
-      <h2 className="text-xl font-bold">Settings</h2>
+      <h2 className="text-xl font-bold">{t('settings')}</h2>
       {enabled ? (
         <form onSubmit={disable} className="space-y-2">
-          <p>Two-factor authentication is enabled.</p>
+          <p>{t('twofa_enabled')}</p>
           <input
             className="border p-1 w-40"
-            placeholder="Code"
+            placeholder={t('code')}
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
           <Button type="submit" loading={loadingDisable}>
-            Disable
+            {t('disable')}
           </Button>
         </form>
       ) : setup ? (
         <form onSubmit={enable} className="space-y-2">
-          <p>Scan this QR code with Google Authenticator and enter the code.</p>
+          <p>{t('scan_qr_prompt')}</p>
           <img src={setup.qr} alt="QR code" className="w-40 h-40" />
           <div className="flex items-center gap-2 text-sm">
             <span className="break-all">
-              Secret: <span className="font-mono">{setup.secret}</span>
+              {t('secret')}: <span className="font-mono">{setup.secret}</span>
             </span>
             <button
               type="button"
               className="p-1 border rounded"
               onClick={() => {
                 navigator.clipboard.writeText(setup.secret);
-                toast.show('Copied to clipboard');
+                toast.show(t('copied'));
               }}
-              aria-label="Copy secret"
+              aria-label={t('copy_secret')}
             >
               <Copy className="w-4 h-4" />
             </button>
           </div>
           <input
             className="border p-1 w-40"
-            placeholder="Code"
+            placeholder={t('code')}
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
           <Button type="submit" loading={loadingEnable}>
-            Enable
+            {t('enable')}
           </Button>
         </form>
       ) : (
         <Button onClick={startSetup} loading={loadingSetup}>
-          Setup 2FA
+          {t('setup_2fa')}
         </Button>
       )}
+      <div className="space-y-1">
+        <label htmlFor="lang" className="block text-sm">
+          {t('language')}
+        </label>
+        <select
+          id="lang"
+          value={lang}
+          onChange={(e) => setLang(e.target.value as Lang)}
+          className="border p-1 w-40"
+        >
+          <option value="en">EN</option>
+          <option value="ru">RU</option>
+        </select>
+      </div>
     </div>
   );
 }
