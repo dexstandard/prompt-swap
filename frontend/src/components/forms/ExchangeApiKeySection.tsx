@@ -2,15 +2,11 @@ import { type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../lib/axios';
 import ApiKeySection from './ApiKeySection';
+import { useTranslation } from '../../lib/i18n';
 
 const videoGuideLinks: Record<string, string> = {
   binance: 'https://youtu.be/2NLF6eV2xhk?t=20',
 };
-
-const exchangeFields = [
-  { name: 'key', placeholder: 'API key' },
-  { name: 'secret', placeholder: 'API secret' },
-];
 
 interface Props {
   exchange: string;
@@ -18,6 +14,11 @@ interface Props {
 }
 
 export default function ExchangeApiKeySection({ exchange, label }: Props) {
+  const t = useTranslation();
+  const exchangeFields = [
+    { name: 'key', placeholder: t('api_key') },
+    { name: 'secret', placeholder: t('api_secret') },
+  ];
   const commonProps = {
     label,
     queryKey: `${exchange}-key`,

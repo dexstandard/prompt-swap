@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react';
 import ApiKeySection from './ApiKeySection';
-
-const aiFields = [{ name: 'key', placeholder: 'API key' }];
+import { useTranslation } from '../../lib/i18n';
 
 export default function AiApiKeySection({
   label,
@@ -10,6 +9,8 @@ export default function AiApiKeySection({
   label: ReactNode;
   allowShare?: boolean;
 }) {
+  const t = useTranslation();
+  const aiFields = [{ name: 'key', placeholder: t('api_key') }];
   return (
     <ApiKeySection
       label={label}

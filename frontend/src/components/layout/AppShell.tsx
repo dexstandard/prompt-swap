@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useUser } from '../../lib/useUser';
 import { useState } from 'react';
-import { useTranslation, useLanguage, type Lang } from '../../lib/i18n';
+import { useTranslation } from '../../lib/i18n';
 
 function ApiStatus() {
   const { isSuccess } = useQuery({
@@ -28,7 +28,6 @@ export default function AppShell() {
   const { user } = useUser();
   const [navCollapsed, setNavCollapsed] = useState(true);
   const t = useTranslation();
-  const { lang, setLang } = useLanguage();
   return (
     <div className="h-screen flex flex-col">
       <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between z-10">
@@ -39,14 +38,6 @@ export default function AppShell() {
           <span className="hidden md:inline">
             <ApiStatus />
           </span>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value as Lang)}
-            className="bg-gray-800 border border-gray-500 rounded p-1 text-sm"
-          >
-            <option value="en">EN</option>
-            <option value="ru">RU</option>
-          </select>
           <GoogleLoginButton />
         </div>
       </header>
