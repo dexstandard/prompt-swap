@@ -70,6 +70,9 @@ export interface RebalancePrompt {
     indicators?: Record<string, TokenMetrics>;
     market_timeseries?: Record<string, MarketTimeseries>;
     fearGreedIndex?: { value: number; classification: string };
+    openInterest?: number;
+    fundingRate?: number;
+    orderBook?: { bid: [number, number]; ask: [number, number] };
   };
   previous_responses?: PreviousResponse[];
 }

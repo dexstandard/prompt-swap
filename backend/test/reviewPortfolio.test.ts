@@ -11,6 +11,7 @@ const sampleIndicators = {
   volume: { z_1h: 0, z_24h: 0 },
   corr: { BTC_30d: 0 },
   regime: { BTC: 'range' },
+  osc: { rsi_14: 0, stoch_k: 0, stoch_d: 0 },
 };
 
 const sampleTimeseries = {
@@ -38,6 +39,9 @@ const flatIndicators = {
   volume_z_24h: 0,
   corr_BTC_30d: 0,
   regime_BTC: 'range',
+  osc_rsi_14: 0,
+  osc_stoch_k: 0,
+  osc_stoch_d: 0,
 };
 
 const flatTimeseries = {
@@ -339,6 +343,96 @@ describe('reviewPortfolio', () => {
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewAgentPortfolio(log, '12');
     expect(createRebalanceLimitOrder).not.toHaveBeenCalled();
+  });
+
+  it('records error when newAllocation is out of range', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(createRebalanceLimitOrder).mockClear();
+    vi.mocked(callRebalancingAgent).mockResolvedValueOnce(
+      JSON.stringify({
+        object: 'response',
+        output: [
+          {
+            id: 'msg_1',
+            content: [
+              {
+                text: JSON.stringify({
+                  result: { rebalance: true, newAllocation: 150, shortReport: 's' },
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['13']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['13', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent13', 'low', '1h', 'inst', false)",
+      ['13', '13'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['13'],
+    );
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewAgentPortfolio(log, '13');
+    expect(createRebalanceLimitOrder).not.toHaveBeenCalled();
+    const { rows } = await db.query(
+      'SELECT new_allocation, error FROM agent_review_result WHERE agent_id=$1',
+      ['13'],
+    );
+    const typed = rows as { new_allocation: number | null; error: string | null }[];
+    expect(typed[0].new_allocation).toBeNull();
+    expect(typed[0].error).not.toBeNull();
+  });
+
+  it('records error when newAllocation violates floor', async () => {
+    vi.mocked(callRebalancingAgent).mockClear();
+    vi.mocked(createRebalanceLimitOrder).mockClear();
+    vi.mocked(callRebalancingAgent).mockResolvedValueOnce(
+      JSON.stringify({
+        object: 'response',
+        output: [
+          {
+            id: 'msg_1',
+            content: [
+              {
+                text: JSON.stringify({
+                  result: { rebalance: true, newAllocation: 5, shortReport: 's' },
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['14']);
+    await db.query(
+      "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
+      ['14', 'enc'],
+    );
+    await db.query(
+      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent14', 'low', '1h', 'inst', false)",
+      ['14', '14'],
+    );
+    await db.query(
+      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['14'],
+    );
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    await reviewAgentPortfolio(log, '14');
+    expect(createRebalanceLimitOrder).not.toHaveBeenCalled();
+    const { rows } = await db.query(
+      'SELECT new_allocation, error FROM agent_review_result WHERE agent_id=$1',
+      ['14'],
+    );
+    const typed = rows as { new_allocation: number | null; error: string | null }[];
+    expect(typed[0].new_allocation).toBeNull();
+    expect(typed[0].error).not.toBeNull();
   });
 
   it('omits indicators for stablecoins', async () => {
