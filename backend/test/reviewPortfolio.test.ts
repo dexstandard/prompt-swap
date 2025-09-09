@@ -19,6 +19,33 @@ const sampleTimeseries = {
   monthly_24m: [[9, 10, 11]],
 };
 
+const flatIndicators = {
+  ret_1h: 0,
+  ret_4h: 0,
+  ret_24h: 0,
+  ret_7d: 0,
+  ret_30d: 0,
+  sma_dist_20: 0,
+  sma_dist_50: 0,
+  sma_dist_200: 0,
+  macd_hist: 0,
+  vol_rv_7d: 0,
+  vol_rv_30d: 0,
+  vol_atr_pct: 0,
+  range_bb_bw: 0,
+  range_donchian20: 0,
+  volume_z_1h: 0,
+  volume_z_24h: 0,
+  corr_BTC_30d: 0,
+  regime_BTC: 'range',
+};
+
+const flatTimeseries = {
+  ret_60m: ((3 - 2) / 2) * 100,
+  ret_24h: ((7 - 6) / 6) * 100,
+  ret_24m: ((11 - 10) / 10) * 100,
+};
+
 vi.mock('../src/util/ai.js', () => ({
   callRebalancingAgent: vi.fn().mockResolvedValue('ok'),
 }));
@@ -118,15 +145,22 @@ describe('reviewPortfolio', () => {
     );
     for (let i = 0; i < 5; i++) {
       await db.query(
-        'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
-        ['1', JSON.stringify({ allocation: i }), 'open', rrRows[i].id, `ord-${i}`],
+        'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
+        [
+          '1',
+          JSON.stringify({ symbol: 'BTCETH', side: 'BUY', quantity: i }),
+          'open',
+          rrRows[i].id,
+          `ord-${i}`,
+          new Date(base.getTime() + i * 1000),
+        ],
       );
     }
     const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
     await reviewAgentPortfolio(log, '1');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
     const args = (callRebalancingAgent as any).mock.calls[0];
-    const prev = args[1].previous_responses.map((s: string) => JSON.parse(s));
+    const prev = args[1].previous_responses;
     expect(prev).toEqual([
       { rebalance: true, newAllocation: 5, shortReport: 'short-5' },
       { rebalance: true, newAllocation: 4, shortReport: 'short-4' },
@@ -134,15 +168,26 @@ describe('reviewPortfolio', () => {
       { rebalance: true, newAllocation: 2, shortReport: 'short-2' },
       { rebalance: true, newAllocation: 1, shortReport: 'short-1' },
     ]);
-    const cfg = args[1].config;
-    const btcPos = cfg.currentStatePortfolio.positions.find((p: any) => p.sym === 'BTC');
-    const ethPos = cfg.currentStatePortfolio.positions.find((p: any) => p.sym === 'ETH');
+    const portfolio = args[1].portfolio;
+    const policy = args[1].policy;
+    const prevOrders = args[1].prev_orders;
+    const btcPos = portfolio.positions.find((p: any) => p.sym === 'BTC');
+    const ethPos = portfolio.positions.find((p: any) => p.sym === 'ETH');
     expect(btcPos.qty).toBe(1.5);
     expect(ethPos.qty).toBe(2);
-    expect(cfg.policy.floorPercents).toEqual({ BTC: 10, ETH: 20 });
-    expect(cfg.currentStatePortfolio.currentWeights.BTC).toBeCloseTo(150 / 350);
-    expect(cfg.currentStatePortfolio.currentWeights.ETH).toBeCloseTo(200 / 350);
-    expect(cfg.previousLimitOrders.map((o: any) => o.planned.allocation)).toEqual([
+    expect(policy.floor).toEqual({ BTC: 10, ETH: 20 });
+    const total = portfolio.positions.reduce(
+      (sum: number, p: any) => sum + p.value_usdt,
+      0,
+    );
+    expect(btcPos.value_usdt / total).toBeCloseTo(150 / 350);
+    expect(ethPos.value_usdt / total).toBeCloseTo(200 / 350);
+    expect(prevOrders[0]).toMatchObject({
+      symbol: 'BTCETH',
+      side: 'BUY',
+      status: 'canceled',
+    });
+    expect(prevOrders.map((o: any) => o.amount)).toEqual([
       4,
       3,
       2,
@@ -152,12 +197,10 @@ describe('reviewPortfolio', () => {
     expect(args[1].marketData).toEqual({
       currentPrice: 100,
       fearGreedIndex: { value: 50, classification: 'Neutral' },
-      indicators: { BTC: sampleIndicators, ETH: sampleIndicators },
-      market_timeseries: {
-        BTCUSDT: sampleTimeseries,
-        ETHUSDT: sampleTimeseries,
-      },
+      indicators: { BTC: flatIndicators, ETH: flatIndicators },
+      market_timeseries: { BTCUSDT: flatTimeseries, ETHUSDT: flatTimeseries },
     });
+    expect(JSON.stringify(args[1].marketData)).not.toContain('minute_60');
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(2);
     expect(fetchMarketTimeseries).toHaveBeenCalledTimes(2);
     expect(fetchFearGreedIndex).toHaveBeenCalledTimes(1);
@@ -189,14 +232,12 @@ describe('reviewPortfolio', () => {
     expect(rowsTyped).toHaveLength(1);
     expect(JSON.parse(rowsTyped[0].prompt!)).toMatchObject({
       instructions: 'inst',
-      config: {
-        policy: { floorPercents: { BTC: 10, ETH: 20 } },
-        currentStatePortfolio: {
-          positions: [
-            expect.objectContaining({ sym: 'BTC', qty: 1.5 }),
-            expect.objectContaining({ sym: 'ETH', qty: 2 }),
-          ],
-        },
+      policy: { floor: { BTC: 10, ETH: 20 } },
+      portfolio: {
+        positions: [
+          expect.objectContaining({ sym: 'BTC', qty: 1.5 }),
+          expect.objectContaining({ sym: 'ETH', qty: 2 }),
+        ],
       },
     });
     const respEntry = JSON.parse(rowsTyped[0].response!);
@@ -330,9 +371,10 @@ describe('reviewPortfolio', () => {
     expect(args[1].marketData).toEqual({
       currentPrice: 100,
       fearGreedIndex: { value: 50, classification: 'Neutral' },
-      indicators: { ETH: sampleIndicators },
-      market_timeseries: { ETHUSDT: sampleTimeseries },
+      indicators: { ETH: flatIndicators },
+      market_timeseries: { ETHUSDT: flatTimeseries },
     });
+    expect(JSON.stringify(args[1].marketData)).not.toContain('minute_60');
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(1);
     expect(fetchTokenIndicators).toHaveBeenCalledWith('ETH');
     expect(fetchMarketTimeseries).toHaveBeenCalledTimes(1);

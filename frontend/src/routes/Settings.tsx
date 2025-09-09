@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import axios from 'axios';
-import QRCode from 'react-qr-code';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import Button from '../components/ui/Button';
@@ -10,7 +9,8 @@ export default function Settings() {
   const { user } = useUser();
   const toast = useToast();
   const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [setup, setSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
+  const [setup, setSetup] =
+    useState<{ secret: string; otpauthUrl: string; qr: string } | null>(null);
   const [code, setCode] = useState('');
   const [loadingSetup, setLoadingSetup] = useState(false);
   const [loadingEnable, setLoadingEnable] = useState(false);
@@ -117,7 +117,14 @@ export default function Settings() {
       ) : setup ? (
         <form onSubmit={enable} className="space-y-2">
           <p>Scan this QR code with Google Authenticator and enter the code.</p>
-          <QRCode value={setup.otpauthUrl} />
+          <img src={setup.qr} alt="QR code" className="w-40 h-40" />
+          <p className="break-all text-sm">Secret: {setup.secret}</p>
+          <a
+            className="text-blue-600 underline break-all text-sm"
+            href={setup.otpauthUrl}
+          >
+            Open in Authenticator
+          </a>
           <input
             className="border p-1 w-40"
             placeholder="Code"

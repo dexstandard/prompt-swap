@@ -33,7 +33,7 @@ import {
   type TokenIndicators,
 } from '../services/indicators.js';
 import { isStablecoin } from '../util/tokens.js';
-import type { RebalancePrompt } from '../util/ai.js';
+import type { RebalancePrompt, PreviousResponse } from '../util/ai.js';
 
 type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
 
@@ -153,15 +153,23 @@ async function prepareAgents(
     }
 
     const prevRows = await getRecentReviewResults(row.id, 5);
-    prompt.previous_responses = prevRows.map((r: any) => {
-      const str = JSON.stringify(r);
-      return str === '{}' ? '' : str;
-    });
+    prompt.previous_responses = prevRows
+      .map(extractPreviousResponse)
+      .filter(Boolean) as PreviousResponse[];
 
     prepared.push({ row, prompt, key, log });
   }
 
   return prepared;
+}
+
+function extractPreviousResponse(r: any): PreviousResponse | undefined {
+  const res: PreviousResponse = {};
+  if (typeof r.rebalance === 'boolean') res.rebalance = r.rebalance;
+  if (typeof r.newAllocation === 'number') res.newAllocation = r.newAllocation;
+  if (typeof r.shortReport === 'string') res.shortReport = r.shortReport;
+  if (r.error !== undefined && r.error !== null) res.error = r.error;
+  return Object.keys(res).length ? res : undefined;
 }
 
 async function cleanupAgentOpenOrders(
@@ -233,23 +241,21 @@ async function buildPrompt(
       ts1,
       ts2,
     } = await fetchPromptData(row, cache);
-    const { floorPercents, positions, currentWeights } = computePortfolioValues(
+    const { floor, positions } = computePortfolioValues(
       row,
       balances,
       price1,
       price2,
     );
+    const prevOrders = await buildPreviousOrders(row.id);
     return {
       instructions: row.agent_instructions,
-      config: {
-        policy: { floorPercents },
-        currentStatePortfolio: {
-          ts: new Date().toISOString(),
-          positions,
-          currentWeights,
-        },
-        ...(await buildPreviousOrders(row.id)),
+      policy: { floor },
+      portfolio: {
+        ts: new Date().toISOString(),
+        positions,
       },
+      ...prevOrders,
       marketData: assembleMarketData(
         row,
         pairData,
@@ -357,8 +363,7 @@ function computePortfolioValues(
   const min2 = row.tokens[1].min_allocation;
   const value1 = balances.token1Balance * price1;
   const value2 = balances.token2Balance * price2;
-  const totalValue = value1 + value2;
-  const floorPercents: Record<string, number> = {
+  const floor: Record<string, number> = {
     [token1]: min1,
     [token2]: min2,
   };
@@ -376,22 +381,30 @@ function computePortfolioValues(
       value_usdt: value2,
     },
   ];
-  const currentWeights: Record<string, number> = {
-    [token1]: totalValue ? value1 / totalValue : 0,
-    [token2]: totalValue ? value2 / totalValue : 0,
-  };
-  return { floorPercents, positions, currentWeights };
+  return { floor, positions };
 }
 
+/**
+ * Serialize minimal information about the most recent limit orders. The prompt
+ * doesn't need the entire planning payload, so we only include the attributes
+ * that are relevant for providing context: symbol, side, quantity, timestamp
+ * and final status.
+ */
 async function buildPreviousOrders(agentId: string) {
   const rows = await getRecentLimitOrders(agentId, 5);
   if (!rows.length) return {};
   return {
-    previousLimitOrders: rows.map((r) => ({
-      planned: JSON.parse(r.planned_json),
-      status: r.status,
-    })),
-  };
+    prev_orders: rows.map((r) => {
+      const planned = JSON.parse(r.planned_json) as Record<string, any>;
+      return {
+        symbol: planned.symbol,
+        side: planned.side,
+        amount: planned.quantity,
+        datetime: new Date(r.created_at).toISOString(),
+        status: r.status,
+      };
+    }),
+  } as const;
 }
 
 function assembleMarketData(
@@ -405,26 +418,78 @@ function assembleMarketData(
 ) {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
+  const ind1Flat = flattenIndicators(ind1);
+  const ind2Flat = flattenIndicators(ind2);
+  const ts1Flat = summarizeTimeseries(ts1);
+  const ts2Flat = summarizeTimeseries(ts2);
   return {
     currentPrice: pairData.currentPrice,
     ...(fearGreed ? { fearGreedIndex: fearGreed } : {}),
-    ...(ind1 || ind2
+    ...(ind1Flat || ind2Flat
       ? {
           indicators: {
-            ...(ind1 ? { [token1]: ind1 } : {}),
-            ...(ind2 ? { [token2]: ind2 } : {}),
+            ...(ind1Flat ? { [token1]: ind1Flat } : {}),
+            ...(ind2Flat ? { [token2]: ind2Flat } : {}),
           },
         }
       : {}),
-    ...(ts1 || ts2
+    ...(ts1Flat || ts2Flat
       ? {
           market_timeseries: {
-            ...(ts1 ? { [`${token1}USDT`]: ts1 } : {}),
-            ...(ts2 ? { [`${token2}USDT`]: ts2 } : {}),
+            ...(ts1Flat ? { [`${token1}USDT`]: ts1Flat } : {}),
+            ...(ts2Flat ? { [`${token2}USDT`]: ts2Flat } : {}),
           },
         }
       : {}),
   };
+}
+
+function flattenIndicators(ind?: TokenIndicators) {
+  if (!ind) return undefined;
+  return {
+    ret_1h: ind.ret['1h'],
+    ret_4h: ind.ret['4h'],
+    ret_24h: ind.ret['24h'],
+    ret_7d: ind.ret['7d'],
+    ret_30d: ind.ret['30d'],
+    sma_dist_20: ind.sma_dist['20'],
+    sma_dist_50: ind.sma_dist['50'],
+    sma_dist_200: ind.sma_dist['200'],
+    macd_hist: ind.macd_hist,
+    vol_rv_7d: ind.vol.rv_7d,
+    vol_rv_30d: ind.vol.rv_30d,
+    vol_atr_pct: ind.vol.atr_pct,
+    range_bb_bw: ind.range.bb_bw,
+    range_donchian20: ind.range.donchian20,
+    volume_z_1h: ind.volume.z_1h,
+    volume_z_24h: ind.volume.z_24h,
+    corr_BTC_30d: ind.corr.BTC_30d,
+    regime_BTC: ind.regime.BTC,
+  };
+}
+
+function summarizeTimeseries(ts?: MarketTimeseries) {
+  if (!ts) return undefined;
+  function pct(arr: [number, number, number, number][]) {
+    if (!arr.length) return undefined;
+    const start = arr[0][1];
+    const end = arr[arr.length - 1][2];
+    return ((end - start) / start) * 100;
+  }
+  function pctMonth(arr: [number, number, number][]) {
+    if (!arr.length) return undefined;
+    const start = arr[0][1];
+    const end = arr[arr.length - 1][2];
+    return ((end - start) / start) * 100;
+  }
+  const minute = pct(ts.minute_60);
+  const hour = pct(ts.hourly_24h);
+  const month = pctMonth(ts.monthly_24m);
+  const res: Record<string, number> = {};
+  if (minute !== undefined) res.ret_60m = minute;
+  if (hour !== undefined) res.ret_24h = hour;
+  if (month !== undefined) res.ret_24m = month;
+  return Object.keys(res).length ? (res as any) : undefined;
 }
 
 async function executeAgent(
@@ -462,7 +527,7 @@ async function executeAgent(
       await createRebalanceLimitOrder({
         userId: row.user_id,
         tokens: row.tokens.map((t) => t.token),
-        positions: prompt.config.currentStatePortfolio.positions,
+        positions: prompt.portfolio.positions,
         newAllocation: parsed.response.newAllocation,
         log,
         reviewResultId: resultId,

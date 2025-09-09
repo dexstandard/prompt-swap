@@ -9,28 +9,31 @@ describe('callRebalancingAgent structured output', () => {
     const { callRebalancingAgent } = await import('../src/util/ai.js');
     const prompt: RebalancePrompt = {
       instructions: 'inst',
-      config: {
-        policy: { floorPercents: { USDT: 20 } },
-        currentStatePortfolio: {
-          ts: new Date().toISOString(),
-          positions: [
-            { sym: 'USDT', qty: 1, price_usdt: 1, value_usdt: 1 },
-          ],
-          currentWeights: { USDT: 1 },
-        },
+      policy: { floor: { USDT: 20 } },
+      portfolio: {
+        ts: new Date().toISOString(),
+        positions: [
+          { sym: 'USDT', qty: 1, price_usdt: 1, value_usdt: 1 },
+        ],
       },
       marketData: { currentPrice: 1 },
-      previous_responses: ['p1', 'p2'],
+      previous_responses: [
+        { shortReport: 'p1' },
+        { rebalance: true, newAllocation: 50 },
+      ],
     };
     await callRebalancingAgent('gpt-test', prompt, 'key');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);
     expect(opts.body).toBe(JSON.stringify(body));
-    expect(body.instructions).toMatch(/assist a real trader/i);
-    expect(body.instructions).toMatch(/determine the target allocation/i);
+    expect(body.instructions).toMatch(/- Decide whether to rebalance/i);
+    expect(body.instructions).toMatch(/On error, return \{error:"message"\}/i);
     const parsedInput = JSON.parse(body.input);
-    expect(parsedInput.previous_responses).toEqual(['p1', 'p2']);
+    expect(parsedInput.previous_responses).toEqual([
+      { shortReport: 'p1' },
+      { rebalance: true, newAllocation: 50 },
+    ]);
     expect(body.input).not.toMatch(/":\s/);
     expect(body.input).not.toMatch(/,\s/);
     expect(body.text.format.type).toBe('json_schema');

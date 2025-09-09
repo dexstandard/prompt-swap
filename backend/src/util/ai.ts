@@ -1,12 +1,36 @@
-const developerInstructions =
-  "You assist a real trader in taking decisions on a given tokens configuration. Users may deposit or withdraw funds between runs; if the current balance doesn't match previous executions, treat the session as new. The user's comment may be found in the trading instructions field. You must determine the target allocation based on current market conditions and the provided portfolio state. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not. Fit report comment in 255 characters. If you suggest rebalancing, provide the new allocation in percentage (0-100) for the first token in the pair. If you don't suggest rebalancing, set rebalance to false and provide a short report comment. If you encounter an error, return an object with an error message.";
+const developerInstructions = [
+  '- Decide whether to rebalance based on portfolio and market data.',
+  '- If rebalancing, return {rebalance:true,newAllocation:0-100 for first token,shortReport}.',
+  '- If not, return {rebalance:false,shortReport}.',
+  '- shortReport ≤255 chars.',
+  '- On error, return {error:"message"}.',
+].join('\n');
 
-import type { TokenIndicators } from '../services/indicators.js';
+export interface TokenMetrics {
+  ret_1h: number;
+  ret_4h: number;
+  ret_24h: number;
+  ret_7d: number;
+  ret_30d: number;
+  sma_dist_20: number;
+  sma_dist_50: number;
+  sma_dist_200: number;
+  macd_hist: number;
+  vol_rv_7d: number;
+  vol_rv_30d: number;
+  vol_atr_pct: number;
+  range_bb_bw: number;
+  range_donchian20: number;
+  volume_z_1h: number;
+  volume_z_24h: number;
+  corr_BTC_30d: number;
+  regime_BTC: string;
+}
 
 export interface MarketTimeseries {
-  minute_60: [number, number, number, number][];
-  hourly_24h: [number, number, number, number][];
-  monthly_24m: [number, number, number][];
+  ret_60m: number;
+  ret_24h: number;
+  ret_24m: number;
 }
 
 export interface RebalancePosition {
@@ -16,27 +40,38 @@ export interface RebalancePosition {
   value_usdt: number;
 }
 
+export interface PreviousResponse {
+  rebalance?: boolean;
+  newAllocation?: number;
+  shortReport?: string;
+  error?: unknown;
+}
+
 export interface RebalancePrompt {
   instructions: string;
-  config: {
-    policy: { floorPercents: Record<string, number> };
-    currentStatePortfolio: {
-      ts: string;
-      positions: RebalancePosition[];
-      currentWeights: Record<string, number>;
-    };
-    previousLimitOrders?: {
-      planned: Record<string, unknown>;
-      status: string;
-    }[];
+  policy: { floor: Record<string, number> };
+  portfolio: {
+    ts: string;
+    positions: RebalancePosition[];
   };
+  /**
+   * Summary of recent limit orders placed by the agent. Only essential
+   * attributes are included to minimize token usage in the prompt.
+   */
+  prev_orders?: {
+    symbol: string;
+    side: string;
+    amount: number;
+    datetime: string;
+    status: string;
+  }[];
   marketData: {
     currentPrice: number;
-    indicators?: Record<string, TokenIndicators>;
+    indicators?: Record<string, TokenMetrics>;
     market_timeseries?: Record<string, MarketTimeseries>;
     fearGreedIndex?: { value: number; classification: string };
   };
-  previous_responses?: string[];
+  previous_responses?: PreviousResponse[];
 }
 
 const rebalanceResponseSchema = {
