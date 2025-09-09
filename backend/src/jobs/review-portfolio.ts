@@ -465,6 +465,9 @@ function flattenIndicators(ind?: TokenIndicators) {
     volume_z_24h: ind.volume.z_24h,
     corr_BTC_30d: ind.corr.BTC_30d,
     regime_BTC: ind.regime.BTC,
+    osc_rsi_14: ind.osc.rsi_14,
+    osc_stoch_k: ind.osc.stoch_k,
+    osc_stoch_d: ind.osc.stoch_d,
   };
 }
 

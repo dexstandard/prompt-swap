@@ -41,6 +41,9 @@ describe('fetchTokenIndicators', () => {
     expect(data.volume.z_1h).toBeCloseTo(1.8, 1);
     expect(data.corr.BTC_30d).toBeCloseTo(1, 5);
     expect(data.regime.BTC).toBe('trend');
+    expect(data.osc.rsi_14).toBeCloseTo(100, 5);
+    expect(data.osc.stoch_k).toBeCloseTo(96.43, 2);
+    expect(data.osc.stoch_d).toBeCloseTo(96.43, 2);
   });
 });
 
