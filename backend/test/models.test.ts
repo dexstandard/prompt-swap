@@ -106,12 +106,9 @@ describe('model routes', () => {
     const userId = await insertUser('6');
     const key = 'aikeyshared123456';
     await setAiKey(adminId, encrypt(key, process.env.KEY_PASSWORD!));
-    await shareAiKey(adminId, userId);
+    await shareAiKey(adminId, userId, 'gpt-5');
 
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: [{ id: 'gpt-5' }, { id: 'other' }] }),
-    });
+    const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -122,9 +119,7 @@ describe('model routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ models: ['gpt-5'] });
-    expect(fetchMock).toHaveBeenCalledWith('https://api.openai.com/v1/models', {
-      headers: { Authorization: `Bearer ${key}` },
-    });
+    expect(fetchMock).not.toHaveBeenCalled();
 
     (globalThis as any).fetch = originalFetch;
     await app.close();

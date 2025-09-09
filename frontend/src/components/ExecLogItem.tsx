@@ -147,6 +147,10 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
                   )}
                 </span>
               </div>
+              <FileText
+                className="h-4 w-4 cursor-pointer flex-shrink-0"
+                onClick={handleShowPrompt}
+              />
               <Eye
                 className="h-4 w-4 cursor-pointer"
                 onClick={() => setShowJson(true)}
@@ -158,12 +162,24 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
               </Modal>
             </div>
           )}
-          {hasResponse && <ExecSuccessItem response={response} />}
+          {hasResponse && (
+            <ExecSuccessItem
+              response={response}
+              promptIcon={
+                <FileText
+                  className="h-4 w-4 cursor-pointer flex-shrink-0"
+                  onClick={handleShowPrompt}
+                />
+              }
+            />
+          )}
         </div>
-        <FileText
-          className="h-4 w-4 cursor-pointer ml-2 flex-shrink-0"
-          onClick={handleShowPrompt}
-        />
+        {!hasError && !hasResponse && (
+          <FileText
+            className="ml-2 h-4 w-4 cursor-pointer flex-shrink-0"
+            onClick={handleShowPrompt}
+          />
+        )}
         {manualRebalance && !!response?.rebalance && !hasOrders && (
           <Button
             variant="secondary"

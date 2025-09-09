@@ -90,7 +90,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         return reply
           .code(404)
           .send(errorResponse(ERROR_MESSAGES.notFound));
-      return { key: '<REDACTED>', shared: true };
+      return { key: '<REDACTED>', shared: true, model: row.shared.model };
     },
   );
 
@@ -177,13 +177,15 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const { id } = params;
       const adminId = await requireAdmin(req, reply);
       if (!adminId || adminId !== id) return;
-      const { email } = req.body as { email: string };
+      const { email, model } = req.body as { email: string; model: string };
+      if (!model)
+        return reply.code(400).send(errorResponse('model required'));
       const row = await getAiKeyRow(id);
       const err = ensureKeyPresent(row?.own, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
       const target = await findUserByEmail(email);
       if (!target) return reply.code(404).send(errorResponse('user not found'));
-      await shareAiKey(id, target.id);
+      await shareAiKey(id, target.id, model);
       return { ok: true };
     },
   );
