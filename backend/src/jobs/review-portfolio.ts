@@ -262,8 +262,14 @@ async function buildPrompt(
     const token1 = row.tokens[0].token;
     const token2 = row.tokens[1].token;
     const [news1, news2] = await Promise.all([
-      getTokenNewsSummary(token1, row.model, apiKey),
-      getTokenNewsSummary(token2, row.model, apiKey),
+      getTokenNewsSummary(token1, row.model, apiKey).catch((err) => {
+        log.error({ err, token: token1 }, 'failed to fetch news summary');
+        return '';
+      }),
+      getTokenNewsSummary(token2, row.model, apiKey).catch((err) => {
+        log.error({ err, token: token2 }, 'failed to fetch news summary');
+        return '';
+      }),
     ]);
     const marketData = assembleMarketData(
       row,
