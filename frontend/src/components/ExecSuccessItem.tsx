@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Eye } from 'lucide-react';
 import Modal from './ui/Modal';
+import { useTranslation } from '../lib/i18n';
 
 const MAX_LEN = 255;
 function truncate(text: string) {
@@ -22,16 +23,17 @@ export default function ExecSuccessItem({ response, promptIcon }: Props) {
   const color = rebalance
     ? 'border-green-300 bg-green-50 text-green-800'
     : 'border-blue-300 bg-blue-50 text-blue-800';
+  const t = useTranslation();
 
   return (
     <div className={`mt-1 flex items-center gap-2 rounded border p-2 ${color}`}>
       <div className="flex-1 min-w-0 whitespace-pre-wrap break-words">
         <span className="font-bold mr-1">
-          {rebalance ? 'Rebalance' : 'Hold'}
+          {rebalance ? t('rebalance') : t('hold')}
         </span>
         <span>{truncate(shortReport)}</span>
         {rebalance && typeof newAllocation === 'number' && (
-          <span className="ml-1">(new allocation: {newAllocation})</span>
+          <span className="ml-1">({t('new_allocation')} {newAllocation})</span>
         )}
       </div>
       {promptIcon}
