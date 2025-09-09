@@ -27,8 +27,8 @@ describe('callRebalancingAgent structured output', () => {
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);
     expect(opts.body).toBe(JSON.stringify(body));
-    expect(body.instructions).toMatch(/assist a real trader/i);
-    expect(body.instructions).toMatch(/determine the target allocation/i);
+    expect(body.instructions).toMatch(/- Decide whether to rebalance/i);
+    expect(body.instructions).toMatch(/On error, return \{error:"message"\}/i);
     const parsedInput = JSON.parse(body.input);
     expect(parsedInput.previous_responses).toEqual(['p1', 'p2']);
     expect(body.input).not.toMatch(/":\s/);
