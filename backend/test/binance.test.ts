@@ -71,6 +71,7 @@ describe('fetchPairInfo', () => {
             filters: [
               { filterType: 'LOT_SIZE', stepSize: '0.001' },
               { filterType: 'PRICE_FILTER', tickSize: '0.00001' },
+              { filterType: 'NOTIONAL', minNotional: '10' },
             ],
           },
         ],
@@ -79,6 +80,7 @@ describe('fetchPairInfo', () => {
     vi.stubGlobal('fetch', fetchMock);
     const info1 = await fetchPairInfo('SOL', 'BTC');
     expect(info1.symbol).toBe('SOLBTC');
+    expect(info1.minNotional).toBe(10);
     const info2 = await fetchPairInfo('SOL', 'BTC');
     expect(info1).toBe(info2);
     expect(fetchMock).toHaveBeenCalledTimes(1);

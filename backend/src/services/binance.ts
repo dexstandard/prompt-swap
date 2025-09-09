@@ -11,6 +11,7 @@ export type PairInfo = {
   quoteAsset: string;
   quantityPrecision: number;
   pricePrecision: number;
+  minNotional: number;
 };
 
 const pairInfoCache = new Map<string, PairInfo>();
@@ -49,6 +50,10 @@ export async function fetchPairInfo(
     const priceF = info.filters?.find(
       (f: any) => f.filterType === 'PRICE_FILTER',
     );
+    const notionalF = info.filters?.find(
+      (f: any) =>
+        f.filterType === 'NOTIONAL' || f.filterType === 'MIN_NOTIONAL',
+    );
     const pair: PairInfo = {
       symbol: info.symbol,
       baseAsset: info.baseAsset,
@@ -65,6 +70,7 @@ export async function fetchPairInfo(
           : priceF
           ? precisionFromStep(priceF.tickSize)
           : 8,
+      minNotional: notionalF ? Number(notionalF.minNotional) : 0,
     };
     pairInfoCache.set(key, pair);
     return pair;
