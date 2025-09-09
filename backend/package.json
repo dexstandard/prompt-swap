@@ -15,7 +15,7 @@
     "@fastify/rate-limit": "8.1.1",
     "dotenv": "16.6.1",
     "fastify": "4.29.1",
-    "google-auth-library": "10.2.1",
+    "google-auth-library": "10.3.0",
     "jsonwebtoken": "9.0.2",
     "node-cron": "3.0.2",
     "otplib": "12.0.1",
@@ -30,6 +30,9 @@
     "@types/pg": "8.10.2",
     "typescript": "5.2.2",
     "vitest": "3.2.4"
+  },
+  "overrides": {
+    "debug": "4.3.4"
   },
   "engines": {
     "node": "22.19.0"
