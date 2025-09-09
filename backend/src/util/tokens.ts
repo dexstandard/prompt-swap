@@ -5,12 +5,12 @@ export interface TokenTags {
 
 export const TOKENS: TokenTags[] = [
   { symbol: 'BTC', tags: ['btc', 'bitcoin'] },
-  { symbol: 'BNB', tags: ['bnb', 'binance coin'] },
+  { symbol: 'BNB', tags: ['bnb', 'binance', 'bcs'] },
   { symbol: 'DOGE', tags: ['doge', 'dogecoin'] },
   { symbol: 'ETH', tags: ['eth', 'ethereum'] },
   { symbol: 'HBAR', tags: ['hbar', 'hedera'] },
   { symbol: 'PEPE', tags: ['pepe'] },
-  { symbol: 'SHIB', tags: ['shib', 'shiba inu'] },
+  { symbol: 'SHIB', tags: ['shib', 'shiba inu', 'shiba'] },
   { symbol: 'SOL', tags: ['sol', 'solana'] },
   { symbol: 'TON', tags: ['ton', 'toncoin'] },
   { symbol: 'TRX', tags: ['trx', 'tron'] },
