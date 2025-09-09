@@ -249,7 +249,7 @@ async function buildPrompt(
       openInterest,
       fundingRate,
       orderBook,
-    } = await fetchPromptData(row, cache);
+    } = await fetchPromptData(row, cache, log);
     const { floor, positions } = computePortfolioValues(
       row,
       balances,
@@ -289,6 +289,7 @@ async function buildPrompt(
 async function fetchPromptData(
   row: ActiveAgentRow,
   cache: PromptCache,
+  log: FastifyBaseLogger,
 ): Promise<{
   pairData: PairCacheData;
   price1: number;
@@ -297,9 +298,9 @@ async function fetchPromptData(
   ind2?: TokenIndicators;
   ts1?: MarketTimeseries;
   ts2?: MarketTimeseries;
-  openInterest: number;
-  fundingRate: number;
-  orderBook: { bid: [number, number]; ask: [number, number] };
+  openInterest?: number;
+  fundingRate?: number;
+  orderBook?: { bid: [number, number]; ask: [number, number] };
 }> {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
@@ -346,17 +347,41 @@ async function fetchPromptData(
     return ts;
   }
 
-  const [price1Data, price2Data, ind1, ind2, ts1, ts2, openInterest, fundingRate, orderBook] = await Promise.all([
+  const [price1Data, price2Data, ind1, ind2, ts1, ts2] = await Promise.all([
     getPrice(token1),
     getPrice(token2),
     getIndicators(token1),
     getIndicators(token2),
     getTimeseries(token1),
     getTimeseries(token2),
+  ]);
+
+  let openInterest: number | undefined;
+  let fundingRate: number | undefined;
+  let orderBook: { bid: [number, number]; ask: [number, number] } | undefined;
+  const derivatives = await Promise.allSettled([
     fetchOpenInterest(pairData.symbol),
     fetchFundingRate(pairData.symbol),
     fetchOrderBook(pairData.symbol),
   ]);
+  if (derivatives[0].status === 'fulfilled') openInterest = derivatives[0].value;
+  else
+    log.error(
+      { err: derivatives[0].reason, symbol: pairData.symbol },
+      'failed to fetch open interest',
+    );
+  if (derivatives[1].status === 'fulfilled') fundingRate = derivatives[1].value;
+  else
+    log.error(
+      { err: derivatives[1].reason, symbol: pairData.symbol },
+      'failed to fetch funding rate',
+    );
+  if (derivatives[2].status === 'fulfilled') orderBook = derivatives[2].value;
+  else
+    log.error(
+      { err: derivatives[2].reason, symbol: pairData.symbol },
+      'failed to fetch order book',
+    );
 
   return {
     pairData,
