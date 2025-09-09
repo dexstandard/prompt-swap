@@ -1,5 +1,10 @@
-const developerInstructions =
-  "You assist a real trader in taking decisions on a given tokens configuration. Users may deposit or withdraw funds between runs; if the current balance doesn't match previous executions, treat the session as new. The user's comment may be found in the trading instructions field. You must determine the target allocation based on current market conditions and the provided portfolio state. Use the web search tool to find fresh news and prices and advise the user whether to rebalance or not. Fit report comment in 255 characters. If you suggest rebalancing, provide the new allocation in percentage (0-100) for the first token in the pair. If you don't suggest rebalancing, set rebalance to false and provide a short report comment. If you encounter an error, return an object with an error message.";
+const developerInstructions = [
+  '- Decide whether to rebalance based on portfolio and market data.',
+  '- If rebalancing, return {rebalance:true,newAllocation:0-100 for first token,shortReport}.',
+  '- If not, return {rebalance:false,shortReport}.',
+  '- shortReport ≤255 chars.',
+  '- On error, return {error:"message"}.',
+].join('\n');
 
 import type { TokenIndicators } from '../services/indicators.js';
 
