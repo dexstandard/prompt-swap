@@ -11,6 +11,7 @@ const sampleIndicators = {
   volume: { z_1h: 0, z_24h: 0 },
   corr: { BTC_30d: 0 },
   regime: { BTC: 'range' },
+  osc: { rsi_14: 0, stoch_k: 0, stoch_d: 0 },
 };
 
 const sampleTimeseries = {
@@ -38,6 +39,9 @@ const flatIndicators = {
   volume_z_24h: 0,
   corr_BTC_30d: 0,
   regime_BTC: 'range',
+  osc_rsi_14: 0,
+  osc_stoch_k: 0,
+  osc_stoch_d: 0,
 };
 
 const flatTimeseries = {

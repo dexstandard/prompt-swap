@@ -122,6 +122,49 @@ function correlation(a: number[], b: number[]) {
   return num / Math.sqrt(denA * denB);
 }
 
+function calcRsi(closes: number[], period = 14) {
+  const gains: number[] = [];
+  const losses: number[] = [];
+  for (let i = 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff >= 0) {
+      gains.push(diff);
+      losses.push(0);
+    } else {
+      gains.push(0);
+      losses.push(-diff);
+    }
+  }
+  let avgGain = sliceMean(gains.slice(0, period));
+  let avgLoss = sliceMean(losses.slice(0, period));
+  for (let i = period; i < gains.length; i++) {
+    avgGain = (avgGain * (period - 1) + gains[i]) / period;
+    avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
+  }
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - 100 / (1 + rs);
+}
+
+function calcStoch(
+  highs: number[],
+  lows: number[],
+  closes: number[],
+  period = 14,
+) {
+  const kVals: number[] = [];
+  for (let i = period - 1; i < closes.length; i++) {
+    const h = Math.max(...highs.slice(i - period + 1, i + 1));
+    const l = Math.min(...lows.slice(i - period + 1, i + 1));
+    const denom = h - l || 1;
+    const k = ((closes[i] - l) / denom) * 100;
+    kVals.push(k);
+  }
+  const k = kVals[kVals.length - 1];
+  const d = sliceMean(kVals.slice(-3));
+  return { k, d };
+}
+
 export async function fetchTokenIndicators(token: string) {
   const pair = await fetchPairData(token, 'USDT');
   const symbol = `${token}USDT`.toUpperCase();
@@ -174,6 +217,10 @@ export async function fetchTokenIndicators(token: string) {
     z_24h: volumeZ(dayVolumes, 30),
   } as const;
 
+  const rsi_14 = calcRsi(dayCloses);
+  const { k: stoch_k, d: stoch_d } = calcStoch(dayHighs, dayLows, dayCloses);
+  const osc = { rsi_14, stoch_k, stoch_d } as const;
+
   const btc = await fetchPairData('BTC', 'USDT');
   const btcCloses = btc.year.map((k: any) => Number(k[4]));
   const corr = {
@@ -187,7 +234,7 @@ export async function fetchTokenIndicators(token: string) {
     BTC: bollingerBandwidth(btcCloses, 20) < 10 ? 'range' : 'trend',
   } as const;
 
-  return { ret, sma_dist, macd_hist, vol, range, volume, corr, regime };
+  return { ret, sma_dist, macd_hist, vol, range, volume, corr, regime, osc };
 }
 
 export type TokenIndicators = Awaited<ReturnType<typeof fetchTokenIndicators>>;
