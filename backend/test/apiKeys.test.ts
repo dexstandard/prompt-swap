@@ -139,7 +139,7 @@ describe('AI API key routes', () => {
       method: 'POST',
       url: `/api/users/${adminId}/ai-key/share`,
       cookies: authCookies(adminId),
-      payload: { email: 'user@example.com' },
+      payload: { email: 'user@example.com', model: 'gpt-5' },
     });
     expect(res.statusCode).toBe(200);
 
@@ -195,7 +195,7 @@ describe('AI API key routes', () => {
       method: 'DELETE',
       url: `/api/users/${adminId}/ai-key/share`,
       cookies: authCookies(adminId),
-      payload: { email: 'user@example.com' },
+      payload: { email: 'user@example.com', model: 'gpt-5' },
     });
     expect(res.statusCode).toBe(200);
 
@@ -455,7 +455,7 @@ describe('key deletion effects on agents', () => {
     const bs = encrypt('skey', process.env.KEY_PASSWORD!);
     await setAiKey(adminId, ai);
     await setBinanceKey(userId, bk, bs);
-    await shareAiKey(adminId, userId);
+    await shareAiKey(adminId, userId, 'gpt-5');
     const agent = await insertAgent({
       userId,
       model: 'gpt-5',
@@ -504,7 +504,7 @@ describe('key deletion effects on agents', () => {
     const bs = encrypt('skey', process.env.KEY_PASSWORD!);
     await setAiKey(adminId, ai);
     await setBinanceKey(userId, bk, bs);
-    await shareAiKey(adminId, userId);
+    await shareAiKey(adminId, userId, 'gpt-5');
     const agent = await insertAgent({
       userId,
       model: 'gpt-5',
@@ -561,7 +561,7 @@ describe('key deletion effects on agents', () => {
     await setAiKey(adminId, aiAdmin);
     await setAiKey(userId, aiUser);
     await setBinanceKey(userId, bk, bs);
-    await shareAiKey(adminId, userId);
+    await shareAiKey(adminId, userId, 'gpt-5');
     const agent = await insertAgent({
       userId,
       model: 'gpt-5',

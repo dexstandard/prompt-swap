@@ -4,7 +4,7 @@ import { encrypt } from '../src/util/crypto.js';
 import { getActiveAgents, getAgent } from '../src/repos/agents.js';
 import { db } from '../src/db/index.js';
 import { insertUser } from './repos/users.js';
-import { setAiKey, setBinanceKey } from '../src/repos/api-keys.js';
+import { setAiKey, setBinanceKey, shareAiKey } from '../src/repos/api-keys.js';
 import { setAgentStatus } from './repos/agents.js';
 import { cancelOpenOrders } from '../src/services/binance.js';
 import { authCookies } from './helpers.js';
@@ -765,6 +765,37 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toContain('minimum allocations');
+    await app.close();
+  });
+
+  it('rejects unauthorized model for shared key', async () => {
+    const app = await buildServer();
+    const adminId = await insertUser('adm');
+    const userId = await insertUser('usr');
+    const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
+    await setAiKey(adminId, ai);
+    await shareAiKey(adminId, userId, 'gpt-5');
+    const payload = {
+      userId,
+      model: 'gpt-4',
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      manualRebalance: false,
+      status: 'draft',
+    };
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/agents',
+      cookies: authCookies(userId),
+      payload,
+    });
+    expect(res.statusCode).toBe(400);
     await app.close();
   });
 });

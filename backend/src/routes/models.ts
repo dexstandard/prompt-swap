@@ -36,32 +36,35 @@ export default async function modelsRoutes(app: FastifyInstance) {
       if (!params) return;
       const { id } = params;
       if (!requireUserIdMatch(req, reply, id)) return;
-    const row = await getAiKeyRow(id);
-    const enc = row?.own?.ai_api_key_enc ?? row?.shared?.ai_api_key_enc;
-    if (!enc)
-      return reply
-        .code(404)
-        .send(errorResponse(ERROR_MESSAGES.notFound));
-    const key = decrypt(enc, env.KEY_PASSWORD);
-    const cached = getCachedModels(key);
-    if (cached) return { models: cached };
-    try {
-      const res = await fetch('https://api.openai.com/v1/models', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      if (!res.ok)
+      const row = await getAiKeyRow(id);
+      if (!row?.own && row?.shared?.model) {
+        return { models: [row.shared.model] };
+      }
+      const enc = row?.own?.ai_api_key_enc ?? row?.shared?.ai_api_key_enc;
+      if (!enc)
         return reply
-          .code(500)
-          .send(errorResponse('failed to fetch models'));
-      const json = await res.json();
-      const models = (json.data as { id: string }[])
-        .map((m) => m.id)
-        .filter(
-          (id: string) =>
-            id.startsWith('gpt-5') || id.startsWith('o3') || id.includes('search'),
-        );
-      setCachedModels(key, models);
-      return { models };
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      const key = decrypt(enc, env.KEY_PASSWORD);
+      const cached = getCachedModels(key);
+      if (cached) return { models: cached };
+      try {
+        const res = await fetch('https://api.openai.com/v1/models', {
+          headers: { Authorization: `Bearer ${key}` },
+        });
+        if (!res.ok)
+          return reply
+            .code(500)
+            .send(errorResponse('failed to fetch models'));
+        const json = await res.json();
+        const models = (json.data as { id: string }[])
+          .map((m) => m.id)
+          .filter(
+            (id: string) =>
+              id.startsWith('gpt-5') || id.startsWith('o3') || id.includes('search'),
+          );
+        setCachedModels(key, models);
+        return { models };
       } catch {
         return reply
           .code(500)

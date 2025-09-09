@@ -123,8 +123,8 @@ export default function ApiKeySection({
   });
 
   const shareMut = useMutation({
-    mutationFn: async (email: string) => {
-      await api.post(sharePath!(id), { email });
+    mutationFn: async ({ email, model }: { email: string; model: string }) => {
+      await api.post(sharePath!(id), { email, model });
     },
   });
 
@@ -269,9 +269,21 @@ export default function ApiKeySection({
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => {
+                  onClick={async () => {
                     const email = window.prompt('Enter email to share with');
-                    if (email) shareMut.mutate(email);
+                    if (!email) return;
+                    try {
+                      const res = await api.get(`/users/${user!.id}/models`);
+                      const models = res.data.models as string[];
+                      const model = window.prompt(
+                        `Select model: ${models.join(', ')}`,
+                      );
+                      if (model && models.includes(model)) {
+                        shareMut.mutate({ email, model });
+                      }
+                    } catch {
+                      toast.show('Failed to fetch models');
+                    }
                   }}
                   disabled={
                     delMut.isPending || shareMut.isPending || revokeMut.isPending
