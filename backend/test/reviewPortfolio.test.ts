@@ -19,6 +19,33 @@ const sampleTimeseries = {
   monthly_24m: [[9, 10, 11]],
 };
 
+const flatIndicators = {
+  ret_1h: 0,
+  ret_4h: 0,
+  ret_24h: 0,
+  ret_7d: 0,
+  ret_30d: 0,
+  sma_dist_20: 0,
+  sma_dist_50: 0,
+  sma_dist_200: 0,
+  macd_hist: 0,
+  vol_rv_7d: 0,
+  vol_rv_30d: 0,
+  vol_atr_pct: 0,
+  range_bb_bw: 0,
+  range_donchian20: 0,
+  volume_z_1h: 0,
+  volume_z_24h: 0,
+  corr_BTC_30d: 0,
+  regime_BTC: 'range',
+};
+
+const flatTimeseries = {
+  ret_60m: ((3 - 2) / 2) * 100,
+  ret_24h: ((7 - 6) / 6) * 100,
+  ret_24m: ((11 - 10) / 10) * 100,
+};
+
 vi.mock('../src/util/ai.js', () => ({
   callRebalancingAgent: vi.fn().mockResolvedValue('ok'),
 }));
@@ -152,12 +179,10 @@ describe('reviewPortfolio', () => {
     expect(args[1].marketData).toEqual({
       currentPrice: 100,
       fearGreedIndex: { value: 50, classification: 'Neutral' },
-      indicators: { BTC: sampleIndicators, ETH: sampleIndicators },
-      market_timeseries: {
-        BTCUSDT: sampleTimeseries,
-        ETHUSDT: sampleTimeseries,
-      },
+      indicators: { BTC: flatIndicators, ETH: flatIndicators },
+      market_timeseries: { BTCUSDT: flatTimeseries, ETHUSDT: flatTimeseries },
     });
+    expect(JSON.stringify(args[1].marketData)).not.toContain('minute_60');
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(2);
     expect(fetchMarketTimeseries).toHaveBeenCalledTimes(2);
     expect(fetchFearGreedIndex).toHaveBeenCalledTimes(1);
@@ -330,9 +355,10 @@ describe('reviewPortfolio', () => {
     expect(args[1].marketData).toEqual({
       currentPrice: 100,
       fearGreedIndex: { value: 50, classification: 'Neutral' },
-      indicators: { ETH: sampleIndicators },
-      market_timeseries: { ETHUSDT: sampleTimeseries },
+      indicators: { ETH: flatIndicators },
+      market_timeseries: { ETHUSDT: flatTimeseries },
     });
+    expect(JSON.stringify(args[1].marketData)).not.toContain('minute_60');
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(1);
     expect(fetchTokenIndicators).toHaveBeenCalledWith('ETH');
     expect(fetchMarketTimeseries).toHaveBeenCalledTimes(1);
