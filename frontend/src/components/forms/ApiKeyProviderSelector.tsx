@@ -16,13 +16,20 @@ interface ProviderConfig {
   renderForm: () => ReactElement;
 }
 
-const aiConfigs: ProviderConfig[] = [
+const aiBaseConfigs: ProviderConfig[] = [
   {
     value: 'openai',
     label: 'OpenAI',
     queryKey: 'ai-key',
     getKeyPath: (id) => `/users/${id}/ai-key`,
     renderForm: () => <AiApiKeySection label="OpenAI API Key" />,
+  },
+  {
+    value: 'openai-shared',
+    label: 'OpenAI (Shared)',
+    queryKey: 'ai-key-shared',
+    getKeyPath: (id) => `/users/${id}/ai-key/shared`,
+    renderForm: () => <></>,
   },
 ];
 
@@ -59,10 +66,10 @@ export default function ApiKeyProviderSelector({
   onChange,
 }: Props) {
   const { user } = useUser();
-  const configs = type === 'ai' ? aiConfigs : exchangeConfigs;
+  const baseConfigs = type === 'ai' ? aiBaseConfigs : exchangeConfigs;
 
   const queries = useQueries({
-    queries: configs.map((cfg) => ({
+    queries: baseConfigs.map((cfg) => ({
       queryKey: [cfg.queryKey, user?.id],
       enabled: !!user,
       queryFn: async () => {
@@ -77,6 +84,18 @@ export default function ApiKeyProviderSelector({
     })),
   });
 
+  const configs =
+    type === 'ai'
+      ? aiBaseConfigs.filter(
+          (cfg, i) => cfg.value !== 'openai-shared' || !!queries[i]?.data,
+        )
+      : exchangeConfigs;
+
+  const queryFor = (val: string) => {
+    const idx = baseConfigs.findIndex((c) => c.value === val);
+    return queries[idx];
+  };
+
   if (!user) return null;
 
   const selectedIndex = Math.max(
@@ -84,7 +103,7 @@ export default function ApiKeyProviderSelector({
     0,
   );
   const selectedConfig = configs[selectedIndex];
-  const hasKey = !!queries[selectedIndex]?.data;
+  const hasKey = !!queryFor(selectedConfig.value)?.data;
 
   return (
     <div>

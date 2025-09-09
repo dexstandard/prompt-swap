@@ -44,17 +44,13 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const params = parseParams(idParams, req.params, reply);
       if (!params) return;
-      const { id } = params;
-      if (!requireUserIdMatch(req, reply, id)) return;
-      const { key } = req.body as { key: string };
-      const row = await getAiKeyRow(id);
+  const { id } = params;
+  if (!requireUserIdMatch(req, reply, id)) return;
+  const { key } = req.body as { key: string };
+  const row = await getAiKeyRow(id);
       let err = ensureUser(row);
       if (err) return reply.code(err.code).send(err.body);
-      if (row!.is_shared)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
-      err = ensureKeyAbsent(row, ['ai_api_key_enc']);
+      err = ensureKeyAbsent(row?.own, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
       if (!(await verifyApiKey(ApiKeyType.Ai, key)))
         return reply.code(400).send(errorResponse('verification failed'));
@@ -70,14 +66,31 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const params = parseParams(idParams, req.params, reply);
       if (!params) return;
-      const { id } = params;
-      if (!requireUserIdMatch(req, reply, id)) return;
+  const { id } = params;
+  if (!requireUserIdMatch(req, reply, id)) return;
       const row = await getAiKeyRow(id);
-      if (!row?.id)
+      if (!row?.own?.id)
         return reply
           .code(404)
           .send(errorResponse(ERROR_MESSAGES.notFound));
-      return { key: '<REDACTED>', ...(row.is_shared ? { shared: true } : {}) };
+      return { key: '<REDACTED>' };
+    },
+  );
+
+  app.get(
+    '/users/:id/ai-key/shared',
+    { config: { rateLimit: RATE_LIMITS.MODERATE } },
+    async (req, reply) => {
+      const params = parseParams(idParams, req.params, reply);
+      if (!params) return;
+      const { id } = params;
+      if (!requireUserIdMatch(req, reply, id)) return;
+      const row = await getAiKeyRow(id);
+      if (!row?.shared?.id)
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      return { key: '<REDACTED>', shared: true };
     },
   );
 
@@ -91,11 +104,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       if (!requireUserIdMatch(req, reply, id)) return;
       const { key } = req.body as { key: string };
       const row = await getAiKeyRow(id);
-      if (row?.is_shared)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
-      if (!row?.ai_api_key_enc)
+      if (!row?.own?.ai_api_key_enc)
         return reply
           .code(404)
           .send(errorResponse(ERROR_MESSAGES.notFound));
@@ -116,11 +125,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const { id } = params;
       if (!requireUserIdMatch(req, reply, id)) return;
       const row = await getAiKeyRow(id);
-      if (row?.is_shared)
-        return reply
-          .code(403)
-          .send(errorResponse(ERROR_MESSAGES.forbidden));
-      if (!row?.ai_api_key_enc)
+      if (!row?.own?.ai_api_key_enc)
         return reply
           .code(404)
           .send(errorResponse(ERROR_MESSAGES.notFound));
@@ -142,7 +147,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const targets = await getAiKeyShareTargets(id);
       for (const targetId of targets) {
         const keyRow = await getAiKeyRow(targetId);
-        if (keyRow?.is_shared) {
+        if (!keyRow?.own && keyRow?.shared) {
           const tAgents = await getActiveAgentsByUser(targetId);
           for (const agent of tAgents) {
             removeAgentFromSchedule(agent.id);
@@ -174,7 +179,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       if (!adminId || adminId !== id) return;
       const { email } = req.body as { email: string };
       const row = await getAiKeyRow(id);
-      const err = ensureKeyPresent(row, ['ai_api_key_enc']);
+      const err = ensureKeyPresent(row?.own, ['ai_api_key_enc']);
       if (err) return reply.code(err.code).send(err.body);
       const target = await findUserByEmail(email);
       if (!target) return reply.code(404).send(errorResponse('user not found'));
@@ -198,7 +203,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       if (!(await hasAiKeyShare(id, target.id)))
         return reply.code(404).send(errorResponse('share not found'));
       const keyRow = await getAiKeyRow(target.id);
-      if (keyRow?.is_shared) {
+      if (!keyRow?.own && keyRow?.shared) {
         const agents = await getActiveAgentsByUser(target.id);
         for (const agent of agents) {
           removeAgentFromSchedule(agent.id);

@@ -1,5 +1,6 @@
 import { useUser } from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
+import SharedAiApiKeySection from '../components/forms/SharedAiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 
 export default function Keys() {
@@ -12,6 +13,7 @@ export default function Keys() {
         decrypted solely when needed to call providers and are never shared.
       </div>
       <AiApiKeySection label="OpenAI API Key" allowShare />
+      <SharedAiApiKeySection label="OpenAI API Key (Shared)" />
       <ExchangeApiKeySection
         exchange="binance"
         label={

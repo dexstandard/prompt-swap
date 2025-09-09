@@ -37,11 +37,12 @@ export default async function modelsRoutes(app: FastifyInstance) {
       const { id } = params;
       if (!requireUserIdMatch(req, reply, id)) return;
     const row = await getAiKeyRow(id);
-    if (!row?.ai_api_key_enc)
+    const enc = row?.own?.ai_api_key_enc ?? row?.shared?.ai_api_key_enc;
+    if (!enc)
       return reply
         .code(404)
         .send(errorResponse(ERROR_MESSAGES.notFound));
-    const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
+    const key = decrypt(enc, env.KEY_PASSWORD);
     const cached = getCachedModels(key);
     if (cached) return { models: cached };
     try {

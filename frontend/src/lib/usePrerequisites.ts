@@ -26,6 +26,20 @@ export function usePrerequisites(tokens: string[]) {
     },
   });
 
+  const sharedAiKeyQuery = useQuery<string | null>({
+    queryKey: ['ai-key-shared', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      try {
+        const res = await api.get(`/users/${user!.id}/ai-key/shared`);
+        return res.data.key as string;
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+        throw err;
+      }
+    },
+  });
+
   const binanceKeyQuery = useQuery<string | null>({
     queryKey: ['binance-key', user?.id],
     enabled: !!user,
@@ -40,7 +54,7 @@ export function usePrerequisites(tokens: string[]) {
     },
   });
 
-  const hasOpenAIKey = !!aiKeyQuery.data;
+  const hasOpenAIKey = !!aiKeyQuery.data || !!sharedAiKeyQuery.data;
   const hasBinanceKey = !!binanceKeyQuery.data;
 
   const modelsQuery = useQuery<string[]>({

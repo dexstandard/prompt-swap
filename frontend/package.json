@@ -40,6 +40,9 @@
     "typescript-eslint": "8.39.1",
     "vite": "7.1.2"
   },
+  "overrides": {
+    "debug": "4.3.4"
+  },
   "engines": {
     "node": "22.19.0"
   }
