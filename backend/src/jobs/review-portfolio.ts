@@ -27,6 +27,12 @@ import {
   fetchFearGreedIndex,
   type FearGreedIndex,
 } from '../services/binance.js';
+
+import {
+  fetchOpenInterest,
+  fetchFundingRate,
+  fetchOrderBook,
+} from '../services/derivatives.js'; 
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import {
   fetchTokenIndicators,
@@ -240,6 +246,9 @@ async function buildPrompt(
       ind2,
       ts1,
       ts2,
+      openInterest,
+      fundingRate,
+      orderBook,
     } = await fetchPromptData(row, cache);
     const { floor, positions } = computePortfolioValues(
       row,
@@ -264,6 +273,9 @@ async function buildPrompt(
         ts1,
         ts2,
         cache.fearGreed,
+        openInterest,
+        fundingRate,
+        orderBook,
       ),
     };
   } catch (err) {
@@ -285,6 +297,9 @@ async function fetchPromptData(
   ind2?: TokenIndicators;
   ts1?: MarketTimeseries;
   ts2?: MarketTimeseries;
+  openInterest: number;
+  fundingRate: number;
+  orderBook: { bid: [number, number]; ask: [number, number] };
 }> {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
@@ -331,13 +346,16 @@ async function fetchPromptData(
     return ts;
   }
 
-  const [price1Data, price2Data, ind1, ind2, ts1, ts2] = await Promise.all([
+  const [price1Data, price2Data, ind1, ind2, ts1, ts2, openInterest, fundingRate, orderBook] = await Promise.all([
     getPrice(token1),
     getPrice(token2),
     getIndicators(token1),
     getIndicators(token2),
     getTimeseries(token1),
     getTimeseries(token2),
+    fetchOpenInterest(pairData.symbol),
+    fetchFundingRate(pairData.symbol),
+    fetchOrderBook(pairData.symbol),
   ]);
 
   return {
@@ -348,6 +366,9 @@ async function fetchPromptData(
     ind2,
     ts1,
     ts2,
+    openInterest,
+    fundingRate,
+    orderBook,
   };
 }
 
@@ -415,6 +436,9 @@ function assembleMarketData(
   ts1?: MarketTimeseries,
   ts2?: MarketTimeseries,
   fearGreed?: FearGreedIndex,
+  openInterest?: number,
+  fundingRate?: number,
+  orderBook?: { bid: [number, number]; ask: [number, number] },
 ) {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
@@ -425,6 +449,9 @@ function assembleMarketData(
   return {
     currentPrice: pairData.currentPrice,
     ...(fearGreed ? { fearGreedIndex: fearGreed } : {}),
+    ...(typeof openInterest === 'number' ? { openInterest } : {}),
+    ...(typeof fundingRate === 'number' ? { fundingRate } : {}),
+    ...(orderBook ? { orderBook } : {}),
     ...(ind1Flat || ind2Flat
       ? {
           indicators: {
