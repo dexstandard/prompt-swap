@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import ApiKeySection from './ApiKeySection';
 
-const aiFields = [{ name: 'key', placeholder: 'API key' }];
+const aiFields = [{ name: 'key', placeholder: 'api_key' }];
 
 export default function AiApiKeySection({
   label,

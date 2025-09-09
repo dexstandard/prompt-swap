@@ -12,19 +12,22 @@ import {
 } from 'lucide-react';
 import { useUser } from '../../lib/useUser';
 import { useState } from 'react';
+import { useTranslation } from '../../lib/i18n';
 
 function ApiStatus() {
   const { isSuccess } = useQuery({
     queryKey: ['api-status'],
     queryFn: () => axios.get('/health'),
   });
+  const t = useTranslation();
 
-  return <span className="text-sm">API: {isSuccess ? 'Online' : 'Offline'}</span>;
+  return <span className="text-sm">API: {isSuccess ? t('online') : t('offline')}</span>;
 }
 
 export default function AppShell() {
   const { user } = useUser();
   const [navCollapsed, setNavCollapsed] = useState(true);
+  const t = useTranslation();
   return (
     <div className="h-screen flex flex-col">
       <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between z-10">
@@ -52,30 +55,30 @@ export default function AppShell() {
               className={`flex items-center text-gray-700 hover:text-gray-900 ${
                 navCollapsed ? 'justify-center' : 'gap-2'
               }`}
-              title={navCollapsed ? 'Agents' : undefined}
+              title={navCollapsed ? t('agents') : undefined}
             >
               <Bot className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
-              {!navCollapsed && 'Agents'}
+              {!navCollapsed && t('agents')}
             </Link>
             <Link
               to="/keys"
               className={`flex items-center text-gray-700 hover:text-gray-900 ${
                 navCollapsed ? 'justify-center' : 'gap-2'
               }`}
-              title={navCollapsed ? 'Keys' : undefined}
+              title={navCollapsed ? t('keys') : undefined}
             >
               <Key className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
-              {!navCollapsed && 'Keys'}
+              {!navCollapsed && t('keys')}
             </Link>
             <Link
               to="/settings"
               className={`flex items-center text-gray-700 hover:text-gray-900 ${
                 navCollapsed ? 'justify-center' : 'gap-2'
               }`}
-              title={navCollapsed ? 'Settings' : undefined}
+              title={navCollapsed ? t('settings') : undefined}
             >
               <SettingsIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
-              {!navCollapsed && 'Settings'}
+              {!navCollapsed && t('settings')}
             </Link>
             {user?.role === 'admin' && (
               <Link
@@ -83,10 +86,10 @@ export default function AppShell() {
                 className={`flex items-center text-gray-700 hover:text-gray-900 ${
                   navCollapsed ? 'justify-center' : 'gap-2'
                 }`}
-                title={navCollapsed ? 'Users' : undefined}
+                title={navCollapsed ? t('users') : undefined}
               >
                 <UsersIcon className={`${navCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
-                {!navCollapsed && 'Users'}
+                {!navCollapsed && t('users')}
               </Link>
             )}
           </div>
@@ -109,20 +112,32 @@ export default function AppShell() {
       </div>
       <footer className="hidden md:block fixed bottom-0 left-0 right-0 bg-gray-100 text-xs text-center py-1 border-t">
         <Link to="/terms" className="mx-2 hover:text-gray-900">
-          Terms
+          {t('terms')}
         </Link>
         <Link to="/privacy" className="mx-2 hover:text-gray-900">
-          Privacy
+          {t('privacy')}
         </Link>
       </footer>
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-100 border-t flex justify-around py-4">
-        <Link to="/settings" className="text-gray-700 hover:text-gray-900" aria-label="Settings">
+        <Link
+          to="/settings"
+          className="text-gray-700 hover:text-gray-900"
+          aria-label={t('settings')}
+        >
           <SettingsIcon className="w-6 h-6" />
         </Link>
-        <Link to="/" className="text-gray-700 hover:text-gray-900" aria-label="Agents">
+        <Link
+          to="/"
+          className="text-gray-700 hover:text-gray-900"
+          aria-label={t('agents')}
+        >
           <Bot className="w-6 h-6" />
         </Link>
-        <Link to="/keys" className="text-gray-700 hover:text-gray-900" aria-label="Keys">
+        <Link
+          to="/keys"
+          className="text-gray-700 hover:text-gray-900"
+          aria-label={t('keys')}
+        >
           <Key className="w-6 h-6" />
         </Link>
       </nav>

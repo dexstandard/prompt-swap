@@ -2,25 +2,22 @@ import { useUser } from '../lib/useUser';
 import AiApiKeySection from '../components/forms/AiApiKeySection';
 import SharedAiApiKeySection from '../components/forms/SharedAiApiKeySection';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
+import { useTranslation } from '../lib/i18n';
 
 export default function Keys() {
   const { user } = useUser();
-  if (!user) return <p>Please log in.</p>;
+  const t = useTranslation();
+  if (!user) return <p>{t('login_prompt')}</p>;
   return (
     <div className="space-y-8 max-w-md">
       <div className="p-3 bg-blue-100 border border-blue-200 text-sm text-blue-900 rounded">
-        Your API keys are encrypted using AES-256 and stored only on our server. They are
-        decrypted solely when needed to call providers and are never shared.
+        {t('api_keys_notice')}
       </div>
-      <AiApiKeySection label="OpenAI API Key" allowShare />
-      <SharedAiApiKeySection label="OpenAI API Key (Shared)" />
+      <AiApiKeySection label={t('openai_api_key')} allowShare />
+      <SharedAiApiKeySection label={t('openai_api_key_shared')} />
       <ExchangeApiKeySection
         exchange="binance"
-        label={
-          <>
-            Binance API <span className="hidden sm:inline">Credentials</span>
-          </>
-        }
+        label={t('binance_api_credentials')}
       />
     </div>
   );

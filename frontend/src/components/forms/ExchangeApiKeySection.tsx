@@ -8,8 +8,8 @@ const videoGuideLinks: Record<string, string> = {
 };
 
 const exchangeFields = [
-  { name: 'key', placeholder: 'API key' },
-  { name: 'secret', placeholder: 'API secret' },
+  { name: 'key', placeholder: 'api_key' },
+  { name: 'secret', placeholder: 'api_secret' },
 ];
 
 interface Props {

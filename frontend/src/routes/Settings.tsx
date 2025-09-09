@@ -5,6 +5,7 @@ import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import Button from '../components/ui/Button';
 import { useToast } from '../lib/useToast';
+import { useTranslation, useLanguage, type Lang } from '../lib/i18n';
 
 export default function Settings() {
   const { user } = useUser();
@@ -15,14 +16,16 @@ export default function Settings() {
   const [loadingSetup, setLoadingSetup] = useState(false);
   const [loadingEnable, setLoadingEnable] = useState(false);
   const [loadingDisable, setLoadingDisable] = useState(false);
+  const t = useTranslation();
+  const { lang, setLang } = useLanguage();
 
   useEffect(() => {
     if (!user) return;
     api.get('/2fa/status').then((res) => setEnabled(res.data.enabled));
   }, [user]);
 
-  if (!user) return <p>Please log in.</p>;
-  if (enabled === null) return <p>Loading...</p>;
+  if (!user) return <p>{t('login_prompt')}</p>;
+  if (enabled === null) return <p>{t('loading')}</p>;
 
   const startSetup = async () => {
     setLoadingSetup(true);
@@ -100,39 +103,52 @@ export default function Settings() {
 
   return (
     <div className="space-y-4 max-w-md">
-      <h2 className="text-xl font-bold">Settings</h2>
+      <h2 className="text-xl font-bold">{t('settings')}</h2>
       {enabled ? (
         <form onSubmit={disable} className="space-y-2">
-          <p>Two-factor authentication is enabled.</p>
+          <p>{t('2fa_enabled')}</p>
           <input
             className="border p-1 w-40"
-            placeholder="Code"
+            placeholder={t('code')}
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
           <Button type="submit" loading={loadingDisable}>
-            Disable
+            {t('disable')}
           </Button>
         </form>
       ) : setup ? (
         <form onSubmit={enable} className="space-y-2">
-          <p>Scan this QR code with Google Authenticator and enter the code.</p>
+          <p>{t('scan_qr')}</p>
           <QRCode value={setup.otpauthUrl} />
           <input
             className="border p-1 w-40"
-            placeholder="Code"
+            placeholder={t('code')}
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
           <Button type="submit" loading={loadingEnable}>
-            Enable
+            {t('enable')}
           </Button>
         </form>
       ) : (
         <Button onClick={startSetup} loading={loadingSetup}>
-          Setup 2FA
+          {t('setup_2fa')}
         </Button>
       )}
+      <div className="pt-4">
+        <label className="block text-sm font-medium mb-1">
+          {t('language')}
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value as Lang)}
+            className="ml-2 border p-1"
+          >
+            <option value="en">{t('english')}</option>
+            <option value="ru">{t('russian')}</option>
+          </select>
+        </label>
+      </div>
     </div>
   );
 }

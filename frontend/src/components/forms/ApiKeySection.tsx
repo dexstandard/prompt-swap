@@ -13,6 +13,7 @@ import { useUser } from '../../lib/useUser';
 import { useToast } from '../../lib/useToast';
 import Button from '../ui/Button';
 import { Copy } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n';
 
 interface Field {
   name: string;
@@ -49,6 +50,7 @@ export default function ApiKeySection({
 }: ApiKeySectionProps) {
   const { user } = useUser();
   const toast = useToast();
+  const t = useTranslation();
   const defaultValues = useMemo(
     () =>
       Object.fromEntries(fields.map((f) => [f.name, ''])) as Record<string, string>,
@@ -110,7 +112,7 @@ export default function ApiKeySection({
         axios.isAxiosError(err) &&
         err.response?.data?.error === 'verification failed'
       ) {
-        toast.show('Key verification failed');
+        toast.show(t('key_verification_failed'));
       }
     },
   });
@@ -151,7 +153,7 @@ export default function ApiKeySection({
     <div className="space-y-2 w-full max-w-md">
       {label && <h2 className="text-md font-bold">{label}</h2>}
       {query.isLoading ? (
-        <p>Loading...</p>
+        <p>{t('loading')}</p>
       ) : editing ? (
         <div className="space-y-2">
           {fields.map((f) => (
@@ -159,7 +161,7 @@ export default function ApiKeySection({
               key={f.name}
               type="text"
               autoComplete="off"
-              placeholder={f.placeholder}
+              placeholder={t(f.placeholder)}
               {...form.register(f.name, { required: true, minLength: f.minLength ?? 10 })}
               className="border rounded px-2 py-1 w-full"
               style={form.watch(f.name) ? textSecurityStyle : undefined}
@@ -175,13 +177,13 @@ export default function ApiKeySection({
                 rel="noopener noreferrer"
                 className="text-blue-600 underline"
               >
-                Video guide
+                {t('video_guide')}
               </a>
             </p>
           )}
           {hasErrors && (
             <p className="text-sm text-red-600">
-              All fields are required and must be at least 10 characters
+              {t('all_fields_required')}
             </p>
           )}
           <div className="flex gap-2">
@@ -191,7 +193,7 @@ export default function ApiKeySection({
               disabled={saveDisabled}
               loading={saveMut.isPending}
             >
-              {query.data ? 'Update' : 'Save'}
+              {query.data ? t('update') : t('save')}
             </Button>
             {query.data && (
                 <Button
@@ -210,7 +212,7 @@ export default function ApiKeySection({
                   }}
                   disabled={saveMut.isPending}
                 >
-                  Cancel
+                  {t('cancel')}
                 </Button>
             )}
           </div>
@@ -241,7 +243,7 @@ export default function ApiKeySection({
                   }}
                   disabled={delMut.isPending}
                 >
-                  Edit
+                  {t('edit')}
                 </Button>
                 <Button
                   type="button"
@@ -249,7 +251,7 @@ export default function ApiKeySection({
                   onClick={() => {
                     if (
                       window.confirm(
-                        'Deleting this key will stop all active agents. Continue?',
+                        t('delete_key_confirm'),
                       )
                     ) {
                       delMut.mutate();
@@ -257,12 +259,12 @@ export default function ApiKeySection({
                   }}
                   disabled={delMut.isPending}
                 >
-                  Delete
+                  {t('delete')}
                 </Button>
               </>
             )}
             {query.data?.shared && (
-              <p className="text-sm text-gray-600 self-center">Shared by admin</p>
+              <p className="text-sm text-gray-600 self-center">{t('shared_by_admin')}</p>
             )}
             {user?.role === 'admin' && sharePath && (
               <>
@@ -270,49 +272,49 @@ export default function ApiKeySection({
                   type="button"
                   variant="secondary"
                   onClick={async () => {
-                    const email = window.prompt('Enter email to share with');
+                    const email = window.prompt(t('enter_email_share'));
                     if (!email) return;
                     try {
                       const res = await api.get(`/users/${user!.id}/models`);
                       const models = res.data.models as string[];
                       const model = window.prompt(
-                        `Select model: ${models.join(', ')}`,
+                        `${t('select_model')} ${models.join(', ')}`,
                       );
                       if (model && models.includes(model)) {
                         shareMut.mutate({ email, model });
                       }
                     } catch {
-                      toast.show('Failed to fetch models');
+                      toast.show(t('failed_fetch_models'));
                     }
                   }}
                   disabled={
                     delMut.isPending || shareMut.isPending || revokeMut.isPending
                   }
                 >
-                  Share
+                  {t('share')}
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    const email = window.prompt('Enter email to revoke');
+                    const email = window.prompt(t('enter_email_revoke'));
                     if (email) revokeMut.mutate(email);
                   }}
                   disabled={
                     delMut.isPending || shareMut.isPending || revokeMut.isPending
                   }
                 >
-                  Revoke
+                  {t('revoke')}
                 </Button>
               </>
             )}
           </div>
           {balanceQueryKey && (
             balanceQuery.isLoading ? (
-              <p>Loading balance...</p>
+              <p>{t('loading_balance')}</p>
           ) : balanceQuery.data ? (
             <p className="text-sm text-gray-600">
-              Total balance: ${balanceQuery.data.totalUsd.toFixed(2)}
+              {t('total_balance')} ${balanceQuery.data.totalUsd.toFixed(2)}
             </p>
           ) : null
         )}
@@ -320,7 +322,7 @@ export default function ApiKeySection({
     )}
       {whitelistHost && (
         <div className="text-sm text-gray-600 sm:flex sm:items-center sm:gap-2">
-          <span className="block sm:inline">Whitelist IP:</span>
+          <span className="block sm:inline">{t('whitelist_ip')}</span>
           <span className="flex items-center gap-2">
             <span className="font-mono">{whitelistHost}</span>
             <button
@@ -328,9 +330,9 @@ export default function ApiKeySection({
               className="p-1 border rounded"
               onClick={() => {
                 navigator.clipboard.writeText(whitelistHost);
-                toast.show('Copied to clipboard');
+                toast.show(t('copied'));
               }}
-              aria-label="Copy IP"
+              aria-label={t('copy_ip')}
             >
               <Copy className="w-4 h-4" />
             </button>
