@@ -207,7 +207,14 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
       <Modal open={showPrompt} onClose={() => setShowPrompt(false)}>
         <pre className="whitespace-pre-wrap text-sm">{promptText}</pre>
       </Modal>
-      {showTx && orders && <ExecTxCard orders={orders} />}
+      {showTx && orders && (
+        <ExecTxCard
+          agentId={agentId}
+          logId={log.id}
+          orders={orders}
+          onCancel={refetchOrders}
+        />
+      )}
       {showPreview && order && (
         <Modal open={showPreview} onClose={() => setShowPreview(false)}>
           <h3 className="mb-2 text-lg font-bold">Confirm Rebalance</h3>

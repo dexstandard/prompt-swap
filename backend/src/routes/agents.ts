@@ -30,6 +30,7 @@ import * as binance from '../services/binance.js';
 import {
   cancelOpenLimitOrdersByAgent,
   getLimitOrdersByReviewResult,
+  updateLimitOrderStatus,
 } from '../repos/limit-orders.js';
 import {
   createRebalanceLimitOrder,
@@ -212,10 +213,12 @@ export default async function agentRoutes(app: FastifyInstance) {
         orders: rows.map((r) => {
           const planned = JSON.parse(r.planned_json);
           return {
+            id: r.order_id,
             side: planned.side,
             quantity: planned.quantity,
             price: planned.price,
             status: r.status,
+            createdAt: r.created_at.getTime(),
           } as const;
         }),
       };
@@ -348,6 +351,45 @@ export default async function agentRoutes(app: FastifyInstance) {
       }
       log.info({ execLogId: logId }, 'created manual order');
       return reply.code(201).send({ ok: true });
+    },
+  );
+
+  const orderIdParams = z.object({ logId: z.string(), orderId: z.string() });
+
+  app.post(
+    '/agents/:id/exec-log/:logId/orders/:orderId/cancel',
+    { config: { rateLimit: RATE_LIMITS.TIGHT } },
+    async (req, reply) => {
+      const ctx = await getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { id, userId, log } = ctx;
+      const lp = parseParams(orderIdParams, req.params, reply);
+      if (!lp) return;
+      const { logId, orderId } = lp;
+      const rows = await getLimitOrdersByReviewResult(id, logId);
+      const row = rows.find((r) => r.order_id === orderId);
+      if (!row) {
+        log.error({ execLogId: logId, orderId }, 'order not found');
+        return reply.code(404).send(errorResponse('order not found'));
+      }
+      if (row.status !== 'open') {
+        log.error({ execLogId: logId, orderId }, 'order not open');
+        return reply.code(400).send(errorResponse('order not open'));
+      }
+      const planned = JSON.parse(row.planned_json);
+      try {
+        await binance.cancelOrder(userId, {
+          symbol: planned.symbol,
+          orderId: Number(orderId),
+        });
+        await updateLimitOrderStatus(userId, orderId, 'canceled');
+        log.info({ execLogId: logId, orderId }, 'canceled order');
+        return { ok: true } as const;
+      } catch (err) {
+        log.error({ err, execLogId: logId, orderId }, 'failed to cancel order');
+        const msg = parseBinanceError(err) || 'failed to cancel order';
+        return reply.code(500).send(errorResponse(msg));
+      }
     },
   );
 
