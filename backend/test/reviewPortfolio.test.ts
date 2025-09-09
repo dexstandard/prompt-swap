@@ -126,7 +126,7 @@ describe('reviewPortfolio', () => {
     await reviewAgentPortfolio(log, '1');
     expect(callRebalancingAgent).toHaveBeenCalledTimes(1);
     const args = (callRebalancingAgent as any).mock.calls[0];
-    const prev = args[1].previous_responses.map((s: string) => JSON.parse(s));
+    const prev = args[1].previous_responses;
     expect(prev).toEqual([
       { rebalance: true, newAllocation: 5, shortReport: 'short-5' },
       { rebalance: true, newAllocation: 4, shortReport: 'short-4' },

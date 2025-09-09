@@ -33,7 +33,7 @@ import {
   type TokenIndicators,
 } from '../services/indicators.js';
 import { isStablecoin } from '../util/tokens.js';
-import type { RebalancePrompt } from '../util/ai.js';
+import type { RebalancePrompt, PreviousResponse } from '../util/ai.js';
 
 type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
 
@@ -153,15 +153,23 @@ async function prepareAgents(
     }
 
     const prevRows = await getRecentReviewResults(row.id, 5);
-    prompt.previous_responses = prevRows.map((r: any) => {
-      const str = JSON.stringify(r);
-      return str === '{}' ? '' : str;
-    });
+    prompt.previous_responses = prevRows
+      .map(extractPreviousResponse)
+      .filter(Boolean) as PreviousResponse[];
 
     prepared.push({ row, prompt, key, log });
   }
 
   return prepared;
+}
+
+function extractPreviousResponse(r: any): PreviousResponse | undefined {
+  const res: PreviousResponse = {};
+  if (typeof r.rebalance === 'boolean') res.rebalance = r.rebalance;
+  if (typeof r.newAllocation === 'number') res.newAllocation = r.newAllocation;
+  if (typeof r.shortReport === 'string') res.shortReport = r.shortReport;
+  if (r.error !== undefined && r.error !== null) res.error = r.error;
+  return Object.keys(res).length ? res : undefined;
 }
 
 async function cleanupAgentOpenOrders(
