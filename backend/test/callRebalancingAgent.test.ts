@@ -20,7 +20,10 @@ describe('callRebalancingAgent structured output', () => {
         },
       },
       marketData: { currentPrice: 1 },
-      previous_responses: ['p1', 'p2'],
+      previous_responses: [
+        { shortReport: 'p1' },
+        { rebalance: true, newAllocation: 50 },
+      ],
     };
     await callRebalancingAgent('gpt-test', prompt, 'key');
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -30,7 +33,10 @@ describe('callRebalancingAgent structured output', () => {
     expect(body.instructions).toMatch(/assist a real trader/i);
     expect(body.instructions).toMatch(/determine the target allocation/i);
     const parsedInput = JSON.parse(body.input);
-    expect(parsedInput.previous_responses).toEqual(['p1', 'p2']);
+    expect(parsedInput.previous_responses).toEqual([
+      { shortReport: 'p1' },
+      { rebalance: true, newAllocation: 50 },
+    ]);
     expect(body.input).not.toMatch(/":\s/);
     expect(body.input).not.toMatch(/,\s/);
     expect(body.text.format.type).toBe('json_schema');

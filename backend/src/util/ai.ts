@@ -16,6 +16,13 @@ export interface RebalancePosition {
   value_usdt: number;
 }
 
+export interface PreviousResponse {
+  rebalance?: boolean;
+  newAllocation?: number;
+  shortReport?: string;
+  error?: unknown;
+}
+
 export interface RebalancePrompt {
   instructions: string;
   config: {
@@ -36,7 +43,7 @@ export interface RebalancePrompt {
     market_timeseries?: Record<string, MarketTimeseries>;
     fearGreedIndex?: { value: number; classification: string };
   };
-  previous_responses?: string[];
+  previous_responses?: PreviousResponse[];
 }
 
 const rebalanceResponseSchema = {
