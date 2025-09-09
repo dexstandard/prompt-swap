@@ -49,25 +49,22 @@ export interface PreviousResponse {
 
 export interface RebalancePrompt {
   instructions: string;
-  config: {
-    policy: { floorPercents: Record<string, number> };
-    currentStatePortfolio: {
-      ts: string;
-      positions: RebalancePosition[];
-      currentWeights: Record<string, number>;
-    };
-    /**
-     * Summary of recent limit orders placed by the agent. Only essential
-     * attributes are included to minimize token usage in the prompt.
-     */
-    previousLimitOrders?: {
-      symbol: string;
-      side: string;
-      amount: number;
-      datetime: string;
-      status: string;
-    }[];
+  policy: { floor: Record<string, number> };
+  portfolio: {
+    ts: string;
+    positions: RebalancePosition[];
   };
+  /**
+   * Summary of recent limit orders placed by the agent. Only essential
+   * attributes are included to minimize token usage in the prompt.
+   */
+  prev_orders?: {
+    symbol: string;
+    side: string;
+    amount: number;
+    datetime: string;
+    status: string;
+  }[];
   marketData: {
     currentPrice: number;
     indicators?: Record<string, TokenMetrics>;

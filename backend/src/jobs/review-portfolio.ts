@@ -241,23 +241,21 @@ async function buildPrompt(
       ts1,
       ts2,
     } = await fetchPromptData(row, cache);
-    const { floorPercents, positions, currentWeights } = computePortfolioValues(
+    const { floor, positions } = computePortfolioValues(
       row,
       balances,
       price1,
       price2,
     );
+    const prevOrders = await buildPreviousOrders(row.id);
     return {
       instructions: row.agent_instructions,
-      config: {
-        policy: { floorPercents },
-        currentStatePortfolio: {
-          ts: new Date().toISOString(),
-          positions,
-          currentWeights,
-        },
-        ...(await buildPreviousOrders(row.id)),
+      policy: { floor },
+      portfolio: {
+        ts: new Date().toISOString(),
+        positions,
       },
+      ...prevOrders,
       marketData: assembleMarketData(
         row,
         pairData,
@@ -365,8 +363,7 @@ function computePortfolioValues(
   const min2 = row.tokens[1].min_allocation;
   const value1 = balances.token1Balance * price1;
   const value2 = balances.token2Balance * price2;
-  const totalValue = value1 + value2;
-  const floorPercents: Record<string, number> = {
+  const floor: Record<string, number> = {
     [token1]: min1,
     [token2]: min2,
   };
@@ -384,11 +381,7 @@ function computePortfolioValues(
       value_usdt: value2,
     },
   ];
-  const currentWeights: Record<string, number> = {
-    [token1]: totalValue ? value1 / totalValue : 0,
-    [token2]: totalValue ? value2 / totalValue : 0,
-  };
-  return { floorPercents, positions, currentWeights };
+  return { floor, positions };
 }
 
 /**
@@ -401,7 +394,7 @@ async function buildPreviousOrders(agentId: string) {
   const rows = await getRecentLimitOrders(agentId, 5);
   if (!rows.length) return {};
   return {
-    previousLimitOrders: rows.map((r) => {
+    prev_orders: rows.map((r) => {
       const planned = JSON.parse(r.planned_json) as Record<string, any>;
       return {
         symbol: planned.symbol,
@@ -534,7 +527,7 @@ async function executeAgent(
       await createRebalanceLimitOrder({
         userId: row.user_id,
         tokens: row.tokens.map((t) => t.token),
-        positions: prompt.config.currentStatePortfolio.positions,
+        positions: prompt.portfolio.positions,
         newAllocation: parsed.response.newAllocation,
         log,
         reviewResultId: resultId,
