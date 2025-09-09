@@ -121,3 +121,20 @@ export function parseExecLog(log: unknown): ParsedExecLog {
 
   return { text, response, error };
 }
+
+export function validateExecResponse(
+  response: ParsedExecLog['response'] | undefined,
+  policy: { floor: Record<string, number> },
+): string | undefined {
+  if (!response || response.newAllocation === undefined) return undefined;
+  const na = response.newAllocation;
+  if (typeof na !== 'number' || Number.isNaN(na) || na < 0 || na > 100)
+    return 'newAllocation must be between 0 and 100';
+  const tokens = Object.keys(policy.floor || {});
+  const [t1, t2] = tokens;
+  const floor1 = t1 ? policy.floor[t1] || 0 : 0;
+  const floor2 = t2 ? policy.floor[t2] || 0 : 0;
+  if (na < floor1 || na > 100 - floor2)
+    return 'newAllocation violates policy floor';
+  return undefined;
+}

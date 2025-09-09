@@ -15,7 +15,7 @@ import {
   getOpenLimitOrdersForAgent,
   updateLimitOrderStatus,
 } from '../repos/limit-orders.js';
-import { parseExecLog } from '../util/parse-exec-log.js';
+import { parseExecLog, validateExecResponse } from '../util/parse-exec-log.js';
 import { callRebalancingAgent } from '../util/ai.js';
 import {
   fetchAccount,
@@ -509,20 +509,25 @@ async function executeAgent(
       response: text,
     });
     const parsed = parseExecLog(text);
+    const validationError = validateExecResponse(parsed.response, prompt.policy);
+    if (validationError) log.error({ err: validationError }, 'validation failed');
     const resultId = await insertReviewResult({
       agentId: row.id,
       log: parsed.text,
       rawLogId: logId,
-      ...(parsed.response
+      ...(parsed.response && !validationError
         ? {
             rebalance: parsed.response.rebalance,
             newAllocation: parsed.response.newAllocation,
             shortReport: parsed.response.shortReport,
           }
         : {}),
-      ...(parsed.error ? { error: parsed.error } : {}),
+      ...((parsed.error || validationError)
+        ? { error: parsed.error ?? { message: validationError } }
+        : {}),
     });
     if (
+      !validationError &&
       !row.manual_rebalance &&
       parsed.response?.rebalance &&
       parsed.response.newAllocation !== undefined
