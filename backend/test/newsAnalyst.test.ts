@@ -7,7 +7,12 @@ const responseJson = JSON.stringify({
   output: [
     {
       id: 'msg_1',
-      content: [{ type: 'output_text', text: 'summary text' }],
+      content: [
+        {
+          type: 'output_text',
+          text: JSON.stringify({ comment: 'summary text', score: 1 }),
+        },
+      ],
     },
   ],
 });
@@ -22,8 +27,8 @@ describe('news analyst', () => {
     (globalThis as any).fetch = fetchMock;
     const s1 = await getTokenNewsSummary('BTC', 'gpt', 'key');
     const s2 = await getTokenNewsSummary('BTC', 'gpt', 'key');
-    expect(s1).toBe('summary text');
-    expect(s2).toBe('summary text');
+    expect(s1?.comment).toBe('summary text');
+    expect(s2?.comment).toBe('summary text');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
@@ -42,8 +47,8 @@ describe('news analyst', () => {
       getTokenNewsSummary('ETH', 'gpt', 'key'),
       getTokenNewsSummary('ETH', 'gpt', 'key'),
     ]);
-    expect(r1).toBe('summary text');
-    expect(r2).toBe('summary text');
+    expect(r1?.comment).toBe('summary text');
+    expect(r2?.comment).toBe('summary text');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
@@ -53,7 +58,7 @@ describe('news analyst', () => {
     const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
     const first = await getTokenNewsSummary('DOGE', 'gpt', 'key');
-    expect(first).toBe('');
+    expect(first).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
     await db.query(
       "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t', 'l', NOW(), ARRAY['DOGE'])",
@@ -61,7 +66,7 @@ describe('news analyst', () => {
     const fetchMock2 = vi.fn().mockResolvedValue({ text: async () => responseJson });
     (globalThis as any).fetch = fetchMock2;
     const second = await getTokenNewsSummary('DOGE', 'gpt', 'key');
-    expect(second).toBe('summary text');
+    expect(second?.comment).toBe('summary text');
     expect(fetchMock2).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
