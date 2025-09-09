@@ -13,7 +13,7 @@ async function main() {
   const app = await buildServer(routesDir);
   const log = app.log;
 
-  schedule('*/5 * * * *', () => fetchNews(log));
+  schedule('*/10 * * * *', () => fetchNews(log));
 
   const schedules: Record<string, string> = {
     openOrders: '*/3 * * * *',
