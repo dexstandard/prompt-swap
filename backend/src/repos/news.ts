@@ -2,10 +2,11 @@ import { db } from '../db/index.js';
 import type { NewsItem } from '../services/news.js';
 
 export async function insertNews(items: NewsItem[]) {
-  if (!items.length) return;
+  const filtered = items.filter((i) => i.tokens.length);
+  if (!filtered.length) return;
   const params: any[] = [];
   const values: string[] = [];
-  items.forEach((item, i) => {
+  filtered.forEach((item, i) => {
     const base = i * 4;
     values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`);
     params.push(item.title, item.link, item.pubDate ?? null, item.tokens);

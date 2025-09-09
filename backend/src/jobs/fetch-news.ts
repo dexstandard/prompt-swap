@@ -7,9 +7,7 @@ export default async function fetchNewsJob(log: FastifyBaseLogger) {
     const news = await fetchNews();
     await insertNews(news);
     for (const item of news) {
-      if (item.tokens.length) {
-        log.info({ title: item.title, tokens: item.tokens, link: item.link }, 'news item');
-      }
+      log.info({ title: item.title, tokens: item.tokens, link: item.link }, 'news item');
     }
   } catch (err) {
     log.error({ err }, 'failed to fetch news');

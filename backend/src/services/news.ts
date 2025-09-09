@@ -40,11 +40,13 @@ export async function fetchNews(): Promise<NewsItem[]> {
       const feed = await parser.parseURL(url);
       for (const item of feed.items) {
         if (!item.title || !item.link) continue;
+        const tokens = tagTokens(item.title);
+        if (!tokens.length) continue;
         items.push({
           title: item.title,
           link: item.link,
           pubDate: item.pubDate,
-          tokens: tagTokens(item.title),
+          tokens,
         });
       }
     } catch (err) {

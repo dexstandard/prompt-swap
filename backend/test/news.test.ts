@@ -24,4 +24,16 @@ describe('insertNews', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].tokens).toEqual(['BTC']);
   });
+
+  it('skips items without token matches', async () => {
+    const item = {
+      title: 'General market news',
+      link: 'https://example.com/general',
+      pubDate: new Date().toISOString(),
+      tokens: [],
+    };
+    await insertNews([item]);
+    const { rows } = await db.query('SELECT 1 FROM news WHERE link = $1', [item.link]);
+    expect(rows).toHaveLength(0);
+  });
 });
