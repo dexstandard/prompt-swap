@@ -78,16 +78,27 @@ const rebalanceResponseSchema = {
     additionalProperties: false,
   };
 
-export async function callAi(body: string, apiKey: string): Promise<string> {
+export async function callAi(body: unknown, apiKey: string): Promise<string> {
   const res = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body,
+    body: compactJson(body),
   });
   return await res.text();
+}
+
+function compactJson(value: unknown): string {
+  if (typeof value === 'string') {
+    try {
+      return JSON.stringify(JSON.parse(value));
+    } catch {
+      return value.trim();
+    }
+  }
+  return JSON.stringify(value);
 }
 
 export async function callRebalancingAgent(
@@ -95,9 +106,9 @@ export async function callRebalancingAgent(
   input: RebalancePrompt,
   apiKey: string,
 ): Promise<string> {
-  const body = JSON.stringify({
+  const body = {
     model,
-    input: JSON.stringify(input),
+    input: compactJson(input),
     instructions: developerInstructions,
     tools: [{ type: 'web_search_preview' }],
     text: {
@@ -108,6 +119,6 @@ export async function callRebalancingAgent(
         schema: rebalanceResponseSchema,
       },
     },
-  });
+  };
   return callAi(body, apiKey);
 }
