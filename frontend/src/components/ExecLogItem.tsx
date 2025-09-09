@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, Eye, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertCircle, Eye, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import api from '../lib/axios';
@@ -43,6 +43,8 @@ interface Props {
 export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: Props) {
   const [showJson, setShowJson] = useState(false);
   const [showTx, setShowTx] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [promptText, setPromptText] = useState<string | null>(null);
   const { log: text, error, response } = log;
   const hasError = error && Object.keys(error).length > 0;
   const hasResponse = response && Object.keys(response).length > 0;
@@ -66,6 +68,18 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
   const [price, setPrice] = useState('');
   const [manuallyEdited, setManuallyEdited] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  async function handleShowPrompt() {
+    if (!showPrompt) {
+      try {
+        const res = await api.get(`/agents/${agentId}/exec-log/${log.id}/prompt`);
+        setPromptText(JSON.stringify(res.data.prompt, null, 2));
+      } catch {
+        setPromptText('Failed to load prompt');
+      }
+    }
+    setShowPrompt(true);
+  }
 
   useEffect(() => {
     if (showPreview && order) {
@@ -146,6 +160,10 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
           )}
           {hasResponse && <ExecSuccessItem response={response} />}
         </div>
+        <FileText
+          className="h-4 w-4 cursor-pointer ml-2 flex-shrink-0"
+          onClick={handleShowPrompt}
+        />
         {manualRebalance && !!response?.rebalance && !hasOrders && (
           <Button
             variant="secondary"
@@ -170,6 +188,9 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
           </div>
         )}
       </div>
+      <Modal open={showPrompt} onClose={() => setShowPrompt(false)}>
+        <pre className="whitespace-pre-wrap text-sm">{promptText}</pre>
+      </Modal>
       {showTx && orders && <ExecTxCard orders={orders} />}
       {showPreview && order && (
         <Modal open={showPreview} onClose={() => setShowPreview(false)}>

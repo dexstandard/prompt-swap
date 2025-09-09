@@ -61,6 +61,51 @@ describe('agent exec log routes', () => {
     expect(res.statusCode).toBe(403);
     await app.close();
   });
+
+  it('returns prompt for log and enforces ownership', async () => {
+    const app = await buildServer();
+    const user1Id = await insertUser('20');
+    const user2Id = await insertUser('21');
+    const agent = await insertAgent({
+      userId: user1Id,
+      model: 'gpt',
+      status: 'active',
+      startBalance: null,
+      name: 'A',
+      tokens: [
+        { token: 'BTC', minAllocation: 10 },
+        { token: 'ETH', minAllocation: 20 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'inst',
+      manualRebalance: false,
+    });
+    const rawId = await insertReviewRawLog({
+      agentId: agent.id,
+      prompt: { a: 1 },
+      response: 'resp',
+    });
+    const reviewResultId = await insertReviewResult({
+      agentId: agent.id,
+      log: 'log',
+      rawLogId: rawId,
+    });
+    let res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/prompt`,
+      cookies: authCookies(user1Id),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ prompt: { a: 1 } });
+    res = await app.inject({
+      method: 'GET',
+      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/prompt`,
+      cookies: authCookies(user2Id),
+    });
+    expect(res.statusCode).toBe(403);
+    await app.close();
+  });
   it('returns paginated logs and enforces ownership', async () => {
     const app = await buildServer();
     const user1Id = await insertUser('1');

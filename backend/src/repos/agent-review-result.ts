@@ -7,11 +7,12 @@ export interface ReviewResultInsert {
   newAllocation?: number;
   shortReport?: string;
   error?: Record<string, unknown>;
+  rawLogId?: string;
 }
 
 export async function insertReviewResult(entry: ReviewResultInsert): Promise<string> {
   const { rows } = await db.query(
-    'INSERT INTO agent_review_result (agent_id, log, rebalance, new_allocation, short_report, error) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+    'INSERT INTO agent_review_result (agent_id, log, rebalance, new_allocation, short_report, error, raw_log_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
     [
       entry.agentId,
       entry.log,
@@ -19,6 +20,7 @@ export async function insertReviewResult(entry: ReviewResultInsert): Promise<str
       entry.newAllocation ?? null,
       entry.shortReport ?? null,
       entry.error ? JSON.stringify(entry.error) : null,
+      entry.rawLogId ?? null,
     ],
   );
   return rows[0].id as string;

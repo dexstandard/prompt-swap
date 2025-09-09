@@ -38,6 +38,7 @@ import {
 } from '../services/rebalance.js';
 import { parseBinanceError } from '../services/binance.js';
 import { getRebalanceInfo } from '../repos/agent-review-result.js';
+import { getPromptForReviewResult } from '../repos/agent-review-raw-log.js';
 import { parseParams } from '../util/validation.js';
 
 const idParams = z.object({ id: z.string().regex(/^\d+$/) });
@@ -172,6 +173,27 @@ export default async function agentRoutes(app: FastifyInstance) {
         pageSize: ps,
       };
     }
+  );
+
+  app.get(
+    '/agents/:id/exec-log/:logId/prompt',
+    { config: { rateLimit: RATE_LIMITS.RELAXED } },
+    async (req, reply) => {
+      const ctx = await getAgentForRequest(req, reply);
+      if (!ctx) return;
+      const { id, log } = ctx;
+      const lp = parseParams(logIdParams, req.params, reply);
+      if (!lp) return;
+      const prompt = await getPromptForReviewResult(id, lp.logId);
+      if (!prompt) {
+        log.error({ execLogId: lp.logId }, 'prompt not found');
+        return reply
+          .code(404)
+          .send(errorResponse(ERROR_MESSAGES.notFound));
+      }
+      log.info({ execLogId: lp.logId }, 'fetched exec prompt');
+      return { prompt: JSON.parse(prompt) };
+    },
   );
 
   app.get(

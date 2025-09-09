@@ -12,4 +12,36 @@ export const db = new Pool({ connectionString: env.DATABASE_URL });
 export async function migrate() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   await db.query(schema);
+  await runMigrations();
+}
+
+async function runMigrations() {
+  const migrationsDir = path.join(__dirname, 'migrations');
+  if (!fs.existsSync(migrationsDir)) return;
+
+  const files = fs
+    .readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+
+  const client = await db.connect();
+  try {
+    for (const file of files) {
+      const id = file;
+      const applied = await client.query('SELECT 1 FROM migrations WHERE id=$1', [id]);
+      if (applied.rowCount > 0) continue;
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      await client.query('BEGIN');
+      try {
+        await client.query(sql);
+        await client.query('INSERT INTO migrations(id) VALUES ($1)', [id]);
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      }
+    }
+  } finally {
+    client.release();
+  }
 }

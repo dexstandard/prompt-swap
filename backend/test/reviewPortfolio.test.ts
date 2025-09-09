@@ -45,6 +45,9 @@ vi.mock('../src/services/binance.js', () => ({
   }),
   cancelOrder: vi.fn().mockResolvedValue(undefined),
   parseBinanceError: vi.fn().mockReturnValue(null),
+  fetchFearGreedIndex: vi
+    .fn()
+    .mockResolvedValue({ value: 50, classification: 'Neutral' }),
 }));
 
 vi.mock('../src/services/indicators.js', () => ({
@@ -67,20 +70,27 @@ let fetchMarketTimeseries: any;
 let fetchPairInfo: any;
 let fetchTokenIndicators: any;
 let createRebalanceLimitOrder: any;
+let fetchFearGreedIndex: any;
 
 beforeAll(async () => {
   ({ reviewAgentPortfolio, default: reviewPortfolios } = await import(
     '../src/jobs/review-portfolio.js'
   ));
   ({ callRebalancingAgent } = await import('../src/util/ai.js'));
-  ({ fetchAccount, fetchPairData, fetchMarketTimeseries, fetchPairInfo } =
-    await import('../src/services/binance.js'));
+  ({
+    fetchAccount,
+    fetchPairData,
+    fetchMarketTimeseries,
+    fetchPairInfo,
+    fetchFearGreedIndex,
+  } = await import('../src/services/binance.js'));
   ({ fetchTokenIndicators } = await import('../src/services/indicators.js'));
   ({ createRebalanceLimitOrder } = await import('../src/services/rebalance.js'));
 });
 
 describe('reviewPortfolio', () => {
   it('passes last five responses to callRebalancingAgent', async () => {
+    vi.mocked(fetchFearGreedIndex).mockClear();
     await db.query('INSERT INTO users (id) VALUES ($1)', ['1']);
     await db.query(
       "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
@@ -140,6 +150,7 @@ describe('reviewPortfolio', () => {
     ]);
     expect(args[1].marketData).toEqual({
       currentPrice: 100,
+      fearGreedIndex: { value: 50, classification: 'Neutral' },
       indicators: { BTC: sampleIndicators, ETH: sampleIndicators },
       market_timeseries: {
         BTCUSDT: sampleTimeseries,
@@ -148,6 +159,7 @@ describe('reviewPortfolio', () => {
     });
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(2);
     expect(fetchMarketTimeseries).toHaveBeenCalledTimes(2);
+    expect(fetchFearGreedIndex).toHaveBeenCalledTimes(1);
   });
 
   it('saves prompt and response to exec log', async () => {
@@ -316,6 +328,7 @@ describe('reviewPortfolio', () => {
     const args = (callRebalancingAgent as any).mock.calls[0];
     expect(args[1].marketData).toEqual({
       currentPrice: 100,
+      fearGreedIndex: { value: 50, classification: 'Neutral' },
       indicators: { ETH: sampleIndicators },
       market_timeseries: { ETHUSDT: sampleTimeseries },
     });
