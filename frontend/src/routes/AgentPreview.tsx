@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useTranslation } from '../lib/i18n';
 import AgentName from '../components/AgentName';
 import StrategyForm from '../components/StrategyForm';
 import AgentInstructions from '../components/AgentInstructions';
@@ -41,6 +42,7 @@ export default function AgentPreview({ draft }: Props) {
   const locationData = location.state as AgentPreviewDetails | undefined;
   const { user } = useUser();
   const toast = useToast();
+  const t = useTranslation();
   const data = draft ?? locationData;
   const [agentData, setAgentData] = useState<AgentPreviewDetails | undefined>(data);
   useEffect(() => {
@@ -73,12 +75,12 @@ export default function AgentPreview({ draft }: Props) {
 
   const isDraft = !!draft;
 
-  if (!agentData) return <div className="p-4">No preview data</div>;
+  if (!agentData) return <div className="p-4">{t('no_preview_data')}</div>;
 
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
-        <span>{isDraft ? 'Agent Draft:' : 'Agent Preview:'}</span>
+        <span>{isDraft ? t('agent_draft') : t('agent_preview')}:</span>
         <AgentName
           name={agentData.name}
           onChange={(name) => setAgentData((d) => (d ? { ...d, name } : d))}
@@ -115,13 +117,13 @@ export default function AgentPreview({ draft }: Props) {
             <div>
               <ApiKeyProviderSelector
                 type="ai"
-                label="AI Provider"
+                label={t('ai_provider')}
                 value={aiProvider}
                 onChange={setAiProvider}
               />
               {hasOpenAIKey && (models.length || draft?.model) && (
                 <div className="mt-2">
-                  <h2 className="text-md font-bold">Model</h2>
+                  <h2 className="text-md font-bold">{t('model')}</h2>
                   <SelectInput
                     id="model"
                     value={model}
@@ -138,7 +140,7 @@ export default function AgentPreview({ draft }: Props) {
             <div>
               <ApiKeyProviderSelector
                 type="exchange"
-                label="Exchange"
+                label={t('exchange')}
                 value={exchangeProvider}
                 onChange={setExchangeProvider}
               />
@@ -152,11 +154,14 @@ export default function AgentPreview({ draft }: Props) {
 
       <div className="mt-4 max-w-2xl">
         <WarningSign>
-          Trading agent will use all available balance for {agentData.tokens.map((t) => t.token.toUpperCase()).join(' and ')} in
-          your Binance Spot wallet. Move excess funds to futures wallet before trading.
+          {t('trading_agent_warning').replace(
+            '{tokens}',
+            agentData.tokens
+              .map((t) => t.token.toUpperCase())
+              .join(` ${t('and')} `),
+          )}
           <br />
-          <strong>DON'T MOVE FUNDS ON SPOT WALLET DURING TRADING!</strong> It will confuse the trading agent and may
-          lead to unexpected results.
+          <strong>{t('dont_move_funds_warning')}</strong>
         </WarningSign>
         <label className="mt-4 flex items-center gap-2">
           <input
@@ -168,10 +173,10 @@ export default function AgentPreview({ draft }: Props) {
               )
             }
           />
-          <span>Manual Rebalancing</span>
+          <span>{t('manual_rebalancing')}</span>
         </label>
         {!user && (
-          <p className="text-sm text-gray-600 mb-2 mt-4">Log in to continue</p>
+          <p className="text-sm text-gray-600 mb-2 mt-4">{t('log_in_to_continue')}</p>
         )}
         <div className="mt-4 flex gap-2">
           <Button
@@ -213,19 +218,19 @@ export default function AgentPreview({ draft }: Props) {
                   });
                 }
                 setIsSavingDraft(false);
-                toast.show('Draft saved successfully', 'success');
+                toast.show(t('draft_saved_successfully'), 'success');
                 navigate('/');
               } catch (err) {
                 setIsSavingDraft(false);
                 if (axios.isAxiosError(err) && err.response?.data?.error) {
                   toast.show(err.response.data.error);
                 } else {
-                  toast.show('Failed to save draft');
+                  toast.show(t('failed_save_draft'));
                 }
               }
             }}
           >
-            {isDraft ? 'Update Draft' : 'Save Draft'}
+            {isDraft ? t('update_draft') : t('save_draft')}
           </Button>
           <AgentStartButton
             draft={draft}

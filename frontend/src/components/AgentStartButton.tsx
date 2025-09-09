@@ -5,6 +5,7 @@ import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import { useToast } from '../lib/useToast';
+import { useTranslation } from '../lib/i18n';
 import Button from './ui/Button';
 import ConfirmDialog from './ui/ConfirmDialog';
 
@@ -40,13 +41,14 @@ export default function AgentStartButton({
   const toast = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const t = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function startAgent() {
     if (!user) return;
     if (!model) {
-      toast.show('Model is required');
+      toast.show(t('model_required'));
       return;
     }
     setConfirmOpen(false);
@@ -55,7 +57,7 @@ export default function AgentStartButton({
       if (draft) {
         await api.post(`/agents/${draft.id}/start`);
         queryClient.invalidateQueries({ queryKey: ['agents'] });
-        toast.show('Agent started successfully', 'success');
+        toast.show(t('agent_started_success'), 'success');
         navigate('/');
       } else {
         const res = await api.post('/agents', {
@@ -78,7 +80,7 @@ export default function AgentStartButton({
       if (axios.isAxiosError(err) && err.response?.data?.error) {
         toast.show(err.response.data.error);
       } else {
-        toast.show('Failed to start agent');
+        toast.show(t('failed_start_agent'));
       }
     } finally {
       setIsCreating(false);
@@ -92,11 +94,11 @@ export default function AgentStartButton({
         loading={isCreating}
         onClick={() => setConfirmOpen(true)}
       >
-        Start Agent
+        {t('start_agent')}
       </Button>
       <ConfirmDialog
         open={confirmOpen}
-        message="Start agent with current settings?"
+        message={t('start_agent_confirm')}
         onConfirm={startAgent}
         onCancel={() => setConfirmOpen(false)}
       />

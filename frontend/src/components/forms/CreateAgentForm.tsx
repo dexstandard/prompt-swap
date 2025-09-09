@@ -3,6 +3,7 @@ import {useNavigate} from 'react-router-dom';
 import {Controller, useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {useUser} from '../../lib/useUser';
+import {useTranslation} from '../../lib/i18n';
 import {
     DEFAULT_AGENT_INSTRUCTIONS,
     createAgentDefaults,
@@ -26,6 +27,7 @@ export default function CreateAgentForm({
     onTokensChange?: (tokens: string[]) => void;
 }) {
     const {user} = useUser();
+    const t = useTranslation();
     const {
         handleSubmit,
         watch,
@@ -82,16 +84,16 @@ export default function CreateAgentForm({
                     className="w-full md:hidden"
                     onClick={() => setMobileOpen(true)}
                 >
-                    Create Agent
+                    {t('create_agent')}
                 </Button>
             )}
             <form
                 onSubmit={onSubmit}
                 className={`bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem] ${mobileOpen ? '' : 'hidden'} md:block`}
             >
-                <h2 className="text-lg md:text-xl font-bold">Create Agent</h2>
+                <h2 className="text-lg md:text-xl font-bold">{t('create_agent')}</h2>
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField label="Token 1" htmlFor="token1">
+                    <FormField label={t('token1')} htmlFor="token1">
                         <Controller
                             name="tokens.0.token"
                             control={control}
@@ -111,7 +113,7 @@ export default function CreateAgentForm({
                             )}
                         />
                     </FormField>
-                    <FormField label="Token 2" htmlFor="token2">
+                    <FormField label={t('token2')} htmlFor="token2">
                         <Controller
                             name="tokens.1.token"
                             control={control}
@@ -134,7 +136,7 @@ export default function CreateAgentForm({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
-                        label={`Min ${token1.toUpperCase()} allocation`}
+                        label={t('min_token_allocation').replace('{token}', token1.toUpperCase())}
                         htmlFor="minToken1Allocation"
                     >
                         <Controller
@@ -159,7 +161,7 @@ export default function CreateAgentForm({
                         />
                     </FormField>
                     <FormField
-                        label={`Min ${token2.toUpperCase()} allocation`}
+                        label={t('min_token_allocation').replace('{token}', token2.toUpperCase())}
                         htmlFor="minToken2Allocation"
                     >
                         <Controller
@@ -185,7 +187,7 @@ export default function CreateAgentForm({
                     </FormField>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField label="Risk Tolerance" htmlFor="risk">
+                    <FormField label={t('risk_tolerance')} htmlFor="risk">
                         <Controller
                             name="risk"
                             control={control}
@@ -200,9 +202,9 @@ export default function CreateAgentForm({
                         />
                     </FormField>
                     <FormField
-                        label="Review Interval"
+                        label={t('review_interval')}
                         htmlFor="reviewInterval"
-                        tooltip="How often the agent will review the portfolio; it may not rebalance every time."
+                        tooltip={t('review_interval_tooltip')}
                     >
                         <Controller
                             name="reviewInterval"
@@ -212,14 +214,14 @@ export default function CreateAgentForm({
                                     id="reviewInterval"
                                     value={field.value}
                                     onChange={field.onChange}
-                                    options={reviewIntervalOptions}
+                                    options={reviewIntervalOptions(t)}
                                 />
                             )}
                         />
                     </FormField>
                 </div>
                 {!user && (
-                    <p className="text-sm text-gray-600 mb-2">Log in to continue</p>
+                    <p className="text-sm text-gray-600 mb-2">{t('log_in_to_continue')}</p>
                 )}
                 <Button
                     type="submit"
@@ -227,7 +229,7 @@ export default function CreateAgentForm({
                     disabled={!user}
                     loading={isSubmitting}
                 >
-                    Preview
+                    {t('preview')}
                 </Button>
             </form>
         </>
