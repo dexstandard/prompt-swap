@@ -90,6 +90,17 @@ export async function callAi(body: string, apiKey: string): Promise<string> {
   return await res.text();
 }
 
+function compactJson(value: unknown): string {
+  if (typeof value === 'string') {
+    try {
+      return JSON.stringify(JSON.parse(value));
+    } catch {
+      return value.trim();
+    }
+  }
+  return JSON.stringify(value);
+}
+
 export async function callRebalancingAgent(
   model: string,
   input: RebalancePrompt,
@@ -97,7 +108,7 @@ export async function callRebalancingAgent(
 ): Promise<string> {
   const body = JSON.stringify({
     model,
-    input: JSON.stringify(input),
+    input: compactJson(input),
     instructions: developerInstructions,
     tools: [{ type: 'web_search_preview' }],
     text: {
