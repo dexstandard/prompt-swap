@@ -405,26 +405,78 @@ function assembleMarketData(
 ) {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
+  const ind1Flat = flattenIndicators(ind1);
+  const ind2Flat = flattenIndicators(ind2);
+  const ts1Flat = summarizeTimeseries(ts1);
+  const ts2Flat = summarizeTimeseries(ts2);
   return {
     currentPrice: pairData.currentPrice,
     ...(fearGreed ? { fearGreedIndex: fearGreed } : {}),
-    ...(ind1 || ind2
+    ...(ind1Flat || ind2Flat
       ? {
           indicators: {
-            ...(ind1 ? { [token1]: ind1 } : {}),
-            ...(ind2 ? { [token2]: ind2 } : {}),
+            ...(ind1Flat ? { [token1]: ind1Flat } : {}),
+            ...(ind2Flat ? { [token2]: ind2Flat } : {}),
           },
         }
       : {}),
-    ...(ts1 || ts2
+    ...(ts1Flat || ts2Flat
       ? {
           market_timeseries: {
-            ...(ts1 ? { [`${token1}USDT`]: ts1 } : {}),
-            ...(ts2 ? { [`${token2}USDT`]: ts2 } : {}),
+            ...(ts1Flat ? { [`${token1}USDT`]: ts1Flat } : {}),
+            ...(ts2Flat ? { [`${token2}USDT`]: ts2Flat } : {}),
           },
         }
       : {}),
   };
+}
+
+function flattenIndicators(ind?: TokenIndicators) {
+  if (!ind) return undefined;
+  return {
+    ret_1h: ind.ret['1h'],
+    ret_4h: ind.ret['4h'],
+    ret_24h: ind.ret['24h'],
+    ret_7d: ind.ret['7d'],
+    ret_30d: ind.ret['30d'],
+    sma_dist_20: ind.sma_dist['20'],
+    sma_dist_50: ind.sma_dist['50'],
+    sma_dist_200: ind.sma_dist['200'],
+    macd_hist: ind.macd_hist,
+    vol_rv_7d: ind.vol.rv_7d,
+    vol_rv_30d: ind.vol.rv_30d,
+    vol_atr_pct: ind.vol.atr_pct,
+    range_bb_bw: ind.range.bb_bw,
+    range_donchian20: ind.range.donchian20,
+    volume_z_1h: ind.volume.z_1h,
+    volume_z_24h: ind.volume.z_24h,
+    corr_BTC_30d: ind.corr.BTC_30d,
+    regime_BTC: ind.regime.BTC,
+  };
+}
+
+function summarizeTimeseries(ts?: MarketTimeseries) {
+  if (!ts) return undefined;
+  function pct(arr: [number, number, number, number][]) {
+    if (!arr.length) return undefined;
+    const start = arr[0][1];
+    const end = arr[arr.length - 1][2];
+    return ((end - start) / start) * 100;
+  }
+  function pctMonth(arr: [number, number, number][]) {
+    if (!arr.length) return undefined;
+    const start = arr[0][1];
+    const end = arr[arr.length - 1][2];
+    return ((end - start) / start) * 100;
+  }
+  const minute = pct(ts.minute_60);
+  const hour = pct(ts.hourly_24h);
+  const month = pctMonth(ts.monthly_24m);
+  const res: Record<string, number> = {};
+  if (minute !== undefined) res.ret_60m = minute;
+  if (hour !== undefined) res.ret_24h = hour;
+  if (month !== undefined) res.ret_24m = month;
+  return Object.keys(res).length ? (res as any) : undefined;
 }
 
 async function executeAgent(
