@@ -9,6 +9,7 @@ import TextInput from './forms/TextInput';
 import ExecSuccessItem from './ExecSuccessItem';
 import ExecTxCard from './ExecTxCard';
 import Button from './ui/Button';
+import { useTranslation } from '../lib/i18n';
 
 const MAX_LEN = 255;
 function truncate(text: string) {
@@ -48,6 +49,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
   const { log: text, error, response } = log;
   const hasError = error && Object.keys(error).length > 0;
   const hasResponse = response && Object.keys(response).length > 0;
+  const t = useTranslation();
   const {
     data: orders,
     refetch: refetchOrders,
@@ -75,7 +77,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
         const res = await api.get(`/agents/${agentId}/exec-log/${log.id}/prompt`);
         setPromptText(JSON.stringify(res.data.prompt, null, 2));
       } catch {
-        setPromptText('Failed to load prompt');
+        setPromptText(t('failed_load_prompt'));
       }
     }
     setShowPrompt(true);
@@ -187,7 +189,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
             onClick={handleRebalance}
             loading={creating}
           >
-            Rebalance
+            {t('run_rebalance')}
           </Button>
         )}
         {txEnabled && (
@@ -217,12 +219,12 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
       )}
       {showPreview && order && (
         <Modal open={showPreview} onClose={() => setShowPreview(false)}>
-          <h3 className="mb-2 text-lg font-bold">Confirm Rebalance</h3>
+          <h3 className="mb-2 text-lg font-bold">{t('confirm_rebalance')}</h3>
           <div className="mb-2 text-sm">
-            Side: {order.side}
+            {t('side')}: {order.side}
           </div>
           <div className="mb-2">
-            <label className="mb-1 block text-sm">Quantity ({tokens[0]})</label>
+            <label className="mb-1 block text-sm">{t('quantity')} ({tokens[0]})</label>
             <TextInput
               type="number"
               value={quantity}
@@ -233,7 +235,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
             />
           </div>
           <div className="mb-4">
-            <label className="mb-1 block text-sm">Price ({tokens[1]})</label>
+            <label className="mb-1 block text-sm">{t('price')} ({tokens[1]})</label>
             <TextInput
               type="number"
               value={price}
@@ -245,10 +247,10 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setShowPreview(false)}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button onClick={confirmRebalance} loading={creating}>
-              Confirm
+              {t('confirm')}
             </Button>
           </div>
         </Modal>
@@ -257,7 +259,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
         <Modal open onClose={() => setErrorMsg(null)}>
           <p className="mb-4">{errorMsg}</p>
           <div className="flex justify-end">
-            <Button onClick={() => setErrorMsg(null)}>Close</Button>
+            <Button onClick={() => setErrorMsg(null)}>{t('close')}</Button>
           </div>
         </Modal>
       )}
