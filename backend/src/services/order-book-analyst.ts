@@ -11,7 +11,16 @@ export async function getOrderBookAnalysis(
   const key = `orderbook:${model}:${pair}`;
   const cached = await getCache<Analysis>(key);
   if (cached) return cached;
-  if (!acquireLock(key)) return null;
+  if (!acquireLock(key)) {
+    // Another request is already computing this pair; wait for cache
+    const end = Date.now() + 5000; // wait up to 5s
+    while (Date.now() < end) {
+      await new Promise((r) => setTimeout(r, 50));
+      const retry = await getCache<Analysis>(key);
+      if (retry) return retry;
+    }
+    return null;
+  }
   try {
     const snapshot = await fetchOrderBook(pair);
     const prompt = { pair, snapshot };
