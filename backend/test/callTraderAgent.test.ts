@@ -29,7 +29,9 @@ describe('callTraderAgent structured output', () => {
     expect(opts.body).toBe(JSON.stringify(body));
     expect(body.instructions).toMatch(/- Decide whether to rebalance/i);
     expect(body.instructions).toMatch(/On error, return \{error:"message"\}/i);
-    expect(body.input.previous_responses).toEqual([
+    expect(typeof body.input).toBe('string');
+    const parsed = JSON.parse(body.input);
+    expect(parsed.previous_responses).toEqual([
       { shortReport: 'p1' },
       { rebalance: true, newAllocation: 50 },
     ]);
