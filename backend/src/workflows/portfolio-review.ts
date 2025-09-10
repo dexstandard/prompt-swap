@@ -30,7 +30,7 @@ export function removeWorkflowFromSchedule(id: string) {
   runningWorkflows.delete(id);
 }
 
-export async function reviewAgentPortfolio(
+export async function reviewPortfolio(
   log: FastifyBaseLogger,
   agentId: string,
 ): Promise<void> {

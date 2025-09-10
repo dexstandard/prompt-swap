@@ -13,7 +13,7 @@ import {
 import { getAgentReviewResults } from '../repos/agent-review-result.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 import {
-  reviewAgentPortfolio,
+  reviewPortfolio,
   removeWorkflowFromSchedule,
 } from '../workflows/portfolio-review.js';
 import { requireUserId } from '../util/auth.js';
@@ -123,7 +123,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           manualRebalance: validated.manualRebalance,
         });
         if (status === AgentStatus.Active)
-          reviewAgentPortfolio(req.log, row.id).catch((err) =>
+          reviewPortfolio(req.log, row.id).catch((err) =>
             log.error({ err, agentId: row.id }, 'initial review failed'),
           );
         log.info({ agentId: row.id }, 'created agent');
@@ -518,7 +518,7 @@ export default async function agentRoutes(app: FastifyInstance) {
         });
         const row = (await getAgent(id))!;
         if (status === AgentStatus.Active)
-          await reviewAgentPortfolio(req.log, id);
+          await reviewPortfolio(req.log, id);
         log.info('updated agent');
         return toApi(row);
       }
@@ -572,7 +572,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       const bal = await getStartBalance(log, userId, tokens);
       if (typeof bal !== 'number') return reply.code(bal.code).send(bal.body);
       await repoStartAgent(id, bal);
-      reviewAgentPortfolio(req.log, id).catch((err) =>
+      reviewPortfolio(req.log, id).catch((err) =>
         log.error({ err }, 'initial review failed')
       );
       const row = (await getAgent(id))!;
@@ -609,7 +609,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           .send(errorResponse('agent not active'));
       }
       try {
-        await reviewAgentPortfolio(req.log, id);
+        await reviewPortfolio(req.log, id);
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : 'manual review failed';
