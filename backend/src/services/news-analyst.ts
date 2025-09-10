@@ -1,3 +1,4 @@
+import type { FastifyBaseLogger } from 'fastify';
 import { getNewsByToken } from '../repos/news.js';
 import { callAi, extractJson, compactJson } from '../util/ai.js';
 import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
@@ -6,6 +7,7 @@ export async function getTokenNewsSummary(
   token: string,
   model: string,
   apiKey: string,
+  log: FastifyBaseLogger,
 ): Promise<AnalysisLog> {
   const items = await getNewsByToken(token, 5);
   if (!items.length) return { analysis: null };
@@ -30,9 +32,14 @@ export async function getTokenNewsSummary(
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
     const res = await callAi(body, apiKey);
-    const analysis = extractJson<Analysis>(res) ?? fallback;
+    const analysis = extractJson<Analysis>(res);
+    if (!analysis) {
+      log.error({ token, response: res }, 'news analyst returned invalid response');
+      return { analysis: fallback, prompt: body, response: res };
+    }
     return { analysis, prompt: body, response: res };
-  } catch {
+  } catch (err) {
+    log.error({ err, token }, 'news analyst call failed');
     return { analysis: fallback };
   }
 }

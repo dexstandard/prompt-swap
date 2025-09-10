@@ -3,8 +3,18 @@ import type { FastifyBaseLogger } from 'fastify';
 import { setCache, getCache, clearCache } from '../src/util/cache.js';
 import type { Analysis } from '../src/services/types.js';
 
-const getPerformanceAnalysisMock = vi.fn(() =>
-  Promise.resolve({ analysis: { comment: 'perf', score: 4 }, prompt: { a: 1 }, response: 'r' }),
+const getPerformanceAnalysisMock = vi.fn(
+  (
+    _input?: unknown,
+    _model?: string,
+    _apiKey?: string,
+    _log?: FastifyBaseLogger,
+  ) =>
+    Promise.resolve({
+      analysis: { comment: 'perf', score: 4 },
+      prompt: { a: 1 },
+      response: 'r',
+    }),
 );
 vi.mock('../src/services/performance-analyst.js', () => ({
   getPerformanceAnalysis: getPerformanceAnalysisMock,

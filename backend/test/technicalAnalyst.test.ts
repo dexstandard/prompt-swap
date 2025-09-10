@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { FastifyBaseLogger } from 'fastify';
 import { getTechnicalOutlook } from '../src/services/technical-analyst.js';
+
+function createLogger(): FastifyBaseLogger {
+  const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
+  return log;
+}
 
 const responseJson = JSON.stringify({
   object: 'response',
@@ -27,7 +33,7 @@ describe('technical analyst', () => {
       .mockResolvedValue({ ok: true, text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d');
+    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d', createLogger());
     expect(res.analysis?.comment).toBe('outlook text');
     expect(res.prompt).toBeTruthy();
     expect(res.response).toBe(responseJson);
@@ -41,7 +47,7 @@ describe('technical analyst', () => {
       .mockResolvedValue({ ok: true, text: async () => '{"output":[]}' });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d');
+    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
     (globalThis as any).fetch = orig;
@@ -51,7 +57,7 @@ describe('technical analyst', () => {
     const orig = globalThis.fetch;
     const fetchMock = vi.fn().mockRejectedValue(new Error('network'));
     (globalThis as any).fetch = fetchMock;
-    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d');
+    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
     (globalThis as any).fetch = orig;

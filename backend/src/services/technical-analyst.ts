@@ -1,3 +1,4 @@
+import type { FastifyBaseLogger } from 'fastify';
 import { fetchTokenIndicators } from './indicators.js';
 import { callAi, extractJson, compactJson } from '../util/ai.js';
 import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
@@ -7,6 +8,7 @@ export async function getTechnicalOutlook(
   model: string,
   apiKey: string,
   timeframe: string,
+  log: FastifyBaseLogger,
 ): Promise<AnalysisLog> {
   const indicators = await fetchTokenIndicators(token);
   const prompt = { token, timeframe, indicators };
@@ -28,9 +30,14 @@ export async function getTechnicalOutlook(
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
     const res = await callAi(body, apiKey);
-    const analysis = extractJson<Analysis>(res) ?? fallback;
+    const analysis = extractJson<Analysis>(res);
+    if (!analysis) {
+      log.error({ token, response: res }, 'technical analyst returned invalid response');
+      return { analysis: fallback, prompt: body, response: res };
+    }
     return { analysis, prompt: body, response: res };
-  } catch {
+  } catch (err) {
+    log.error({ err, token }, 'technical analyst call failed');
     return { analysis: fallback };
   }
 }

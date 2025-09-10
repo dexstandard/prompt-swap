@@ -92,30 +92,49 @@ vi.mock('../src/services/rebalance.js', () => ({
 vi.mock('../src/services/news-analyst.js', () => ({
   getTokenNewsSummary: vi
     .fn()
-    .mockImplementation((token: string) =>
-      Promise.resolve({
-        analysis: { comment: `${token} news`, score: 1 },
-        prompt: { token },
-        response: 'r',
-      }),
+    .mockImplementation(
+      (
+        token: string,
+        _model?: string,
+        _apiKey?: string,
+        _log?: FastifyBaseLogger,
+      ) =>
+        Promise.resolve({
+          analysis: { comment: `${token} news`, score: 1 },
+          prompt: { token },
+          response: 'r',
+        }),
     ),
 }));
 vi.mock('../src/services/technical-analyst.js', () => ({
-  getTechnicalOutlook: vi.fn().mockImplementation((token: string) =>
-    Promise.resolve({
-      analysis: { comment: `${token} tech`, score: 2 },
-      prompt: { token },
-      response: 'r',
-    }),
+  getTechnicalOutlook: vi.fn().mockImplementation(
+    (
+      token: string,
+      _model?: string,
+      _apiKey?: string,
+      _timeframe?: string,
+      _log?: FastifyBaseLogger,
+    ) =>
+      Promise.resolve({
+        analysis: { comment: `${token} tech`, score: 2 },
+        prompt: { token },
+        response: 'r',
+      }),
   ),
 }));
 vi.mock('../src/services/order-book-analyst.js', () => ({
-  getOrderBookAnalysis: vi.fn().mockImplementation((pair: string) =>
-    Promise.resolve({
-      analysis: { comment: `${pair} order`, score: 3 },
-      prompt: { pair },
-      response: 'r',
-    }),
+  getOrderBookAnalysis: vi.fn().mockImplementation(
+    (
+      pair: string,
+      _model?: string,
+      _apiKey?: string,
+      _log?: FastifyBaseLogger,
+    ) =>
+      Promise.resolve({
+        analysis: { comment: `${pair} order`, score: 3 },
+        prompt: { pair },
+        response: 'r',
+      }),
   ),
 }));
 vi.mock('../src/services/performance-analyst.js', () => ({

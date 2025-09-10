@@ -2,34 +2,53 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 import { getCache, clearCache } from '../src/util/cache.js';
 
-const getTokenNewsSummaryMock = vi.fn((token: string) =>
-  Promise.resolve({
-    analysis: { comment: `news ${token}`, score: 1 },
-    prompt: { token },
-    response: 'r',
-  }),
+const getTokenNewsSummaryMock = vi.fn(
+  (
+    token: string,
+    _model?: string,
+    _apiKey?: string,
+    _log?: FastifyBaseLogger,
+  ) =>
+    Promise.resolve({
+      analysis: { comment: `news ${token}`, score: 1 },
+      prompt: { token },
+      response: 'r',
+    }),
 );
 vi.mock('../src/services/news-analyst.js', () => ({
   getTokenNewsSummary: getTokenNewsSummaryMock,
 }));
 
-const getTechnicalOutlookMock = vi.fn((token: string) =>
-  Promise.resolve({
-    analysis: { comment: `tech ${token}`, score: 2 },
-    prompt: { token },
-    response: 'r',
-  }),
+const getTechnicalOutlookMock = vi.fn(
+  (
+    token: string,
+    _model?: string,
+    _apiKey?: string,
+    _timeframe?: string,
+    _log?: FastifyBaseLogger,
+  ) =>
+    Promise.resolve({
+      analysis: { comment: `tech ${token}`, score: 2 },
+      prompt: { token },
+      response: 'r',
+    }),
 );
 vi.mock('../src/services/technical-analyst.js', () => ({
   getTechnicalOutlook: getTechnicalOutlookMock,
 }));
 
-const getOrderBookAnalysisMock = vi.fn((pair: string) =>
-  Promise.resolve({
-    analysis: { comment: `order ${pair}`, score: 3 },
-    prompt: { pair },
-    response: 'r',
-  }),
+const getOrderBookAnalysisMock = vi.fn(
+  (
+    pair: string,
+    _model?: string,
+    _apiKey?: string,
+    _log?: FastifyBaseLogger,
+  ) =>
+    Promise.resolve({
+      analysis: { comment: `order ${pair}`, score: 3 },
+      prompt: { pair },
+      response: 'r',
+    }),
 );
 vi.mock('../src/services/order-book-analyst.js', () => ({
   getOrderBookAnalysis: getOrderBookAnalysisMock,
