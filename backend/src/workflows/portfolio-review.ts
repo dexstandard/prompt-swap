@@ -5,7 +5,7 @@ import { getOrderBookAnalysis } from '../services/order-book-analyst.js';
 import { getPerformanceAnalysis } from '../services/performance-analyst.js';
 import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';
 import { setCache, getCache, acquireLock, releaseLock } from '../util/cache.js';
-import { callTraderAgent } from '../util/ai.js';
+import { callAi, developerInstructions, rebalanceResponseSchema } from '../util/ai.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import type { Analysis } from '../services/types.js';
 import { getRecentLimitOrders } from '../repos/limit-orders.js';
@@ -268,7 +268,7 @@ export async function runMainTrader(
         `performance:${model}:${agentId}:${runId}`,
       );
       const prompt = { portfolioId, reports, performance };
-      const res = await callTraderAgent(model, prompt, apiKey);
+      const res = await callAi(model, developerInstructions, rebalanceResponseSchema, prompt, apiKey);
       await insertReviewRawLog({ agentId, prompt, response: res });
       const decision = extractResult(res);
       if (!decision) {

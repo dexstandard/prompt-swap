@@ -1,6 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { callAi, extractJson, compactJson } from '../util/ai.js';
-import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
+import { callAi, extractJson } from '../util/ai.js';
+import { type AnalysisLog, type Analysis, analysisSchema } from './types.js';
 
 export async function getPerformanceAnalysis(
   input: unknown,
@@ -15,30 +15,17 @@ export async function getPerformanceAnalysis(
     ? (input as any).orders
     : [];
   if (reports.length === 0 && orders.length === 0) return { analysis: null };
-  const body = {
-    model,
-    input: compactJson(input),
-    instructions:
-        'You are a performance analyst. Review the provided analyst reports and recent order outcomes to evaluate how well the trading team performed. Return a brief comment and a performance score from 0-10.',
-    max_output_tokens: 255,
-    text: {
-      format: {
-        type: 'json_schema',
-        name: 'analysis',
-        strict: true,
-        schema: analysisSchema,
-      },
-    },
-  };
+  const instructions =
+    'You are a performance analyst. Review the provided analyst reports and recent order outcomes to evaluate how well the trading team performed. Return a brief comment and a performance score from 0-10.';
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
-    const res = await callAi(body, apiKey);
+    const res = await callAi(model, instructions, analysisSchema, input, apiKey);
     const analysis = extractJson<Analysis>(res);
     if (!analysis) {
       log.error({ input, response: res }, 'performance analyst returned invalid response');
-      return { analysis: fallback, prompt: body, response: res };
+      return { analysis: fallback, prompt: { instructions, input }, response: res };
     }
-    return { analysis, prompt: body, response: res };
+    return { analysis, prompt: { instructions, input }, response: res };
   } catch (err) {
     log.error({ err }, 'performance analyst call failed');
     return { analysis: fallback };

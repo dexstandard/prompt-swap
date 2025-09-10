@@ -1,6 +1,6 @@
 import type { Analysis } from '../services/types.js';
 
-const developerInstructions = [
+export const developerInstructions = [
   '- You lead a crypto analyst team (news, technical, order-book). Reports from each member are attached.',
   '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
   '- Decide whether to rebalance based on portfolio, market data, and analyst reports.',
@@ -92,7 +92,7 @@ export interface RebalancePrompt {
   performance?: Analysis | null;
 }
 
-const rebalanceResponseSchema = {
+export const rebalanceResponseSchema = {
     type: 'object',
     properties: {
       result: {
@@ -131,7 +131,27 @@ const rebalanceResponseSchema = {
     additionalProperties: false,
   };
 
-export async function callAi(body: any, apiKey: string): Promise<string> {
+export async function callAi(
+  model: string,
+  developerInstructions: string,
+  schema: unknown,
+  input: unknown,
+  apiKey: string,
+): Promise<string> {
+  const body = {
+    model,
+    input: compactJson(input),
+    instructions: developerInstructions,
+    tools: [{ type: 'web_search_preview' }],
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'rebalance_response',
+        strict: true,
+        schema,
+      },
+    },
+  };
   const res = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -169,24 +189,3 @@ export function extractJson<T>(res: string): T | null {
   }
 }
 
-export async function callTraderAgent(
-  model: string,
-  input: unknown,
-  apiKey: string,
-): Promise<string> {
-  const body = {
-    model,
-    input: compactJson(input),
-    instructions: developerInstructions,
-    tools: [{ type: 'web_search_preview' }],
-    text: {
-      format: {
-        type: 'json_schema',
-        name: 'rebalance_response',
-        strict: true,
-        schema: rebalanceResponseSchema,
-      },
-    },
-  };
-  return callAi(body, apiKey);
-}

@@ -15,7 +15,9 @@ const sampleIndicators = {
 };
 
 vi.mock('../src/util/ai.js', () => ({
-  callTraderAgent: vi.fn().mockResolvedValue('ok'),
+  callAi: vi.fn().mockResolvedValue('ok'),
+  developerInstructions: '',
+  rebalanceResponseSchema: {},
 }));
 
 vi.mock('../src/util/crypto.js', () => ({
