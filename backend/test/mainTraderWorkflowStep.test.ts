@@ -74,7 +74,7 @@ describe('main trader step', () => {
   });
 
   it('runs traders and aggregates analyses', async () => {
-    const { runMainTrader } = await import('../src/agents/portfolio-review.js');
+    const { runMainTrader } = await import('../src/agents/main-trader.js');
     const decision = await runMainTrader(
       createLogger(),
       'gpt',

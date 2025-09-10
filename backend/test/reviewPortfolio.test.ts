@@ -51,7 +51,7 @@ const flatTimeseries = {
 };
 
 const runMainTrader = vi.fn();
-vi.mock('../src/agents/portfolio-review.js', async (importOriginal) => {
+vi.mock('../src/agents/main-trader.js', async (importOriginal) => {
   const actual = await importOriginal();
   return { ...actual, runMainTrader };
 });
