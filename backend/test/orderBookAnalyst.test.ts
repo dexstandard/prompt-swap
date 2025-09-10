@@ -26,6 +26,7 @@ vi.mock('../src/util/ai.js', () => ({
   callAi: callAiMock,
   extractJson: (res: string) =>
     JSON.parse(JSON.parse(res).output[0].content[0].text),
+  compactJson: (v: unknown) => JSON.stringify(v),
 }));
 
 describe('order book analyst service', () => {
