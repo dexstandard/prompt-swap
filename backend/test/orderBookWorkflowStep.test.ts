@@ -1,18 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 
-const callAiMock = vi.fn(() => Promise.resolve('res'));
-const extractJsonMock = vi.fn(() => ({ comment: 'analysis for BTCUSDT', score: 3 }));
-vi.mock('../src/util/ai.js', () => ({
-  callAi: callAiMock,
-  extractJson: extractJsonMock,
-  compactJson: (v: unknown) => JSON.stringify(v),
-}));
-
-vi.mock('../src/services/derivatives.js', () => ({
-  fetchOrderBook: vi.fn(() => Promise.resolve({ bids: [], asks: [] })),
-}));
-
 vi.mock('../src/util/tokens.js', () => ({
   TOKEN_SYMBOLS: ['BTC'],
   isStablecoin: () => false,
@@ -30,10 +18,15 @@ function createLogger(): FastifyBaseLogger {
 
 describe('order book analyst step', () => {
   it('fetches order book analysis per pair', async () => {
-    const { runOrderBookAnalyst } = await import('../src/agents/order-book-analyst.js');
-    const analyses = await runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'agent1');
+    const mod = await import('../src/agents/order-book-analyst.js');
+    vi.spyOn(mod, 'getOrderBookAnalysis').mockResolvedValue({
+      analysis: { comment: 'analysis for BTCUSDT', score: 3 },
+      prompt: { instructions: '', input: {} },
+      response: 'res',
+    });
+    const analyses = await mod.runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'agent1');
     expect(analyses.BTC?.comment).toBe('analysis for BTCUSDT');
-    expect(callAiMock).toHaveBeenCalled();
+    expect(mod.getOrderBookAnalysis).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });
