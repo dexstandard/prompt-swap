@@ -1,5 +1,5 @@
 import { getNewsByToken } from '../repos/news.js';
-import { callAi, extractJson } from '../util/ai.js';
+import { callAi, extractJson, compactJson } from '../util/ai.js';
 import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
 
 export async function getTokenNewsSummary(
@@ -13,14 +13,14 @@ export async function getTokenNewsSummary(
   const prompt = { token, headlines };
   const body = {
     model,
-    input: prompt,
+    input: compactJson(prompt),
     instructions:
       `You are a crypto market news analyst. Using web search and the headlines in input, write a short report for a crypto trader about ${token}. Include a bullishness score from 0-10 and highlight key events.`,
     tools: [{ type: 'web_search_preview' }],
     max_output_tokens: 255,
     text: {
-      format: 'json_schema',
-      json_schema: {
+      format: {
+        type: 'json_schema',
         name: 'analysis',
         strict: true,
         schema: analysisSchema,

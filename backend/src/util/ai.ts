@@ -132,12 +132,6 @@ const rebalanceResponseSchema = {
   };
 
 export async function callAi(body: any, apiKey: string): Promise<string> {
-  if (body && typeof body === 'object' && 'input' in body) {
-    const val = (body as any).input;
-    if (val !== null && typeof val !== 'string' && !Array.isArray(val)) {
-      (body as any).input = compactJson(val);
-    }
-  }
   const res = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -182,12 +176,12 @@ export async function callTraderAgent(
 ): Promise<string> {
   const body = {
     model,
-    input,
+    input: compactJson(input),
     instructions: developerInstructions,
     tools: [{ type: 'web_search_preview' }],
     text: {
-      format: 'json_schema',
-      json_schema: {
+      format: {
+        type: 'json_schema',
         name: 'rebalance_response',
         strict: true,
         schema: rebalanceResponseSchema,
