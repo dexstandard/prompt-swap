@@ -32,7 +32,6 @@ export async function getTokenNewsSummary(
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
     const res = await callAi(body, apiKey);
-    log.debug({ token, body, response: res }, 'news analyst response');
     const analysis = extractJson<Analysis>(res);
     if (!analysis) {
       log.error({ token, response: res }, 'news analyst returned invalid response');
