@@ -35,7 +35,7 @@ export async function getPerformanceAnalysis(
     const res = await callAi(body, apiKey);
     const analysis = extractJson<Analysis>(res);
     if (!analysis) {
-      log.error({ input, res }, 'performance analyst returned invalid response');
+      log.error({ input, response: res }, 'performance analyst returned invalid response');
       return { analysis: fallback, prompt: body, response: res };
     }
     return { analysis, prompt: body, response: res };

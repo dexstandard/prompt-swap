@@ -31,7 +31,7 @@ export async function getOrderBookAnalysis(
     const res = await callAi(body, apiKey);
     const analysis = extractJson<Analysis>(res);
     if (!analysis) {
-      log.error({ pair, res }, 'order book analyst returned invalid response');
+      log.error({ pair, response: res }, 'order book analyst returned invalid response');
       return { analysis: fallback, prompt: body, response: res };
     }
     return { analysis, prompt: body, response: res };
