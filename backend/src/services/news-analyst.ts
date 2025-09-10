@@ -19,8 +19,9 @@ export async function getTokenNewsSummary(
     tools: [{ type: 'web_search_preview' }],
     max_output_tokens: 255,
     text: {
-      format: {
-        type: 'json_schema',
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
         json_schema: {
           name: 'analysis',
           strict: true,

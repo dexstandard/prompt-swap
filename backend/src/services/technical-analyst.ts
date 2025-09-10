@@ -17,8 +17,9 @@ export async function getTechnicalOutlook(
       `You are a crypto technical analyst. Using indicators in input, write a short outlook for a crypto trader about ${token} on timeframe ${timeframe}. Include a bullishness score from 0-10 and key signals.`,
     max_output_tokens: 255,
     text: {
-      format: {
-        type: 'json_schema',
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
         json_schema: {
           name: 'analysis',
           strict: true,

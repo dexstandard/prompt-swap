@@ -225,6 +225,8 @@ export async function runMainTrader(
     runPerformanceAnalyzer(log, model, apiKey, timeframe, agentId, runId),
   ]);
 
+  await runPerformanceAnalyzer(log, model, apiKey, timeframe, agentId, runId);
+
   await runWithCache(
     log,
     `portfolio:${model}:${portfolioId}:${runId}`,
