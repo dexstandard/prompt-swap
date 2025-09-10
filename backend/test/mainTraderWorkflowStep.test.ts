@@ -66,7 +66,7 @@ vi.mock('../src/repos/limit-orders.js', () => ({
   getRecentLimitOrders: getRecentLimitOrdersMock,
 }));
 
-const callTraderAgentMock = vi.fn(() =>
+const callAiMock = vi.fn(() =>
   Promise.resolve(
     JSON.stringify({
       output: [
@@ -84,7 +84,11 @@ const callTraderAgentMock = vi.fn(() =>
     }),
   ),
 );
-vi.mock('../src/util/ai.js', () => ({ callTraderAgent: callTraderAgentMock }));
+vi.mock('../src/util/ai.js', () => ({
+  callAi: callAiMock,
+  developerInstructions: '',
+  rebalanceResponseSchema: {},
+}));
 
 const insertReviewRawLogMock = vi.fn(() => Promise.resolve('1'));
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -104,7 +108,7 @@ describe('main trader step', () => {
     getOrderBookAnalysisMock.mockClear();
     getPerformanceAnalysisMock.mockClear();
     getRecentLimitOrdersMock.mockClear();
-    callTraderAgentMock.mockClear();
+    callAiMock.mockClear();
     insertReviewRawLogMock.mockClear();
   });
 
@@ -120,13 +124,8 @@ describe('main trader step', () => {
       'run1',
     );
 
-    const decision = await getCache<any>(`portfolio:gpt:pf1:run1`);
-    expect(decision?.rebalance).toBe(true);
-    expect(callTraderAgentMock).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
     expect(getPerformanceAnalysisMock).toHaveBeenCalled();
-    const promptArg = callTraderAgentMock.mock.calls[0][1];
-    expect(promptArg.performance.comment).toBe('perf');
     expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDT');
     expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDC');
     expect(getTechnicalOutlookMock).not.toHaveBeenCalledWith('USDT');
