@@ -15,9 +15,15 @@ const getPerformanceAnalysisMock = vi.fn(
       response: 'r',
     }),
 );
-vi.mock('../src/services/performance-analyst.js', () => ({
-  getPerformanceAnalysis: getPerformanceAnalysisMock,
-}));
+vi.mock('../src/services/performance-analyst.js', async () => {
+  const actual = await vi.importActual<typeof import('../src/services/performance-analyst.js')>(
+    '../src/services/performance-analyst.js',
+  );
+  return {
+    ...actual,
+    getPerformanceAnalysis: getPerformanceAnalysisMock,
+  };
+});
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -50,7 +56,7 @@ describe('performance analyzer step', () => {
   });
 
   it('fetches performance analysis', async () => {
-    const { runPerformanceAnalyzer } = await import('../src/agents/portfolio-review.js');
+    const { runPerformanceAnalyzer } = await import('../src/services/performance-analyst.js');
     const reports = [
       {
         token: 'BTC',
@@ -63,7 +69,6 @@ describe('performance analyzer step', () => {
       createLogger(),
       'gpt',
       'key',
-      '1d',
       'agent1',
       reports,
     );

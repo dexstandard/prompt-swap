@@ -1,68 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 
-const getTokenNewsSummaryMock = vi.fn(
-  (
-    token: string,
-    _model?: string,
-    _apiKey?: string,
-    _log?: FastifyBaseLogger,
-  ) =>
-    Promise.resolve({
-      analysis: { comment: `news ${token}`, score: 1 },
-      prompt: { token },
-      response: 'r',
-    }),
+const runNewsAnalystMock = vi.fn(() =>
+  Promise.resolve({ BTC: { comment: 'news BTC', score: 1 } }),
 );
 vi.mock('../src/services/news-analyst.js', () => ({
-  getTokenNewsSummary: getTokenNewsSummaryMock,
+  runNewsAnalyst: runNewsAnalystMock,
 }));
 
-const getTechnicalOutlookMock = vi.fn(
-  (
-    token: string,
-    _model?: string,
-    _apiKey?: string,
-    _timeframe?: string,
-    _log?: FastifyBaseLogger,
-  ) =>
-    Promise.resolve({
-      analysis: { comment: `tech ${token}`, score: 2 },
-      prompt: { token },
-      response: 'r',
-    }),
+const runTechnicalAnalystMock = vi.fn(() =>
+  Promise.resolve({ BTC: { comment: 'tech BTC', score: 2 } }),
 );
 vi.mock('../src/services/technical-analyst.js', () => ({
-  getTechnicalOutlook: getTechnicalOutlookMock,
+  runTechnicalAnalyst: runTechnicalAnalystMock,
 }));
 
-const getOrderBookAnalysisMock = vi.fn(
-  (
-    pair: string,
-    _model?: string,
-    _apiKey?: string,
-    _log?: FastifyBaseLogger,
-  ) =>
-    Promise.resolve({
-      analysis: { comment: `order ${pair}`, score: 3 },
-      prompt: { pair },
-      response: 'r',
-    }),
+const runOrderBookAnalystMock = vi.fn(() =>
+  Promise.resolve({ BTC: { comment: 'order BTCUSDT', score: 3 } }),
 );
 vi.mock('../src/services/order-book-analyst.js', () => ({
-  getOrderBookAnalysis: getOrderBookAnalysisMock,
+  runOrderBookAnalyst: runOrderBookAnalystMock,
 }));
 
-const getPerformanceAnalysisMock = vi.fn(() =>
-  Promise.resolve({ analysis: { comment: 'perf', score: 4 }, prompt: { a: 1 }, response: 'r' }),
+const runPerformanceAnalyzerMock = vi.fn(() =>
+  Promise.resolve({ comment: 'perf', score: 4 }),
 );
 vi.mock('../src/services/performance-analyst.js', () => ({
-  getPerformanceAnalysis: getPerformanceAnalysisMock,
-}));
-
-const getRecentLimitOrdersMock = vi.fn(() => Promise.resolve([]));
-vi.mock('../src/repos/limit-orders.js', () => ({
-  getRecentLimitOrders: getRecentLimitOrdersMock,
+  runPerformanceAnalyzer: runPerformanceAnalyzerMock,
 }));
 
 const callAiMock = vi.fn(() =>
@@ -101,16 +65,15 @@ function createLogger(): FastifyBaseLogger {
 
 describe('main trader step', () => {
   beforeEach(() => {
-    getTokenNewsSummaryMock.mockClear();
-    getTechnicalOutlookMock.mockClear();
-    getOrderBookAnalysisMock.mockClear();
-    getPerformanceAnalysisMock.mockClear();
-    getRecentLimitOrdersMock.mockClear();
+    runNewsAnalystMock.mockClear();
+    runTechnicalAnalystMock.mockClear();
+    runOrderBookAnalystMock.mockClear();
+    runPerformanceAnalyzerMock.mockClear();
     callAiMock.mockClear();
     insertReviewRawLogMock.mockClear();
   });
 
-  it('runs traders and skips stablecoins', async () => {
+  it('runs traders and aggregates analyses', async () => {
     const { runMainTrader } = await import('../src/agents/portfolio-review.js');
     const decision = await runMainTrader(
       createLogger(),
@@ -123,10 +86,9 @@ describe('main trader step', () => {
 
     expect(decision?.rebalance).toBe(true);
     expect(insertReviewRawLogMock).toHaveBeenCalled();
-    expect(getPerformanceAnalysisMock).toHaveBeenCalled();
-    expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDT');
-    expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDC');
-    expect(getTechnicalOutlookMock).not.toHaveBeenCalledWith('USDT');
-    expect(getTechnicalOutlookMock).not.toHaveBeenCalledWith('USDC');
+    expect(runPerformanceAnalyzerMock).toHaveBeenCalled();
+    expect(runNewsAnalystMock).toHaveBeenCalled();
+    expect(runTechnicalAnalystMock).toHaveBeenCalled();
+    expect(runOrderBookAnalystMock).toHaveBeenCalled();
   });
 });

@@ -9,9 +9,15 @@ const getOrderBookAnalysisMock = vi.fn((pair: string) =>
     response: 'r',
   }),
 );
-vi.mock('../src/services/order-book-analyst.js', () => ({
-  getOrderBookAnalysis: getOrderBookAnalysisMock,
-}));
+vi.mock('../src/services/order-book-analyst.js', async () => {
+  const actual = await vi.importActual<typeof import('../src/services/order-book-analyst.js')>(
+    '../src/services/order-book-analyst.js',
+  );
+  return {
+    ...actual,
+    getOrderBookAnalysis: getOrderBookAnalysisMock,
+  };
+});
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -30,7 +36,7 @@ describe('order book analyst step', () => {
   });
 
   it('fetches order book analysis per pair', async () => {
-    const { runOrderBookAnalyst } = await import('../src/agents/portfolio-review.js');
+    const { runOrderBookAnalyst } = await import('../src/services/order-book-analyst.js');
     const analyses = await runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'agent1');
     expect(analyses.BTC?.comment).toBe('analysis for BTCUSDT');
     expect(insertReviewRawLogMock).toHaveBeenCalled();

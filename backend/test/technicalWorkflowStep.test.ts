@@ -9,9 +9,15 @@ const getTechnicalOutlookMock = vi.fn((token: string) =>
     response: 'r',
   }),
 );
-vi.mock('../src/services/technical-analyst.js', () => ({
-  getTechnicalOutlook: getTechnicalOutlookMock,
-}));
+vi.mock('../src/services/technical-analyst.js', async () => {
+  const actual = await vi.importActual<typeof import('../src/services/technical-analyst.js')>(
+    '../src/services/technical-analyst.js',
+  );
+  return {
+    ...actual,
+    getTechnicalOutlook: getTechnicalOutlookMock,
+  };
+});
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -30,7 +36,7 @@ describe('technical analyst step', () => {
   });
 
   it('fetches technical outlook per token', async () => {
-    const { runTechnicalAnalyst } = await import('../src/agents/portfolio-review.js');
+    const { runTechnicalAnalyst } = await import('../src/services/technical-analyst.js');
     const outlooks = await runTechnicalAnalyst(
       createLogger(),
       'gpt',

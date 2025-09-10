@@ -1,9 +1,9 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { getTokenNewsSummary } from '../services/news-analyst.js';
-import { getTechnicalOutlook } from '../services/technical-analyst.js';
-import { getOrderBookAnalysis } from '../services/order-book-analyst.js';
-import { getPerformanceAnalysis, buildPreviousOrders } from '../services/performance-analyst.js';
-import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';
+import { runNewsAnalyst } from '../services/news-analyst.js';
+import { runTechnicalAnalyst } from '../services/technical-analyst.js';
+import { runOrderBookAnalyst } from '../services/order-book-analyst.js';
+import { runPerformanceAnalyzer, buildPreviousOrders } from '../services/performance-analyst.js';
+import { TOKEN_SYMBOLS } from '../util/tokens.js';
 import {
   callAi,
   developerInstructions,
@@ -12,9 +12,7 @@ import {
   type PreviousResponse,
 } from '../util/ai.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
-import type { Analysis } from '../services/types.js';
 import {
-  getRecentLimitOrders,
   getOpenLimitOrdersForAgent,
   updateLimitOrderStatus,
 } from '../repos/limit-orders.js';
@@ -30,128 +28,6 @@ import {
   parseBinanceError,
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
-
-/**
- * Step 1: News Analyst
- * Loads token list and fetches news summaries per token.
- */
-export async function runNewsAnalyst(
-  log: FastifyBaseLogger,
-  model: string,
-  apiKey: string,
-  agentId: string,
-): Promise<Record<string, Analysis | null>> {
-  const summaries: Record<string, Analysis | null> = {};
-  for (const token of TOKEN_SYMBOLS) {
-    if (isStablecoin(token)) continue;
-    const { analysis, prompt, response } = await getTokenNewsSummary(
-      token,
-      model,
-      apiKey,
-      log,
-    );
-    if (prompt && response)
-      await insertReviewRawLog({ agentId, prompt, response });
-    summaries[token] = analysis;
-  }
-  return summaries;
-}
-
-/**
- * Step 2: Technical Analyst
- * Computes technical indicators per token.
- */
-export async function runTechnicalAnalyst(
-  log: FastifyBaseLogger,
-  model: string,
-  apiKey: string,
-  timeframe: string,
-  agentId: string,
-): Promise<Record<string, Analysis | null>> {
-  const outlooks: Record<string, Analysis | null> = {};
-  for (const token of TOKEN_SYMBOLS) {
-    if (isStablecoin(token)) continue;
-    const { analysis, prompt, response } = await getTechnicalOutlook(
-      token,
-      model,
-      apiKey,
-      timeframe,
-      log,
-    );
-    if (prompt && response)
-      await insertReviewRawLog({ agentId, prompt, response });
-    outlooks[token] = analysis;
-  }
-  return outlooks;
-}
-
-/**
- * Step 3: Order Book Analyst
- * Analyzes order book snapshots per trading pair.
- */
-export async function runOrderBookAnalyst(
-  log: FastifyBaseLogger,
-  model: string,
-  apiKey: string,
-  agentId: string,
-): Promise<Record<string, Analysis | null>> {
-  const books: Record<string, Analysis | null> = {};
-  for (const token of TOKEN_SYMBOLS) {
-    if (isStablecoin(token)) continue;
-    const pair = `${token}USDT`;
-    const { analysis, prompt, response } = await getOrderBookAnalysis(
-      pair,
-      model,
-      apiKey,
-      log,
-    );
-    if (prompt && response)
-      await insertReviewRawLog({ agentId, prompt, response });
-    books[token] = analysis;
-  }
-  return books;
-}
-
-/**
- * Step 4: Performance Analyzer
- * Reviews prior analyses and recent order outcomes.
- */
-export async function runPerformanceAnalyzer(
-  log: FastifyBaseLogger,
-  model: string,
-  apiKey: string,
-  timeframe: string,
-  agentId: string,
-  reports: {
-    token: string;
-    news: Analysis | null;
-    tech: Analysis | null;
-    orderbook: Analysis | null;
-  }[],
-): Promise<Analysis | null> {
-  try {
-    const ordersRaw = await getRecentLimitOrders(agentId, 20);
-    const orders = ordersRaw
-      .filter((o) => o.status === 'canceled' || o.status === 'filled')
-      .map((o) => ({
-        status: o.status,
-        created_at: o.created_at.toISOString(),
-        planned: JSON.parse(o.planned_json),
-      }));
-    const { analysis, prompt, response } = await getPerformanceAnalysis(
-      { reports, orders },
-      model,
-      apiKey,
-      log,
-    );
-    if (prompt && response)
-      await insertReviewRawLog({ agentId, prompt, response });
-    return analysis ?? null;
-  } catch (err) {
-    log.error({ err }, 'performance analyzer step failed');
-    return null;
-  }
-}
 
 function extractResult(res: string): any {
   try {
@@ -196,7 +72,6 @@ export async function runMainTrader(
     log,
     model,
     apiKey,
-    timeframe,
     agentId,
     reports,
   );

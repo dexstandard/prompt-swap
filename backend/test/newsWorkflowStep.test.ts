@@ -10,9 +10,15 @@ const getTokenNewsSummaryMock = vi.fn(
       response: 'r',
     }),
 );
-vi.mock('../src/services/news-analyst.js', () => ({
-  getTokenNewsSummary: getTokenNewsSummaryMock,
-}));
+vi.mock('../src/services/news-analyst.js', async () => {
+  const actual = await vi.importActual<typeof import('../src/services/news-analyst.js')>(
+    '../src/services/news-analyst.js',
+  );
+  return {
+    ...actual,
+    getTokenNewsSummary: getTokenNewsSummaryMock,
+  };
+});
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -31,7 +37,7 @@ describe('news analyst step', () => {
   });
 
   it('fetches news summaries', async () => {
-    const { runNewsAnalyst } = await import('../src/agents/portfolio-review.js');
+    const { runNewsAnalyst } = await import('../src/services/news-analyst.js');
     const summaries = await runNewsAnalyst(createLogger(), 'gpt', 'key', 'agent1');
     expect(summaries.BTC?.comment).toBe('summary for BTC');
     expect(insertReviewRawLogMock).toHaveBeenCalled();
