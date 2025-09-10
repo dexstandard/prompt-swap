@@ -68,7 +68,6 @@ type PromptCache = {
   news: Map<string, AnalysisLog>;
   tech: Map<string, AnalysisLog>;
   orderbook: Map<string, AnalysisLog>;
-  performance: Map<string, AnalysisLog>;
   fearGreed?: FearGreedIndex;
 };
 
@@ -103,7 +102,6 @@ async function runAgents(
     news: new Map(),
     tech: new Map(),
     orderbook: new Map(),
-    performance: new Map(),
     fearGreed: undefined,
   };
 
@@ -215,12 +213,14 @@ async function prepareAgents(
         },
       ];
 
-      const performanceLog = await buildPerformancePrompt(
+      const performanceLog = await buildPerformanceReviewPrompt(
         row,
         reports,
+        balances,
+        price1,
+        price2,
         key,
         log,
-        cache,
       );
 
       const marketData = assembleMarketData(
@@ -438,16 +438,15 @@ async function buildOrderBookPrompt(
   return out;
 }
 
-async function buildPerformancePrompt(
+async function buildPerformanceReviewPrompt(
   row: ActiveAgentRow,
   reports: { token: string; news: any; tech: any; orderbook: any }[],
+  balances: { token1Balance: number; token2Balance: number },
+  price1: number,
+  price2: number,
   apiKey: string,
   log: FastifyBaseLogger,
-  cache: PromptCache,
 ): Promise<AnalysisLog> {
-  const pairKey = `${row.tokens[0].token}-${row.tokens[1].token}`;
-  if (cache.performance.has(pairKey)) return cache.performance.get(pairKey)!;
-
   const ordersRaw = await getRecentLimitOrders(row.id, 20);
   const orders = ordersRaw
     .filter((o) => o.status === 'canceled' || o.status === 'filled')
@@ -456,13 +455,21 @@ async function buildPerformancePrompt(
       created_at: o.created_at.toISOString(),
       planned: JSON.parse(o.planned_json),
     }));
-  const res = await getPerformanceAnalysis({ reports, orders }, row.model, apiKey)
-    .catch((err) => {
-      log.error({ err }, 'failed to fetch performance analysis');
-      return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-    });
-  cache.performance.set(pairKey, res);
-  return res;
+  const initialUsd = row.tokens.reduce(
+    (sum, t) => sum + t.min_allocation,
+    0,
+  );
+  const currentUsd =
+    balances.token1Balance * price1 + balances.token2Balance * price2;
+  const pnl = currentUsd - initialUsd;
+  return await getPerformanceAnalysis(
+    { reports, orders, initial_usd: initialUsd, current_usd: currentUsd, pnl },
+    row.model,
+    apiKey,
+  ).catch((err) => {
+    log.error({ err }, 'failed to fetch performance analysis');
+    return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+  });
 }
 
 async function fetchPromptData(

@@ -283,6 +283,10 @@ describe('reviewPortfolio', () => {
       },
     ]);
     expect(args[1].performance).toEqual({ comment: 'perf', score: 4 });
+    const perfArgs = vi.mocked(getPerformanceAnalysis).mock.calls[0][0];
+    expect(perfArgs.initial_usd).toBe(30);
+    expect(perfArgs.current_usd).toBe(350);
+    expect(perfArgs.pnl).toBe(320);
   });
 
   it('saves prompt and response to exec log', async () => {
