@@ -1,4 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { FastifyBaseLogger } from 'fastify';
+
+function createLogger(): FastifyBaseLogger {
+  const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
+  return log;
+}
 
 const callAiMock = vi.fn();
 const extractJsonMock = vi.fn();
@@ -14,7 +20,12 @@ describe('performance analyst service', () => {
     callAiMock.mockResolvedValue('bad');
     extractJsonMock.mockReturnValue(null);
     const { getPerformanceAnalysis } = await import('../src/services/performance-analyst.js');
-    const res = await getPerformanceAnalysis({ reports: [{}], orders: [] }, 'gpt', 'key');
+    const res = await getPerformanceAnalysis(
+      { reports: [{}], orders: [] },
+      'gpt',
+      'key',
+      createLogger(),
+    );
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
   });
@@ -22,7 +33,12 @@ describe('performance analyst service', () => {
   it('falls back when AI request fails', async () => {
     callAiMock.mockRejectedValue(new Error('network'));
     const { getPerformanceAnalysis } = await import('../src/services/performance-analyst.js');
-    const res = await getPerformanceAnalysis({ reports: [{}], orders: [] }, 'gpt', 'key');
+    const res = await getPerformanceAnalysis(
+      { reports: [{}], orders: [] },
+      'gpt',
+      'key',
+      createLogger(),
+    );
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
   });

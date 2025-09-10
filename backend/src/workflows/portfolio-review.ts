@@ -67,6 +67,7 @@ export async function runNewsAnalyst(
         token,
         model,
         apiKey,
+        log,
       );
       if (prompt && response)
         await insertReviewRawLog({ agentId, prompt, response });
@@ -99,6 +100,7 @@ export async function runTechnicalAnalyst(
         model,
         apiKey,
         timeframe,
+        log,
       );
       if (prompt && response)
         await insertReviewRawLog({ agentId, prompt, response });
@@ -132,6 +134,7 @@ export async function runOrderBookAnalyst(
         pair,
         model,
         apiKey,
+        log,
       );
       if (prompt && response)
         await insertReviewRawLog({ agentId, prompt, response });
@@ -184,6 +187,7 @@ export async function runPerformanceAnalyzer(
       { reports, orders },
       model,
       apiKey,
+      log,
     );
     if (prompt && response)
       await insertReviewRawLog({ agentId, prompt, response });
@@ -243,15 +247,21 @@ export async function runMainTrader(
         const news = isStablecoin(token)
           ? null
           : await getCache<Analysis>(`news:${model}:${token}:${runId}`);
+        if (!news || news.comment === 'Analysis unavailable')
+          log.error({ token }, 'news analysis unavailable');
         const tech = isStablecoin(token)
           ? null
           : await getCache<Analysis>(
               `tech:${model}:${token}:${timeframe}:${runId}`,
             );
+        if (!tech || tech.comment === 'Analysis unavailable')
+          log.error({ token }, 'technical analysis unavailable');
         const pair = `${token}USDT`;
         const orderbook = isStablecoin(token)
           ? null
           : await getCache<Analysis>(`orderbook:${model}:${pair}:${runId}`);
+        if (!isStablecoin(token) && (!orderbook || orderbook.comment === 'Analysis unavailable'))
+          log.error({ pair }, 'order book analysis unavailable');
         reports.push({ token, news, tech, orderbook });
       }
       const performance = await getCache<Analysis>(

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { FastifyBaseLogger } from 'fastify';
 import { db } from '../src/db/index.js';
+
+function createLogger(): FastifyBaseLogger {
+  const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
+  return log;
+}
 
 const responseJson = JSON.stringify({
   object: 'response',
@@ -27,7 +33,7 @@ describe('news analyst', () => {
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
-    const res = await getTokenNewsSummary('BTC', 'gpt', 'key');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('summary text');
     expect(res.prompt).toBeTruthy();
     expect(res.response).toBe(responseJson);
@@ -40,7 +46,7 @@ describe('news analyst', () => {
     const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
     const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
-    const res = await getTokenNewsSummary('DOGE', 'gpt', 'key');
+    const res = await getTokenNewsSummary('DOGE', 'gpt', 'key', createLogger());
     expect(res.analysis).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
     (globalThis as any).fetch = orig;
@@ -56,7 +62,7 @@ describe('news analyst', () => {
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
-    const res = await getTokenNewsSummary('BTC', 'gpt', 'key');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
     (globalThis as any).fetch = orig;
@@ -70,7 +76,7 @@ describe('news analyst', () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('network'));
     (globalThis as any).fetch = fetchMock;
     const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
-    const res = await getTokenNewsSummary('BTC', 'gpt', 'key');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
     (globalThis as any).fetch = orig;
