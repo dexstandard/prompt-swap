@@ -1,22 +1,20 @@
-import { getNewsByToken } from '../repos/news.js';
+import { fetchTokenIndicators } from './indicators.js';
 import { callAi, compactJson, extractJson } from '../util/ai.js';
 import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
 
-export async function getTokenNewsSummary(
+export async function getTechnicalOutlook(
   token: string,
   model: string,
   apiKey: string,
+  timeframe: string,
 ): Promise<AnalysisLog> {
-  const items = await getNewsByToken(token, 5);
-  if (!items.length) return { analysis: null };
-  const headlines = items.map((i) => `- ${i.title} (${i.link})`).join('\n');
-  const prompt = { token, headlines };
+  const indicators = await fetchTokenIndicators(token);
+  const prompt = { token, timeframe, indicators };
   const body = {
     model,
     input: compactJson(prompt),
     instructions:
-      `You are a crypto market news analyst. Using web search and the headlines in input, write a short report for a crypto trader about ${token}. Include a bullishness score from 0-10 and highlight key events.`,
-    tools: [{ type: 'web_search_preview' }],
+      `You are a crypto technical analyst. Using indicators in input, write a short outlook for a crypto trader about ${token} on timeframe ${timeframe}. Include a bullishness score from 0-10 and key signals.`,
     text: {
       max_output_tokens: 255,
       format: {

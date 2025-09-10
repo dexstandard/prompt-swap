@@ -1,5 +1,7 @@
 const developerInstructions = [
-  '- Decide whether to rebalance based on portfolio and market data.',
+  '- You lead a crypto analyst team (news, technical, order-book). Reports from each member are attached.',
+  '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
+  '- Decide whether to rebalance based on portfolio, market data, and analyst reports.',
   '- If rebalancing, return {rebalance:true,newAllocation:0-100 for first token,shortReport}.',
   '- If not, return {rebalance:false,shortReport}.',
   '- shortReport ≤255 chars.',
@@ -132,7 +134,7 @@ export async function callAi(body: unknown, apiKey: string): Promise<string> {
   return await res.text();
 }
 
-function compactJson(value: unknown): string {
+export function compactJson(value: unknown): string {
   if (typeof value === 'string') {
     try {
       return JSON.stringify(JSON.parse(value));
@@ -143,9 +145,22 @@ function compactJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export async function callRebalancingAgent(
+export function extractJson<T>(res: string): T | null {
+  try {
+    const json = JSON.parse(res);
+    const outputs = Array.isArray((json as any).output) ? (json as any).output : [];
+    const msg = outputs.find((o: any) => o.type === 'message' || o.id?.startsWith('msg_'));
+    const text = msg?.content?.[0]?.text;
+    if (typeof text !== 'string') return null;
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function callTraderAgent(
   model: string,
-  input: RebalancePrompt,
+  input: unknown,
   apiKey: string,
 ): Promise<string> {
   const body = {

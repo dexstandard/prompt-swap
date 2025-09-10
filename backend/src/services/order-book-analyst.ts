@@ -1,22 +1,19 @@
-import { getNewsByToken } from '../repos/news.js';
+import { fetchOrderBook } from './derivatives.js';
 import { callAi, compactJson, extractJson } from '../util/ai.js';
 import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
 
-export async function getTokenNewsSummary(
-  token: string,
+export async function getOrderBookAnalysis(
+  pair: string,
   model: string,
   apiKey: string,
 ): Promise<AnalysisLog> {
-  const items = await getNewsByToken(token, 5);
-  if (!items.length) return { analysis: null };
-  const headlines = items.map((i) => `- ${i.title} (${i.link})`).join('\n');
-  const prompt = { token, headlines };
+  const snapshot = await fetchOrderBook(pair);
+  const prompt = { pair, snapshot };
   const body = {
     model,
     input: compactJson(prompt),
     instructions:
-      `You are a crypto market news analyst. Using web search and the headlines in input, write a short report for a crypto trader about ${token}. Include a bullishness score from 0-10 and highlight key events.`,
-    tools: [{ type: 'web_search_preview' }],
+      `You are a crypto market order book analyst. Using the order book snapshot in input, write a short report for a crypto trader about ${pair}. Include a liquidity imbalance score from 0-10.`,
     text: {
       max_output_tokens: 255,
       format: {

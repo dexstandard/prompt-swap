@@ -16,7 +16,7 @@ import {
   updateLimitOrderStatus,
 } from '../repos/limit-orders.js';
 import { parseExecLog, validateExecResponse } from '../util/parse-exec-log.js';
-import { callRebalancingAgent } from '../util/ai.js';
+import { callTraderAgent } from '../util/ai.js';
 import {
   fetchAccount,
   fetchPairData,
@@ -261,16 +261,18 @@ async function buildPrompt(
     const prevOrders = await buildPreviousOrders(row.id);
     const token1 = row.tokens[0].token;
     const token2 = row.tokens[1].token;
-    const [news1, news2] = await Promise.all([
+    const [news1Res, news2Res] = await Promise.all([
       getTokenNewsSummary(token1, row.model, apiKey).catch((err) => {
         log.error({ err, token: token1 }, 'failed to fetch news summary');
-        return '';
+        return { analysis: null };
       }),
       getTokenNewsSummary(token2, row.model, apiKey).catch((err) => {
         log.error({ err, token: token2 }, 'failed to fetch news summary');
-        return '';
+        return { analysis: null };
       }),
     ]);
+    const news1 = news1Res.analysis;
+    const news2 = news2Res.analysis;
     const marketData = assembleMarketData(
       row,
       pairData,
@@ -284,9 +286,9 @@ async function buildPrompt(
       orderBook,
     );
     const news: Record<string, string> = {};
-    if (news1) news[token1] = news1;
+    if (news1?.comment) news[token1] = news1.comment;
     else log.info({ token: token1 }, 'no news summary');
-    if (news2) news[token2] = news2;
+    if (news2?.comment) news[token2] = news2.comment;
     else log.info({ token: token2 }, 'no news summary');
     if (Object.keys(news).length) {
       (marketData as any).newsReports = news;
@@ -578,7 +580,7 @@ async function executeAgent(
   log: FastifyBaseLogger,
 ) {
   try {
-    const text = await callRebalancingAgent(row.model, prompt, key);
+    const text = await callTraderAgent(row.model, prompt, key);
     const logId = await insertReviewRawLog({
       agentId: row.id,
       prompt,
