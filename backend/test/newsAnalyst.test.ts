@@ -45,5 +45,35 @@ describe('news analyst', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     (globalThis as any).fetch = orig;
   });
+
+  it('falls back when AI response is malformed', async () => {
+    await db.query(
+      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t2', 'l2', NOW(), ARRAY['BTC'])",
+    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '{"output":[]}' });
+    const orig = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key');
+    expect(res.analysis?.comment).toBe('Analysis unavailable');
+    expect(res.analysis?.score).toBe(0);
+    (globalThis as any).fetch = orig;
+  });
+
+  it('falls back when AI request fails', async () => {
+    await db.query(
+      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t3', 'l3', NOW(), ARRAY['BTC'])",
+    );
+    const orig = globalThis.fetch;
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network'));
+    (globalThis as any).fetch = fetchMock;
+    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key');
+    expect(res.analysis?.comment).toBe('Analysis unavailable');
+    expect(res.analysis?.score).toBe(0);
+    (globalThis as any).fetch = orig;
+  });
 });
 

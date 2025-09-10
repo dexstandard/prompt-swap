@@ -34,4 +34,26 @@ describe('technical analyst', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
+
+  it('falls back when AI response is malformed', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '{"output":[]}' });
+    const orig = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d');
+    expect(res.analysis?.comment).toBe('Analysis unavailable');
+    expect(res.analysis?.score).toBe(0);
+    (globalThis as any).fetch = orig;
+  });
+
+  it('falls back when AI request fails', async () => {
+    const orig = globalThis.fetch;
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network'));
+    (globalThis as any).fetch = fetchMock;
+    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d');
+    expect(res.analysis?.comment).toBe('Analysis unavailable');
+    expect(res.analysis?.score).toBe(0);
+    (globalThis as any).fetch = orig;
+  });
 });

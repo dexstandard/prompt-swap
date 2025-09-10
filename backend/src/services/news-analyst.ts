@@ -27,8 +27,12 @@ export async function getTokenNewsSummary(
       },
     },
   };
-  const res = await callAi(body, apiKey);
-  const analysis = extractJson<Analysis>(res);
-  if (!analysis) throw new Error('missing news analysis');
-  return { analysis, prompt: body, response: res };
+  const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
+  try {
+    const res = await callAi(body, apiKey);
+    const analysis = extractJson<Analysis>(res) ?? fallback;
+    return { analysis, prompt: body, response: res };
+  } catch {
+    return { analysis: fallback };
+  }
 }

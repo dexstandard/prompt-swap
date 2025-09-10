@@ -17,6 +17,9 @@ const responseJson = JSON.stringify({
 
 const fetchOrderBookMock = vi.fn();
 const callAiMock = vi.fn();
+const extractJsonMock = vi.fn(
+  (res: string) => JSON.parse(JSON.parse(res).output[0].content[0].text),
+);
 
 vi.mock('../src/services/derivatives.js', () => ({
   fetchOrderBook: fetchOrderBookMock,
@@ -24,8 +27,7 @@ vi.mock('../src/services/derivatives.js', () => ({
 
 vi.mock('../src/util/ai.js', () => ({
   callAi: callAiMock,
-  extractJson: (res: string) =>
-    JSON.parse(JSON.parse(res).output[0].content[0].text),
+  extractJson: extractJsonMock,
   compactJson: (v: unknown) => JSON.stringify(v),
 }));
 
@@ -33,6 +35,7 @@ describe('order book analyst service', () => {
   beforeEach(() => {
     fetchOrderBookMock.mockReset();
     callAiMock.mockReset();
+    extractJsonMock.mockReset();
   });
 
   it('returns analysis', async () => {
@@ -46,6 +49,29 @@ describe('order book analyst service', () => {
     expect(res.prompt).toBeTruthy();
     expect(res.response).toBe(responseJson);
     expect(callAiMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back when AI response is malformed', async () => {
+    fetchOrderBookMock.mockResolvedValue({ bids: [], asks: [] });
+    callAiMock.mockResolvedValue('bad');
+    extractJsonMock.mockReturnValue(null);
+    const { getOrderBookAnalysis } = await import(
+      '../src/services/order-book-analyst.js'
+    );
+    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key');
+    expect(res.analysis?.comment).toBe('Analysis unavailable');
+    expect(res.analysis?.score).toBe(0);
+  });
+
+  it('falls back when AI request fails', async () => {
+    fetchOrderBookMock.mockResolvedValue({ bids: [], asks: [] });
+    callAiMock.mockRejectedValue(new Error('network'));
+    const { getOrderBookAnalysis } = await import(
+      '../src/services/order-book-analyst.js'
+    );
+    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key');
+    expect(res.analysis?.comment).toBe('Analysis unavailable');
+    expect(res.analysis?.score).toBe(0);
   });
 });
 

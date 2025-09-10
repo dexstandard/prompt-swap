@@ -222,7 +222,6 @@ export async function runMainTrader(
     runNewsAnalyst(log, model, apiKey, runId, agentId),
     runTechnicalAnalyst(log, model, apiKey, timeframe, runId, agentId),
     runOrderBookAnalyst(log, model, apiKey, runId, agentId),
-    runPerformanceAnalyzer(log, model, apiKey, timeframe, agentId, runId),
   ]);
 
   await runPerformanceAnalyzer(log, model, apiKey, timeframe, agentId, runId);
