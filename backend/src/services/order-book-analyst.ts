@@ -13,13 +13,12 @@ export async function getOrderBookAnalysis(
   if (cached) return cached;
   if (!acquireLock(key)) {
     // Another request is already computing this pair; wait for cache
-    const end = Date.now() + 5000; // wait up to 5s
-    while (Date.now() < end) {
-      await new Promise((r) => setTimeout(r, 50));
+    while (true) {
       const retry = await getCache<Analysis>(key);
       if (retry) return retry;
+      if (acquireLock(key)) break; // previous run finished without caching
+      await new Promise((r) => setTimeout(r, 50));
     }
-    return null;
   }
   try {
     const snapshot = await fetchOrderBook(pair);
