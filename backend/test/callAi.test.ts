@@ -37,10 +37,32 @@ describe('callAi structured output', () => {
       { shortReport: 'p1' },
       { rebalance: true, newAllocation: 50 },
     ]);
+    expect(body.tools).toBeUndefined();
     expect(body.text.format.type).toBe('json_schema');
     const anyOf = body.text.format.schema.properties.result.anyOf;
     expect(Array.isArray(anyOf)).toBe(true);
     expect(anyOf).toHaveLength(3);
+    (globalThis as any).fetch = originalFetch;
+  });
+
+  it('adds web search tool when enabled', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '' });
+    const originalFetch = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+    const { callAi, developerInstructions, rebalanceResponseSchema } = await import('../src/util/ai.js');
+    await callAi(
+      'gpt-test',
+      developerInstructions,
+      rebalanceResponseSchema,
+      {},
+      'key',
+      true,
+    );
+    const [, opts] = fetchMock.mock.calls[0];
+    const body = JSON.parse(opts.body);
+    expect(body.tools).toEqual([{ type: 'web_search_preview' }]);
     (globalThis as any).fetch = originalFetch;
   });
 });

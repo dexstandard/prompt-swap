@@ -268,7 +268,14 @@ export async function runMainTrader(
         `performance:${model}:${agentId}:${runId}`,
       );
       const prompt = { portfolioId, reports, performance };
-      const res = await callAi(model, developerInstructions, rebalanceResponseSchema, prompt, apiKey);
+      const res = await callAi(
+        model,
+        developerInstructions,
+        rebalanceResponseSchema,
+        prompt,
+        apiKey,
+        true,
+      );
       await insertReviewRawLog({ agentId, prompt, response: res });
       const decision = extractResult(res);
       if (!decision) {

@@ -137,12 +137,12 @@ export async function callAi(
   schema: unknown,
   input: unknown,
   apiKey: string,
+  webSearch = false,
 ): Promise<string> {
-  const body = {
+  const body: Record<string, unknown> = {
     model,
     input: compactJson(input),
     instructions: developerInstructions,
-    tools: [{ type: 'web_search_preview' }],
     text: {
       format: {
         type: 'json_schema',
@@ -152,6 +152,7 @@ export async function callAi(
       },
     },
   };
+  if (webSearch) body.tools = [{ type: 'web_search_preview' }];
   const res = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
