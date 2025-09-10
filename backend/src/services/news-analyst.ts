@@ -19,7 +19,7 @@ export async function getTokenNewsSummary(
     instructions:
       `You are a crypto market news analyst. Using web search and the headlines in input, write a short report for a crypto trader about ${token}. Include a bullishness score from 0-10 and highlight key events.`,
     tools: [{ type: 'web_search_preview' }],
-    max_output_tokens: 512,
+    max_output_tokens: 255,
     text: {
       format: {
         type: 'json_schema',

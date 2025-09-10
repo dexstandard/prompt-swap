@@ -20,7 +20,7 @@ export async function getPerformanceAnalysis(
     input: compactJson(input),
     instructions:
         'You are a performance analyst. Review the provided analyst reports and recent order outcomes to evaluate how well the trading team performed. Return a brief comment and a performance score from 0-10.',
-    max_output_tokens: 512,
+    max_output_tokens: 255,
     text: {
       format: {
         type: 'json_schema',
