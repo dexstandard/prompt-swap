@@ -26,5 +26,7 @@ export async function getTechnicalOutlook(
     },
   };
   const res = await callAi(body, apiKey);
-  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
+  const analysis = extractJson<Analysis>(res);
+  if (!analysis) throw new Error('missing technical analysis');
+  return { analysis, prompt: body, response: res };
 }

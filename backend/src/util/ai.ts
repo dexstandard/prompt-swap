@@ -146,7 +146,9 @@ export async function callAi(body: any, apiKey: string): Promise<string> {
     },
     body: compactJson(body),
   });
-  return await res.text();
+  const text = await res.text();
+  if (!res.ok) throw new Error(`AI request failed: ${res.status} ${text}`);
+  return text;
 }
 
 export function compactJson(value: unknown): string {

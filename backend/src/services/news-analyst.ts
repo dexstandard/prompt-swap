@@ -28,5 +28,7 @@ export async function getTokenNewsSummary(
     },
   };
   const res = await callAi(body, apiKey);
-  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
+  const analysis = extractJson<Analysis>(res);
+  if (!analysis) throw new Error('missing news analysis');
+  return { analysis, prompt: body, response: res };
 }
