@@ -3,12 +3,13 @@ import type { FastifyBaseLogger } from 'fastify';
 import { getCache, clearCache } from '../src/util/cache.js';
 import type { Analysis } from '../src/services/types.js';
 
-const getTokenNewsSummaryMock = vi.fn((token: string) =>
-  Promise.resolve({
-    analysis: { comment: `summary for ${token}`, score: 1 },
-    prompt: { token },
-    response: 'r',
-  }),
+const getTokenNewsSummaryMock = vi.fn(
+  (token: string) =>
+    Promise.resolve({
+      analysis: { comment: `summary for ${token}`, score: 1 },
+      prompt: { token },
+      response: 'r',
+    }),
 );
 vi.mock('../src/services/news-analyst.js', () => ({
   getTokenNewsSummary: getTokenNewsSummaryMock,

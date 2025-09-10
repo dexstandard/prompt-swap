@@ -346,7 +346,7 @@ async function buildNewsPrompt(
   const tokens = row.tokens.map((t) => t.token);
   const res = await Promise.all(
     tokens.map((token) =>
-      getTokenNewsSummary(token, row.model, apiKey).catch((err) => {
+      getTokenNewsSummary(token, row.model, apiKey, log).catch((err) => {
         log.error({ err, token }, 'failed to fetch news summary');
         return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
       }),
@@ -369,7 +369,13 @@ async function buildTechPrompt(
     tokens.map((token) =>
       isStablecoin(token)
         ? Promise.resolve({ analysis: null })
-        : getTechnicalOutlook(token, row.model, apiKey, row.review_interval).catch(
+        : getTechnicalOutlook(
+            token,
+            row.model,
+            apiKey,
+            row.review_interval,
+            log,
+          ).catch(
             (err) => {
               log.error({ err, token }, 'failed to fetch tech outlook');
               return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
@@ -394,7 +400,12 @@ async function buildOrderBookPrompt(
     tokens.map((token) =>
       isStablecoin(token)
         ? Promise.resolve({ analysis: null })
-        : getOrderBookAnalysis(`${token}USDT`, row.model, apiKey).catch((err) => {
+        : getOrderBookAnalysis(
+            `${token}USDT`,
+            row.model,
+            apiKey,
+            log,
+          ).catch((err) => {
             log.error({ err, token }, 'failed to fetch order book');
             return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
           }),
@@ -421,7 +432,12 @@ async function buildPerformancePrompt(
       created_at: o.created_at.toISOString(),
       planned: JSON.parse(o.planned_json),
     }));
-  return await getPerformanceAnalysis({ reports, orders }, row.model, apiKey).catch(
+  return await getPerformanceAnalysis(
+    { reports, orders },
+    row.model,
+    apiKey,
+    log,
+  ).catch(
     (err) => {
       log.error({ err }, 'failed to fetch performance analysis');
       return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };

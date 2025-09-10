@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { FastifyBaseLogger } from 'fastify';
+
+function createLogger(): FastifyBaseLogger {
+  const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
+  return log;
+}
 
 const responseJson = JSON.stringify({
   object: 'response',
@@ -44,7 +50,7 @@ describe('order book analyst service', () => {
     const { getOrderBookAnalysis } = await import(
       '../src/services/order-book-analyst.js'
     );
-    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key');
+    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('order book summary');
     expect(res.prompt).toBeTruthy();
     expect(res.response).toBe(responseJson);
@@ -58,7 +64,7 @@ describe('order book analyst service', () => {
     const { getOrderBookAnalysis } = await import(
       '../src/services/order-book-analyst.js'
     );
-    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key');
+    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
   });
@@ -69,7 +75,7 @@ describe('order book analyst service', () => {
     const { getOrderBookAnalysis } = await import(
       '../src/services/order-book-analyst.js'
     );
-    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key');
+    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
   });
