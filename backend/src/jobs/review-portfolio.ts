@@ -65,6 +65,10 @@ type PromptCache = {
   pairData: Map<string, PairCacheData>;
   indicators: Map<string, TokenIndicators>;
   timeseries: Map<string, MarketTimeseries>;
+  news: Map<string, AnalysisLog>;
+  tech: Map<string, AnalysisLog>;
+  orderbook: Map<string, AnalysisLog>;
+  performance: Map<string, AnalysisLog>;
   fearGreed?: FearGreedIndex;
 };
 
@@ -96,6 +100,10 @@ async function runAgents(
     pairData: new Map(),
     indicators: new Map(),
     timeseries: new Map(),
+    news: new Map(),
+    tech: new Map(),
+    orderbook: new Map(),
+    performance: new Map(),
     fearGreed: undefined,
   };
 
@@ -187,9 +195,9 @@ async function prepareAgents(
       const token2 = row.tokens[1].token;
 
       const [newsLogs, techLogs, orderLogs] = await Promise.all([
-        buildNewsPrompt(row, key, log),
-        buildTechPrompt(row, key, log),
-        buildOrderBookPrompt(row, key, log),
+        buildNewsPrompt(row, key, log, cache),
+        buildTechPrompt(row, key, log, cache),
+        buildOrderBookPrompt(row, key, log, cache),
       ]);
 
       const reports = [
@@ -212,6 +220,7 @@ async function prepareAgents(
         reports,
         key,
         log,
+        cache,
       );
 
       const marketData = assembleMarketData(
@@ -342,20 +351,26 @@ async function buildNewsPrompt(
   row: ActiveAgentRow,
   apiKey: string,
   log: FastifyBaseLogger,
+  cache: PromptCache,
 ): Promise<Record<string, AnalysisLog>> {
   const tokens = row.tokens.map((t) => t.token);
-  const res = await Promise.all(
-    tokens.map((token) =>
-      getTokenNewsSummary(token, row.model, apiKey).catch((err) => {
-        log.error({ err, token }, 'failed to fetch news summary');
-        return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-      }),
-    ),
-  );
   const out: Record<string, AnalysisLog> = {};
-  tokens.forEach((t, i) => {
-    out[t] = res[i];
-  });
+  await Promise.all(
+    tokens.map(async (token) => {
+      if (cache.news.has(token)) {
+        out[token] = cache.news.get(token)!;
+        return;
+      }
+      const res = await getTokenNewsSummary(token, row.model, apiKey).catch(
+        (err) => {
+          log.error({ err, token }, 'failed to fetch news summary');
+          return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+        },
+      );
+      cache.news.set(token, res);
+      out[token] = res;
+    }),
+  );
   return out;
 }
 
@@ -363,24 +378,33 @@ async function buildTechPrompt(
   row: ActiveAgentRow,
   apiKey: string,
   log: FastifyBaseLogger,
+  cache: PromptCache,
 ): Promise<Record<string, AnalysisLog>> {
   const tokens = row.tokens.map((t) => t.token);
-  const res = await Promise.all(
-    tokens.map((token) =>
-      isStablecoin(token)
-        ? Promise.resolve({ analysis: null })
-        : getTechnicalOutlook(token, row.model, apiKey, row.review_interval).catch(
-            (err) => {
-              log.error({ err, token }, 'failed to fetch tech outlook');
-              return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-            },
-          ),
-    ),
-  );
   const out: Record<string, AnalysisLog> = {};
-  tokens.forEach((t, i) => {
-    out[t] = res[i];
-  });
+  await Promise.all(
+    tokens.map(async (token) => {
+      if (cache.tech.has(token)) {
+        out[token] = cache.tech.get(token)!;
+        return;
+      }
+      let res: AnalysisLog;
+      if (isStablecoin(token)) res = { analysis: null } as AnalysisLog;
+      else {
+        res = await getTechnicalOutlook(
+          token,
+          row.model,
+          apiKey,
+          row.review_interval,
+        ).catch((err) => {
+          log.error({ err, token }, 'failed to fetch tech outlook');
+          return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+        });
+      }
+      cache.tech.set(token, res);
+      out[token] = res;
+    }),
+  );
   return out;
 }
 
@@ -388,22 +412,29 @@ async function buildOrderBookPrompt(
   row: ActiveAgentRow,
   apiKey: string,
   log: FastifyBaseLogger,
+  cache: PromptCache,
 ): Promise<Record<string, AnalysisLog>> {
   const tokens = row.tokens.map((t) => t.token);
-  const res = await Promise.all(
-    tokens.map((token) =>
-      isStablecoin(token)
-        ? Promise.resolve({ analysis: null })
-        : getOrderBookAnalysis(`${token}USDT`, row.model, apiKey).catch((err) => {
-            log.error({ err, token }, 'failed to fetch order book');
-            return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-          }),
-    ),
-  );
   const out: Record<string, AnalysisLog> = {};
-  tokens.forEach((t, i) => {
-    out[t] = res[i];
-  });
+  await Promise.all(
+    tokens.map(async (token) => {
+      const pair = `${token}USDT`;
+      if (cache.orderbook.has(pair)) {
+        out[token] = cache.orderbook.get(pair)!;
+        return;
+      }
+      let res: AnalysisLog;
+      if (isStablecoin(token)) res = { analysis: null } as AnalysisLog;
+      else {
+        res = await getOrderBookAnalysis(pair, row.model, apiKey).catch((err) => {
+          log.error({ err, token }, 'failed to fetch order book');
+          return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+        });
+      }
+      cache.orderbook.set(pair, res);
+      out[token] = res;
+    }),
+  );
   return out;
 }
 
@@ -412,7 +443,11 @@ async function buildPerformancePrompt(
   reports: { token: string; news: any; tech: any; orderbook: any }[],
   apiKey: string,
   log: FastifyBaseLogger,
+  cache: PromptCache,
 ): Promise<AnalysisLog> {
+  const pairKey = `${row.tokens[0].token}-${row.tokens[1].token}`;
+  if (cache.performance.has(pairKey)) return cache.performance.get(pairKey)!;
+
   const ordersRaw = await getRecentLimitOrders(row.id, 20);
   const orders = ordersRaw
     .filter((o) => o.status === 'canceled' || o.status === 'filled')
@@ -421,12 +456,13 @@ async function buildPerformancePrompt(
       created_at: o.created_at.toISOString(),
       planned: JSON.parse(o.planned_json),
     }));
-  return await getPerformanceAnalysis({ reports, orders }, row.model, apiKey).catch(
-    (err) => {
+  const res = await getPerformanceAnalysis({ reports, orders }, row.model, apiKey)
+    .catch((err) => {
       log.error({ err }, 'failed to fetch performance analysis');
       return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-    },
-  );
+    });
+  cache.performance.set(pairKey, res);
+  return res;
 }
 
 async function fetchPromptData(
