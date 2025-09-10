@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../src/jobs/review-portfolio.js', () => ({
+vi.mock('../src/workflows/portfolio-review.js', () => ({
   removeAgentFromSchedule: vi.fn(),
 }));
 
@@ -24,7 +24,7 @@ import { insertAgent } from './repos/agents.js';
 import { getUserApiKeys } from '../src/repos/agents.js';
 import { db } from '../src/db/index.js';
 import { encrypt } from '../src/util/crypto.js';
-import { removeAgentFromSchedule } from '../src/jobs/review-portfolio.js';
+import { removeAgentFromSchedule } from '../src/workflows/portfolio-review.js';
 import { cancelOpenOrders } from '../src/services/binance.js';
 import { authCookies } from './helpers.js';
 

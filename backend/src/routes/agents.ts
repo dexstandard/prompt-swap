@@ -15,7 +15,7 @@ import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 import {
   reviewAgentPortfolio,
   removeAgentFromSchedule,
-} from '../jobs/review-portfolio.js';
+} from '../workflows/portfolio-review.js';
 import { requireUserId } from '../util/auth.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import {

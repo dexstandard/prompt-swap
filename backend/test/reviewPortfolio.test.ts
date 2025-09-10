@@ -128,7 +128,7 @@ vi.mock('../src/services/performance-analyst.js', () => ({
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 
 beforeAll(async () => {
-  ({ reviewAgentPortfolio } = await import('../src/jobs/review-portfolio.js'));
+  ({ reviewAgentPortfolio } = await import('../src/workflows/portfolio-review.js'));
 });
 
 beforeEach(() => {

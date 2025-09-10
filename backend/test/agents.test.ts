@@ -9,7 +9,7 @@ import { setAgentStatus } from './repos/agents.js';
 import { cancelOpenOrders } from '../src/services/binance.js';
 import { authCookies } from './helpers.js';
 
-vi.mock('../src/jobs/review-portfolio.js', () => ({
+vi.mock('../src/workflows/portfolio-review.js', () => ({
   reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
   removeAgentFromSchedule: vi.fn(),
 }));

@@ -1,7 +1,7 @@
 import { schedule } from 'node-cron';
 import buildServer from '../src/server.js';
 import '../src/util/env.js';
-import reviewPortfolios from '../src/jobs/review-portfolio.js';
+import reviewPortfolios from '../src/workflows/portfolio-review.js';
 import checkOpenOrders from '../src/jobs/check-open-orders.js';
 import fetchNews from '../src/jobs/fetch-news.js';
 import * as path from 'node:path';

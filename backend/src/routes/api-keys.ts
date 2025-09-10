@@ -19,7 +19,7 @@ import {
   deactivateAgentsByUser,
   draftAgentsByUser,
 } from '../repos/agents.js';
-import { removeAgentFromSchedule } from '../jobs/review-portfolio.js';
+import { removeAgentFromSchedule } from '../workflows/portfolio-review.js';
 import { cancelOpenOrders } from '../services/binance.js';
 import { requireUserIdMatch, requireAdmin } from '../util/auth.js';
 import {
