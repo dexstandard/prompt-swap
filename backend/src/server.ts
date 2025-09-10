@@ -12,7 +12,7 @@ import { fetchOutputIp } from './util/output-ip.js';
 import { migrate } from './db/index.js';
 
 export default async function buildServer(
-  routesDir: string = path.join(process.cwd(), 'src/routes'),
+  routesDir: string = path.join(new URL('.', import.meta.url).pathname, 'routes'),
 ): Promise<FastifyInstance> {
   await migrate();
   const app = Fastify({ logger: true });
