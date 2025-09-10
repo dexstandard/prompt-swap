@@ -51,13 +51,10 @@ const flatTimeseries = {
 };
 
 const runMainTrader = vi.fn();
-vi.mock('../src/workflows/portfolio-review.js', async (importOriginal) => {
+vi.mock('../src/agents/portfolio-review.js', async (importOriginal) => {
   const actual = await importOriginal();
   return { ...actual, runMainTrader };
 });
-
-const getCache = vi.fn();
-vi.mock('../src/util/cache.js', () => ({ getCache }));
 
 vi.mock('../src/util/crypto.js', () => ({
   decrypt: vi.fn().mockReturnValue('key'),
@@ -168,12 +165,10 @@ describe('reviewPortfolio', () => {
   it('saves decision and logs', async () => {
     await setupAgent('1');
     const decision = { rebalance: false, newAllocation: 40, shortReport: 'ok' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '1');
     expect(runMainTrader).toHaveBeenCalledTimes(1);
-    const runId = runMainTrader.mock.calls[0][6];
-    expect(getCache).toHaveBeenCalledWith(`portfolio:gpt:1:${runId}`);
     const { rows } = await db.query(
       'SELECT prompt, response FROM agent_review_raw_log WHERE agent_id=$1',
       ['1'],
@@ -192,7 +187,7 @@ describe('reviewPortfolio', () => {
   it('calls createRebalanceLimitOrder when rebalance requested', async () => {
     await setupAgent('2');
     const decision = { rebalance: true, newAllocation: 60, shortReport: 's' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '2');
     expect(createRebalanceLimitOrder).toHaveBeenCalledTimes(1);
@@ -204,7 +199,7 @@ describe('reviewPortfolio', () => {
   it('skips createRebalanceLimitOrder when manualRebalance is enabled', async () => {
     await setupAgent('3', true);
     const decision = { rebalance: true, newAllocation: 55, shortReport: 's' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '3');
     expect(createRebalanceLimitOrder).not.toHaveBeenCalled();
@@ -213,7 +208,7 @@ describe('reviewPortfolio', () => {
   it('records error when newAllocation is out of range', async () => {
     await setupAgent('4');
     const decision = { rebalance: true, newAllocation: 150, shortReport: 's' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '4');
     const { rows } = await db.query(
@@ -228,7 +223,7 @@ describe('reviewPortfolio', () => {
   it('records error when newAllocation violates floor', async () => {
     await setupAgent('5');
     const decision = { rebalance: true, newAllocation: 5, shortReport: 's' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '5');
     const { rows } = await db.query(

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { getCache, clearCache } from '../src/util/cache.js';
 import type { Analysis } from '../src/services/types.js';
 
 const getTokenNewsSummaryMock = vi.fn(
@@ -27,20 +26,14 @@ function createLogger(): FastifyBaseLogger {
 
 describe('news analyst step', () => {
   beforeEach(() => {
-    clearCache();
     getTokenNewsSummaryMock.mockClear();
     insertReviewRawLogMock.mockClear();
   });
 
-  it('caches token list and news summaries', async () => {
-    const { runNewsAnalyst } = await import('../src/workflows/portfolio-review.js');
-    await runNewsAnalyst(createLogger(), 'gpt', 'key', 'run1', 'agent1');
-
-    const tokens = await getCache<string[]>(`tokens:gpt`);
-    expect(tokens).toContain('BTC');
-
-    const summary = await getCache<Analysis>(`news:gpt:BTC:run1`);
-    expect(summary?.comment).toBe('summary for BTC');
+  it('fetches news summaries', async () => {
+    const { runNewsAnalyst } = await import('../src/agents/portfolio-review.js');
+    const summaries = await runNewsAnalyst(createLogger(), 'gpt', 'key', 'agent1');
+    expect(summaries.BTC?.comment).toBe('summary for BTC');
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

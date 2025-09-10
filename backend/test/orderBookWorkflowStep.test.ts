@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { getCache, clearCache } from '../src/util/cache.js';
 import type { Analysis } from '../src/services/types.js';
 
 const getOrderBookAnalysisMock = vi.fn((pair: string) =>
@@ -26,17 +25,14 @@ function createLogger(): FastifyBaseLogger {
 
 describe('order book analyst step', () => {
   beforeEach(() => {
-    clearCache();
     getOrderBookAnalysisMock.mockClear();
     insertReviewRawLogMock.mockClear();
   });
 
-  it('caches order book analysis per pair', async () => {
-    const { runOrderBookAnalyst } = await import('../src/workflows/portfolio-review.js');
-    await runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'run1', 'agent1');
-
-    const analysis = await getCache<Analysis>(`orderbook:gpt:BTCUSDT:run1`);
-    expect(analysis?.comment).toBe('analysis for BTCUSDT');
+  it('fetches order book analysis per pair', async () => {
+    const { runOrderBookAnalyst } = await import('../src/agents/portfolio-review.js');
+    const analyses = await runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'agent1');
+    expect(analyses.BTC?.comment).toBe('analysis for BTCUSDT');
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

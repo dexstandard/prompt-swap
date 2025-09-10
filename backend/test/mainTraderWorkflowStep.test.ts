@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { getCache, clearCache } from '../src/util/cache.js';
 
 const getTokenNewsSummaryMock = vi.fn(
   (
@@ -102,7 +101,6 @@ function createLogger(): FastifyBaseLogger {
 
 describe('main trader step', () => {
   beforeEach(() => {
-    clearCache();
     getTokenNewsSummaryMock.mockClear();
     getTechnicalOutlookMock.mockClear();
     getOrderBookAnalysisMock.mockClear();
@@ -112,18 +110,18 @@ describe('main trader step', () => {
     insertReviewRawLogMock.mockClear();
   });
 
-  it('caches decision and skips stablecoins', async () => {
-    const { runMainTrader } = await import('../src/workflows/portfolio-review.js');
-    await runMainTrader(
+  it('runs traders and skips stablecoins', async () => {
+    const { runMainTrader } = await import('../src/agents/portfolio-review.js');
+    const decision = await runMainTrader(
       createLogger(),
       'gpt',
       'key',
       '1d',
       'agent1',
       'pf1',
-      'run1',
     );
 
+    expect(decision?.rebalance).toBe(true);
     expect(insertReviewRawLogMock).toHaveBeenCalled();
     expect(getPerformanceAnalysisMock).toHaveBeenCalled();
     expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDT');

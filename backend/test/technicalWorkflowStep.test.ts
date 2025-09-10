@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { getCache, clearCache } from '../src/util/cache.js';
 import type { Analysis } from '../src/services/types.js';
 
 const getTechnicalOutlookMock = vi.fn((token: string) =>
@@ -26,24 +25,20 @@ function createLogger(): FastifyBaseLogger {
 
 describe('technical analyst step', () => {
   beforeEach(() => {
-    clearCache();
     getTechnicalOutlookMock.mockClear();
     insertReviewRawLogMock.mockClear();
   });
 
-  it('caches technical outlook per token', async () => {
-    const { runTechnicalAnalyst } = await import('../src/workflows/portfolio-review.js');
-    await runTechnicalAnalyst(
+  it('fetches technical outlook per token', async () => {
+    const { runTechnicalAnalyst } = await import('../src/agents/portfolio-review.js');
+    const outlooks = await runTechnicalAnalyst(
       createLogger(),
       'gpt',
       'key',
       '1d',
-      'run1',
       'agent1',
     );
-
-    const outlook = await getCache<Analysis>(`tech:gpt:BTC:1d:run1`);
-    expect(outlook?.comment).toBe('outlook for BTC');
+    expect(outlooks.BTC?.comment).toBe('outlook for BTC');
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });
