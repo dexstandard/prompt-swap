@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 import { db } from '../src/db/index.js';
 
@@ -100,6 +100,31 @@ vi.mock('../src/services/news-analyst.js', () => ({
       }),
     ),
 }));
+vi.mock('../src/services/technical-analyst.js', () => ({
+  getTechnicalOutlook: vi.fn().mockImplementation((token: string) =>
+    Promise.resolve({
+      analysis: { comment: `${token} tech`, score: 2 },
+      prompt: { token },
+      response: 'r',
+    }),
+  ),
+}));
+vi.mock('../src/services/order-book-analyst.js', () => ({
+  getOrderBookAnalysis: vi.fn().mockImplementation((pair: string) =>
+    Promise.resolve({
+      analysis: { comment: `${pair} order`, score: 3 },
+      prompt: { pair },
+      response: 'r',
+    }),
+  ),
+}));
+vi.mock('../src/services/performance-analyst.js', () => ({
+  getPerformanceAnalysis: vi.fn().mockResolvedValue({
+    analysis: { comment: 'perf', score: 4 },
+    prompt: {},
+    response: 'r',
+  }),
+}));
 
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let reviewPortfolios: (
@@ -115,6 +140,9 @@ let fetchTokenIndicators: any;
 let createRebalanceLimitOrder: any;
 let fetchFearGreedIndex: any;
 let getTokenNewsSummary: any;
+let getTechnicalOutlook: any;
+let getOrderBookAnalysis: any;
+let getPerformanceAnalysis: any;
 
 beforeAll(async () => {
   ({ reviewAgentPortfolio, default: reviewPortfolios } = await import(
@@ -131,6 +159,24 @@ beforeAll(async () => {
   ({ fetchTokenIndicators } = await import('../src/services/indicators.js'));
   ({ createRebalanceLimitOrder } = await import('../src/services/rebalance.js'));
   ({ getTokenNewsSummary } = await import('../src/services/news-analyst.js'));
+  ({ getTechnicalOutlook } = await import('../src/services/technical-analyst.js'));
+  ({ getOrderBookAnalysis } = await import('../src/services/order-book-analyst.js'));
+  ({ getPerformanceAnalysis } = await import('../src/services/performance-analyst.js'));
+});
+
+beforeEach(() => {
+  vi.mocked(callTraderAgent).mockClear();
+  vi.mocked(fetchAccount).mockClear();
+  vi.mocked(fetchPairData).mockClear();
+  vi.mocked(fetchMarketTimeseries).mockClear();
+  vi.mocked(fetchPairInfo).mockClear();
+  vi.mocked(fetchTokenIndicators).mockClear();
+  vi.mocked(createRebalanceLimitOrder).mockClear();
+  vi.mocked(fetchFearGreedIndex).mockClear();
+  vi.mocked(getTokenNewsSummary).mockClear();
+  vi.mocked(getTechnicalOutlook).mockClear();
+  vi.mocked(getOrderBookAnalysis).mockClear();
+  vi.mocked(getPerformanceAnalysis).mockClear();
 });
 
 describe('reviewPortfolio', () => {
@@ -222,6 +268,21 @@ describe('reviewPortfolio', () => {
     expect(fetchTokenIndicators).toHaveBeenCalledTimes(2);
     expect(fetchMarketTimeseries).toHaveBeenCalledTimes(2);
     expect(fetchFearGreedIndex).toHaveBeenCalledTimes(1);
+    expect(args[1].reports).toEqual([
+      {
+        token: 'BTC',
+        news: { comment: 'BTC news', score: 1 },
+        tech: { comment: 'BTC tech', score: 2 },
+        orderbook: { comment: 'BTCUSDT order', score: 3 },
+      },
+      {
+        token: 'ETH',
+        news: { comment: 'ETH news', score: 1 },
+        tech: { comment: 'ETH tech', score: 2 },
+        orderbook: { comment: 'ETHUSDT order', score: 3 },
+      },
+    ]);
+    expect(args[1].performance).toEqual({ comment: 'perf', score: 4 });
   });
 
   it('saves prompt and response to exec log', async () => {
@@ -519,7 +580,12 @@ describe('reviewPortfolio', () => {
     await reviewAgentPortfolio(log, '9');
     expect(callTraderAgent).toHaveBeenCalledTimes(1);
     const args = (callTraderAgent as any).mock.calls[0];
-    expect(args[1].marketData.newsReports).toEqual({ ETH: 'ETH news' });
+    const reports = args[1].reports;
+    expect(reports).toHaveLength(2);
+    const btc = reports.find((r: any) => r.token === 'BTC');
+    const eth = reports.find((r: any) => r.token === 'ETH');
+    expect(btc?.news?.comment).toContain('Error: fail');
+    expect(eth?.news?.comment).toBe('ETH news');
   });
 
   it('logs error when token balances missing and skips callTraderAgent', async () => {
