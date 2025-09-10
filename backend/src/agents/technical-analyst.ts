@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { fetchTokenIndicators } from './indicators.js';
+import { fetchTokenIndicators } from '../services/indicators.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import { callAi, extractJson } from '../util/ai.js';
 import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';

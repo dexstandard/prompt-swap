@@ -20,7 +20,7 @@ import {
   parseBinanceError,
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
-import { buildPreviousOrders } from '../services/performance-analyst.js';
+import { buildPreviousOrders } from '../agents/performance-analyst.js';
 import { type RebalancePrompt, type PreviousResponse } from '../util/ai.js';
 
 /** Workflows currently running. Used to avoid concurrent runs. */

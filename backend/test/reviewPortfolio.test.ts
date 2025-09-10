@@ -93,7 +93,7 @@ vi.mock('../src/services/rebalance.js', () => ({
   createRebalanceLimitOrder,
 }));
 
-vi.mock('../src/services/news-analyst.js', () => ({
+vi.mock('../src/agents/news-analyst.js', () => ({
   getTokenNewsSummary: vi.fn().mockResolvedValue({
     analysis: { comment: 'news', score: 1 },
     prompt: {},
@@ -101,7 +101,7 @@ vi.mock('../src/services/news-analyst.js', () => ({
   }),
 }));
 
-vi.mock('../src/services/technical-analyst.js', () => ({
+vi.mock('../src/agents/technical-analyst.js', () => ({
   getTechnicalOutlook: vi.fn().mockResolvedValue({
     analysis: { comment: 'tech', score: 2 },
     prompt: {},
@@ -109,7 +109,7 @@ vi.mock('../src/services/technical-analyst.js', () => ({
   }),
 }));
 
-vi.mock('../src/services/order-book-analyst.js', () => ({
+vi.mock('../src/agents/order-book-analyst.js', () => ({
   getOrderBookAnalysis: vi.fn().mockResolvedValue({
     analysis: { comment: 'order', score: 3 },
     prompt: {},
@@ -117,7 +117,7 @@ vi.mock('../src/services/order-book-analyst.js', () => ({
   }),
 }));
 
-vi.mock('../src/services/performance-analyst.js', () => ({
+vi.mock('../src/agents/performance-analyst.js', () => ({
   getPerformanceAnalysis: vi.fn().mockResolvedValue({
     analysis: { comment: 'perf', score: 4 },
     prompt: {},

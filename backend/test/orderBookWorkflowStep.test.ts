@@ -1,23 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import type { Analysis } from '../src/services/types.js';
 
-const getOrderBookAnalysisMock = vi.fn((pair: string) =>
-  Promise.resolve({
-    analysis: { comment: `analysis for ${pair}`, score: 3 },
-    prompt: { pair },
-    response: 'r',
-  }),
-);
-vi.mock('../src/services/order-book-analyst.js', async () => {
-  const actual = await vi.importActual<typeof import('../src/services/order-book-analyst.js')>(
-    '../src/services/order-book-analyst.js',
-  );
-  return {
-    ...actual,
-    getOrderBookAnalysis: getOrderBookAnalysisMock,
-  };
-});
+const callAiMock = vi.fn(() => Promise.resolve('res'));
+const extractJsonMock = vi.fn(() => ({ comment: 'analysis for BTCUSDT', score: 3 }));
+vi.mock('../src/util/ai.js', () => ({
+  callAi: callAiMock,
+  extractJson: extractJsonMock,
+  compactJson: (v: unknown) => JSON.stringify(v),
+}));
+
+vi.mock('../src/services/derivatives.js', () => ({
+  fetchOrderBook: vi.fn(() => Promise.resolve({ bids: [], asks: [] })),
+}));
+
+vi.mock('../src/util/tokens.js', () => ({
+  TOKEN_SYMBOLS: ['BTC'],
+  isStablecoin: () => false,
+}));
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -30,15 +29,11 @@ function createLogger(): FastifyBaseLogger {
 }
 
 describe('order book analyst step', () => {
-  beforeEach(() => {
-    getOrderBookAnalysisMock.mockClear();
-    insertReviewRawLogMock.mockClear();
-  });
-
   it('fetches order book analysis per pair', async () => {
-    const { runOrderBookAnalyst } = await import('../src/services/order-book-analyst.js');
+    const { runOrderBookAnalyst } = await import('../src/agents/order-book-analyst.js');
     const analyses = await runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'agent1');
     expect(analyses.BTC?.comment).toBe('analysis for BTCUSDT');
+    expect(callAiMock).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

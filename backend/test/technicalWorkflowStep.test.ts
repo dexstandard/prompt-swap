@@ -1,23 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import type { Analysis } from '../src/services/types.js';
 
-const getTechnicalOutlookMock = vi.fn((token: string) =>
-  Promise.resolve({
-    analysis: { comment: `outlook for ${token}`, score: 2 },
-    prompt: { token },
-    response: 'r',
-  }),
-);
-vi.mock('../src/services/technical-analyst.js', async () => {
-  const actual = await vi.importActual<typeof import('../src/services/technical-analyst.js')>(
-    '../src/services/technical-analyst.js',
-  );
-  return {
-    ...actual,
-    getTechnicalOutlook: getTechnicalOutlookMock,
-  };
-});
+const callAiMock = vi.fn(() => Promise.resolve('res'));
+const extractJsonMock = vi.fn(() => ({ comment: 'outlook for BTC', score: 2 }));
+vi.mock('../src/util/ai.js', () => ({
+  callAi: callAiMock,
+  extractJson: extractJsonMock,
+  compactJson: (v: unknown) => JSON.stringify(v),
+}));
+
+vi.mock('../src/services/indicators.js', () => ({
+  fetchTokenIndicators: vi.fn(() => Promise.resolve({ rsi: 50 })),
+}));
+
+vi.mock('../src/util/tokens.js', () => ({
+  TOKEN_SYMBOLS: ['BTC'],
+  isStablecoin: () => false,
+}));
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -30,13 +29,8 @@ function createLogger(): FastifyBaseLogger {
 }
 
 describe('technical analyst step', () => {
-  beforeEach(() => {
-    getTechnicalOutlookMock.mockClear();
-    insertReviewRawLogMock.mockClear();
-  });
-
   it('fetches technical outlook per token', async () => {
-    const { runTechnicalAnalyst } = await import('../src/services/technical-analyst.js');
+    const { runTechnicalAnalyst } = await import('../src/agents/technical-analyst.js');
     const outlooks = await runTechnicalAnalyst(
       createLogger(),
       'gpt',
@@ -45,6 +39,7 @@ describe('technical analyst step', () => {
       'agent1',
     );
     expect(outlooks.BTC?.comment).toBe('outlook for BTC');
+    expect(callAiMock).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

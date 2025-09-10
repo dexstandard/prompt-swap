@@ -48,7 +48,7 @@ describe('order book analyst service', () => {
     fetchOrderBookMock.mockResolvedValue({ bids: [], asks: [] });
     callAiMock.mockResolvedValue(responseJson);
     const { getOrderBookAnalysis } = await import(
-      '../src/services/order-book-analyst.js'
+      '../src/agents/order-book-analyst.js'
     );
     const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('order book summary');
@@ -62,7 +62,7 @@ describe('order book analyst service', () => {
     callAiMock.mockResolvedValue('bad');
     extractJsonMock.mockReturnValue(null);
     const { getOrderBookAnalysis } = await import(
-      '../src/services/order-book-analyst.js'
+      '../src/agents/order-book-analyst.js'
     );
     const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
@@ -73,7 +73,7 @@ describe('order book analyst service', () => {
     fetchOrderBookMock.mockResolvedValue({ bids: [], asks: [] });
     callAiMock.mockRejectedValue(new Error('network'));
     const { getOrderBookAnalysis } = await import(
-      '../src/services/order-book-analyst.js'
+      '../src/agents/order-book-analyst.js'
     );
     const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');

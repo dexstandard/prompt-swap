@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { fetchOrderBook } from './derivatives.js';
+import { fetchOrderBook } from '../services/derivatives.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import { callAi, extractJson } from '../util/ai.js';
 import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';

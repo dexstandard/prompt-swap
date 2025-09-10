@@ -1,29 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import type { Analysis } from '../src/services/types.js';
+import type { Analysis } from '../src/agents/types.js';
 
-const getPerformanceAnalysisMock = vi.fn(
-  (
-    _input?: unknown,
-    _model?: string,
-    _apiKey?: string,
-    _log?: FastifyBaseLogger,
-  ) =>
-    Promise.resolve({
-      analysis: { comment: 'perf', score: 4 },
-      prompt: { a: 1 },
-      response: 'r',
-    }),
-);
-vi.mock('../src/services/performance-analyst.js', async () => {
-  const actual = await vi.importActual<typeof import('../src/services/performance-analyst.js')>(
-    '../src/services/performance-analyst.js',
-  );
-  return {
-    ...actual,
-    getPerformanceAnalysis: getPerformanceAnalysisMock,
-  };
-});
+const callAiMock = vi.fn(() => Promise.resolve('r'));
+const extractJsonMock = vi.fn(() => ({ comment: 'perf', score: 4 }));
+vi.mock('../src/util/ai.js', () => ({
+  callAi: callAiMock,
+  extractJson: extractJsonMock,
+  compactJson: (v: unknown) => JSON.stringify(v),
+}));
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -50,13 +35,14 @@ function createLogger(): FastifyBaseLogger {
 
 describe('performance analyzer step', () => {
   beforeEach(() => {
-    getPerformanceAnalysisMock.mockClear();
+    callAiMock.mockClear();
+    extractJsonMock.mockClear();
     getRecentLimitOrdersMock.mockClear();
     insertReviewRawLogMock.mockClear();
   });
 
   it('fetches performance analysis', async () => {
-    const { runPerformanceAnalyzer } = await import('../src/services/performance-analyst.js');
+    const { runPerformanceAnalyzer } = await import('../src/agents/performance-analyst.js');
     const reports = [
       {
         token: 'BTC',
@@ -73,8 +59,9 @@ describe('performance analyzer step', () => {
       reports,
     );
     expect(perf?.comment).toBe('perf');
-    expect(getPerformanceAnalysisMock).toHaveBeenCalled();
     expect(getRecentLimitOrdersMock).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
+    expect(callAiMock).toHaveBeenCalled();
+    expect(extractJsonMock).toHaveBeenCalled();
   });
 });

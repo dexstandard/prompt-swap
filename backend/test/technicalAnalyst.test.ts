@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { getTechnicalOutlook } from '../src/services/technical-analyst.js';
+import { getTechnicalOutlook } from '../src/agents/technical-analyst.js';
 
 function createLogger(): FastifyBaseLogger {
   const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;

@@ -1,9 +1,10 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { TOKEN_SYMBOLS } from '../util/tokens.js';
-import { runNewsAnalyst } from '../services/news-analyst.js';
-import { runTechnicalAnalyst } from '../services/technical-analyst.js';
-import { runOrderBookAnalyst } from '../services/order-book-analyst.js';
-import { runPerformanceAnalyzer } from '../services/performance-analyst.js';
+import { runNewsAnalyst } from './news-analyst.js';
+import { runTechnicalAnalyst } from './technical-analyst.js';
+import { runOrderBookAnalyst } from './order-book-analyst.js';
+import { runPerformanceAnalyzer } from './performance-analyst.js';
+import { getRecentLimitOrders } from '../repos/limit-orders.js';
 import {
   callAi,
   developerInstructions,
@@ -60,7 +61,7 @@ export class MainTraderAgent {
     newAllocation?: number;
     shortReport: string;
   } | null> {
-    const [news, tech, orderbook] = await Promise.all([
+    const [news, tech, orderbook, ordersRaw] = await Promise.all([
       runNewsAnalyst(this.log, this.model, this.apiKey, this.agentId),
       runTechnicalAnalyst(
         this.log,
@@ -70,6 +71,7 @@ export class MainTraderAgent {
         this.agentId,
       ),
       runOrderBookAnalyst(this.log, this.model, this.apiKey, this.agentId),
+      getRecentLimitOrders(this.agentId, 20),
     ]);
 
     const reports = TOKEN_SYMBOLS.map((token) => ({
@@ -79,13 +81,17 @@ export class MainTraderAgent {
       orderbook: orderbook[token] ?? null,
     }));
 
-    const performance = await runPerformanceAnalyzer(
-      this.log,
-      this.model,
-      this.apiKey,
-      this.agentId,
-      reports,
-    );
+    let performance = null;
+    if (ordersRaw.length) {
+      performance = await runPerformanceAnalyzer(
+        this.log,
+        this.model,
+        this.apiKey,
+        this.agentId,
+        reports,
+        ordersRaw,
+      );
+    }
 
     const prompt = { portfolioId: this.portfolioId, reports, performance };
     const res = await callAi(

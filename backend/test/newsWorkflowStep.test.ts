@@ -1,24 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import type { Analysis } from '../src/services/types.js';
 
-const getTokenNewsSummaryMock = vi.fn(
-  (token: string) =>
-    Promise.resolve({
-      analysis: { comment: `summary for ${token}`, score: 1 },
-      prompt: { token },
-      response: 'r',
-    }),
-);
-vi.mock('../src/services/news-analyst.js', async () => {
-  const actual = await vi.importActual<typeof import('../src/services/news-analyst.js')>(
-    '../src/services/news-analyst.js',
-  );
-  return {
-    ...actual,
-    getTokenNewsSummary: getTokenNewsSummaryMock,
-  };
-});
+const callAiMock = vi.fn(() => Promise.resolve('res'));
+const extractJsonMock = vi.fn(() => ({ comment: 'summary for BTC', score: 1 }));
+vi.mock('../src/util/ai.js', () => ({
+  callAi: callAiMock,
+  extractJson: extractJsonMock,
+  compactJson: (v: unknown) => JSON.stringify(v),
+}));
+
+vi.mock('../src/repos/news.js', () => ({
+  getNewsByToken: vi.fn(() => Promise.resolve([{ title: 't', link: 'l' }])),
+}));
+
+vi.mock('../src/util/tokens.js', () => ({
+  TOKEN_SYMBOLS: ['BTC'],
+  isStablecoin: () => false,
+}));
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -31,15 +29,11 @@ function createLogger(): FastifyBaseLogger {
 }
 
 describe('news analyst step', () => {
-  beforeEach(() => {
-    getTokenNewsSummaryMock.mockClear();
-    insertReviewRawLogMock.mockClear();
-  });
-
   it('fetches news summaries', async () => {
-    const { runNewsAnalyst } = await import('../src/services/news-analyst.js');
+    const { runNewsAnalyst } = await import('../src/agents/news-analyst.js');
     const summaries = await runNewsAnalyst(createLogger(), 'gpt', 'key', 'agent1');
     expect(summaries.BTC?.comment).toBe('summary for BTC');
+    expect(callAiMock).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

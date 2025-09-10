@@ -45,16 +45,22 @@ export async function runPerformanceAnalyzer(
     tech: Analysis | null;
     orderbook: Analysis | null;
   }[],
+  ordersRaw?: {
+    planned_json: string;
+    status: string;
+    created_at: Date;
+  }[],
 ): Promise<Analysis | null> {
   try {
-    const ordersRaw = await getRecentLimitOrders(agentId, 20);
-    const orders = ordersRaw
+    const fetched = ordersRaw ?? (await getRecentLimitOrders(agentId, 20));
+    const orders = fetched
       .filter((o) => o.status === 'canceled' || o.status === 'filled')
       .map((o) => ({
         status: o.status,
         created_at: o.created_at.toISOString(),
         planned: JSON.parse(o.planned_json),
       }));
+    if (!orders.length) return null;
     const { analysis, prompt, response } = await getPerformanceAnalysis(
       { reports, orders },
       model,

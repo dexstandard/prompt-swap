@@ -4,28 +4,28 @@ import type { FastifyBaseLogger } from 'fastify';
 const runNewsAnalystMock = vi.fn(() =>
   Promise.resolve({ BTC: { comment: 'news BTC', score: 1 } }),
 );
-vi.mock('../src/services/news-analyst.js', () => ({
+vi.mock('../src/agents/news-analyst.js', () => ({
   runNewsAnalyst: runNewsAnalystMock,
 }));
 
 const runTechnicalAnalystMock = vi.fn(() =>
   Promise.resolve({ BTC: { comment: 'tech BTC', score: 2 } }),
 );
-vi.mock('../src/services/technical-analyst.js', () => ({
+vi.mock('../src/agents/technical-analyst.js', () => ({
   runTechnicalAnalyst: runTechnicalAnalystMock,
 }));
 
 const runOrderBookAnalystMock = vi.fn(() =>
   Promise.resolve({ BTC: { comment: 'order BTCUSDT', score: 3 } }),
 );
-vi.mock('../src/services/order-book-analyst.js', () => ({
+vi.mock('../src/agents/order-book-analyst.js', () => ({
   runOrderBookAnalyst: runOrderBookAnalystMock,
 }));
 
 const runPerformanceAnalyzerMock = vi.fn(() =>
   Promise.resolve({ comment: 'perf', score: 4 }),
 );
-vi.mock('../src/services/performance-analyst.js', () => ({
+vi.mock('../src/agents/performance-analyst.js', () => ({
   runPerformanceAnalyzer: runPerformanceAnalyzerMock,
 }));
 
@@ -58,6 +58,17 @@ vi.mock('../src/repos/agent-review-raw-log.js', () => ({
   insertReviewRawLog: insertReviewRawLogMock,
 }));
 
+const getRecentLimitOrdersMock = vi.fn(() => Promise.resolve([
+  {
+    planned_json: JSON.stringify({ symbol: 'BTCUSDT', side: 'BUY' }),
+    status: 'filled',
+    created_at: new Date(),
+  },
+]));
+vi.mock('../src/repos/limit-orders.js', () => ({
+  getRecentLimitOrders: getRecentLimitOrdersMock,
+}));
+
 function createLogger(): FastifyBaseLogger {
   const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
   return log;
@@ -71,6 +82,7 @@ describe('main trader step', () => {
     runPerformanceAnalyzerMock.mockClear();
     callAiMock.mockClear();
     insertReviewRawLogMock.mockClear();
+    getRecentLimitOrdersMock.mockClear();
   });
 
   it('runs traders and aggregates analyses', async () => {
