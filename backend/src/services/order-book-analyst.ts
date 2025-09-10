@@ -1,26 +1,30 @@
 import { fetchOrderBook } from './derivatives.js';
 import { callAi, extractJson } from '../util/ai.js';
 import { analysisSchema, type Analysis } from './types.js';
-import { setCache, getCache, acquireLock, releaseLock } from '../util/cache.js';
+
+interface CacheEntry {
+  summary?: Analysis;
+  expires: number;
+  promise?: Promise<Analysis | null>;
+}
+
+const ONE_MINUTE = 60 * 1000;
+const cache = new Map<string, CacheEntry>();
 
 export async function getOrderBookAnalysis(
   pair: string,
   model: string,
   apiKey: string,
 ): Promise<Analysis | null> {
-  const key = `orderbook:${model}:${pair}`;
-  const cached = await getCache<Analysis>(key);
-  if (cached) return cached;
-  if (!acquireLock(key)) {
-    // Another request is already computing this pair; wait for cache
-    while (true) {
-      const retry = await getCache<Analysis>(key);
-      if (retry) return retry;
-      if (acquireLock(key)) break; // previous run finished without caching
-      await new Promise((r) => setTimeout(r, 50));
-    }
+  const now = Date.now();
+  const key = `${model}:${pair}`;
+  const existing = cache.get(key);
+  if (existing) {
+    if (existing.summary && existing.expires > now) return existing.summary;
+    if (existing.promise) return existing.promise;
   }
-  try {
+
+  const promise = (async () => {
     const snapshot = await fetchOrderBook(pair);
     const prompt = { pair, snapshot };
     const body = {
@@ -39,10 +43,21 @@ export async function getOrderBookAnalysis(
       },
     };
     const res = await callAi(body, apiKey);
-    const analysis = extractJson<Analysis>(res);
-    if (analysis) await setCache(key, analysis, 60 * 1000);
-    return analysis;
-  } finally {
-    releaseLock(key);
+    return extractJson<Analysis>(res);
+  })();
+
+  cache.set(key, { promise, expires: now + ONE_MINUTE });
+
+  try {
+    const summary = await promise;
+    if (summary) {
+      cache.set(key, { summary, expires: Date.now() + ONE_MINUTE });
+    } else {
+      cache.delete(key);
+    }
+    return summary;
+  } catch (err) {
+    cache.delete(key);
+    throw err;
   }
 }

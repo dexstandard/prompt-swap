@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { clearCache } from '../src/util/cache.js';
 
 const responseJson = JSON.stringify({
   object: 'response',
@@ -31,7 +30,6 @@ vi.mock('../src/util/ai.js', () => ({
 
 describe('order book analyst service', () => {
   beforeEach(() => {
-    clearCache();
     fetchOrderBookMock.mockReset();
     callAiMock.mockReset();
   });
