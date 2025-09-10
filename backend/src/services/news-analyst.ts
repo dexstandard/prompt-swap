@@ -1,6 +1,7 @@
 import { getNewsByToken } from '../repos/news.js';
 import { callAi, extractJson } from '../util/ai.js';
 import { analysisSchema, type Analysis } from './types.js';
+import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 
 interface CacheEntry {
   summary?: Analysis;
@@ -20,8 +21,9 @@ export async function getTokenNewsSummary(
   token: string,
   model: string,
   apiKey: string,
-  keyType = 'openai',
+  opts?: { keyType?: string; agentId?: string },
 ): Promise<Analysis | null> {
+  const { keyType = 'openai', agentId } = opts ?? {};
   const now = Date.now();
   const cacheKey = getCacheKey(keyType, token);
   const existing = cache.get(cacheKey);
@@ -51,6 +53,8 @@ export async function getTokenNewsSummary(
       },
     };
     const res = await callAi(body, apiKey);
+    if (agentId)
+      await insertReviewRawLog({ agentId, prompt: body, response: res });
     return extractJson<Analysis>(res);
   })();
   cache.set(cacheKey, { promise, expires: now + THREE_MINUTES });

@@ -23,7 +23,7 @@ describe('news analyst step', () => {
 
   it('caches token list and news summaries', async () => {
     const { runNewsAnalyst } = await import('../src/workflows/portfolio-review.js');
-    await runNewsAnalyst(createLogger(), 'gpt', 'key', 'run1');
+    await runNewsAnalyst(createLogger(), 'gpt', 'key', 'run1', 'agent1');
 
     const tokens = await getCache<string[]>(`tokens:gpt`);
     expect(tokens).toContain('BTC');

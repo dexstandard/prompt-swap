@@ -1,6 +1,7 @@
 import { fetchOrderBook } from './derivatives.js';
 import { callAi, extractJson } from '../util/ai.js';
 import { analysisSchema, type Analysis } from './types.js';
+import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 
 interface CacheEntry {
   summary?: Analysis;
@@ -15,6 +16,7 @@ export async function getOrderBookAnalysis(
   pair: string,
   model: string,
   apiKey: string,
+  agentId?: string,
 ): Promise<Analysis | null> {
   const now = Date.now();
   const key = `${model}:${pair}`;
@@ -43,6 +45,8 @@ export async function getOrderBookAnalysis(
       },
     };
     const res = await callAi(body, apiKey);
+    if (agentId)
+      await insertReviewRawLog({ agentId, prompt: body, response: res });
     return extractJson<Analysis>(res);
   })();
 

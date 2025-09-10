@@ -23,7 +23,14 @@ describe('technical analyst step', () => {
 
   it('caches technical outlook per token', async () => {
     const { runTechnicalAnalyst } = await import('../src/workflows/portfolio-review.js');
-    await runTechnicalAnalyst(createLogger(), 'gpt', 'key', '1d', 'run1');
+    await runTechnicalAnalyst(
+      createLogger(),
+      'gpt',
+      'key',
+      '1d',
+      'run1',
+      'agent1',
+    );
 
     const outlook = await getCache<Analysis>(`tech:gpt:BTC:1d:run1`);
     expect(outlook?.comment).toBe('outlook for BTC');

@@ -19,6 +19,7 @@ export async function runNewsAnalyst(
   model: string,
   apiKey: string,
   runId: string,
+  agentId: string,
 ): Promise<void> {
   // cache token list
   await setCache(`tokens:${model}`, TOKEN_SYMBOLS);
@@ -33,7 +34,9 @@ export async function runNewsAnalyst(
       continue;
     }
     try {
-      const summary = await getTokenNewsSummary(token, model, apiKey);
+      const summary = await getTokenNewsSummary(token, model, apiKey, {
+        agentId,
+      });
       if (summary) await setCache(key, summary);
     } catch (err) {
       log.error({ err, token }, 'failed to summarize news');
@@ -53,6 +56,7 @@ export async function runTechnicalAnalyst(
   apiKey: string,
   timeframe: string,
   runId: string,
+  agentId: string,
 ): Promise<void> {
   const tokens =
     (await getCache<string[]>(`tokens:${model}`)) ?? TOKEN_SYMBOLS;
@@ -65,7 +69,9 @@ export async function runTechnicalAnalyst(
       continue;
     }
     try {
-      const outlook = await getTechnicalOutlook(token, model, apiKey, timeframe);
+      const outlook = await getTechnicalOutlook(token, model, apiKey, timeframe, {
+        agentId,
+      });
       if (outlook) await setCache(key, outlook);
     } catch (err) {
       log.error({ err, token }, 'failed to compute technical outlook');
@@ -84,6 +90,7 @@ export async function runOrderBookAnalyst(
   model: string,
   apiKey: string,
   runId: string,
+  agentId: string,
 ): Promise<void> {
   const tokens =
     (await getCache<string[]>(`tokens:${model}`)) ?? TOKEN_SYMBOLS;
@@ -98,7 +105,7 @@ export async function runOrderBookAnalyst(
       continue;
     }
     try {
-      const analysis = await getOrderBookAnalysis(pair, model, apiKey);
+      const analysis = await getOrderBookAnalysis(pair, model, apiKey, agentId);
       if (analysis) await setCache(key, analysis);
     } catch (err) {
       log.error({ err, pair }, 'failed to analyze order book');
@@ -152,7 +159,12 @@ export async function runPerformanceAnalyzer(
         created_at: o.created_at.toISOString(),
         planned: JSON.parse(o.planned_json),
       }));
-    const analysis = await getPerformanceAnalysis({ reports, orders }, model, apiKey);
+    const analysis = await getPerformanceAnalysis(
+      { reports, orders },
+      model,
+      apiKey,
+      agentId,
+    );
     if (analysis) await setCache(key, analysis);
   } catch (err) {
     log.error({ err }, 'failed to run performance analyzer');
@@ -189,9 +201,9 @@ export async function runMainTrader(
   runId: string,
 ): Promise<void> {
   await Promise.all([
-    runNewsAnalyst(log, model, apiKey, runId),
-    runTechnicalAnalyst(log, model, apiKey, timeframe, runId),
-    runOrderBookAnalyst(log, model, apiKey, runId),
+    runNewsAnalyst(log, model, apiKey, runId, agentId),
+    runTechnicalAnalyst(log, model, apiKey, timeframe, runId, agentId),
+    runOrderBookAnalyst(log, model, apiKey, runId, agentId),
   ]);
 
   const tokens = (await getCache<string[]>(`tokens:${model}`)) ?? TOKEN_SYMBOLS;

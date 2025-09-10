@@ -1,10 +1,12 @@
 import { callAi, extractJson } from '../util/ai.js';
 import { analysisSchema, type Analysis } from './types.js';
+import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 
 export async function getPerformanceAnalysis(
   input: unknown,
   model: string,
   apiKey: string,
+  agentId?: string,
 ): Promise<Analysis | null> {
   const reports = Array.isArray((input as any)?.reports)
     ? (input as any).reports
@@ -29,5 +31,7 @@ export async function getPerformanceAnalysis(
     },
   };
   const res = await callAi(body, apiKey);
+  if (agentId)
+    await insertReviewRawLog({ agentId, prompt: body, response: res });
   return extractJson<Analysis>(res);
 }

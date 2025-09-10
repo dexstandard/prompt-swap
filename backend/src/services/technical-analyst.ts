@@ -1,6 +1,7 @@
 import { fetchTokenIndicators } from './indicators.js';
 import { callAi, extractJson } from '../util/ai.js';
 import { analysisSchema, type Analysis } from './types.js';
+import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 
 interface CacheEntry {
   outlook?: Analysis;
@@ -20,8 +21,9 @@ export async function getTechnicalOutlook(
   model: string,
   apiKey: string,
   timeframe: string,
-  keyType = 'openai',
+  opts?: { keyType?: string; agentId?: string },
 ): Promise<Analysis | null> {
+  const { keyType = 'openai', agentId } = opts ?? {};
   const now = Date.now();
   const cacheKey = getCacheKey(keyType, token, timeframe);
   const existing = cache.get(cacheKey);
@@ -48,6 +50,8 @@ export async function getTechnicalOutlook(
       },
     };
     const res = await callAi(body, apiKey);
+    if (agentId)
+      await insertReviewRawLog({ agentId, prompt: body, response: res });
     return extractJson<Analysis>(res);
   })();
   cache.set(cacheKey, { promise, expires: now + ONE_MINUTE });

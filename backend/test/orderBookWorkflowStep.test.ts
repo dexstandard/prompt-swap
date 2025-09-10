@@ -23,7 +23,7 @@ describe('order book analyst step', () => {
 
   it('caches order book analysis per pair', async () => {
     const { runOrderBookAnalyst } = await import('../src/workflows/portfolio-review.js');
-    await runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'run1');
+    await runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'run1', 'agent1');
 
     const analysis = await getCache<Analysis>(`orderbook:gpt:BTCUSDT:run1`);
     expect(analysis?.comment).toBe('analysis for BTCUSDT');

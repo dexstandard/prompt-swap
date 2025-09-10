@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { db } from '../src/db/index.js';
-import { getTokenNewsSummary } from '../src/services/news-analyst.js';
 
 const responseJson = JSON.stringify({
   object: 'response',
@@ -17,19 +16,30 @@ const responseJson = JSON.stringify({
   ],
 });
 
+const insertReviewRawLogMock = vi.fn();
+vi.mock('../src/repos/agent-review-raw-log.js', () => ({
+  insertReviewRawLog: insertReviewRawLogMock,
+}));
+
 describe('news analyst', () => {
-  it('caches summary by token', async () => {
+  beforeEach(() => {
+    insertReviewRawLogMock.mockClear();
+  });
+
+  it('caches summary by token and logs first call', async () => {
     await db.query(
       "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t', 'l', NOW(), ARRAY['BTC'])",
     );
     const fetchMock = vi.fn().mockResolvedValue({ text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const s1 = await getTokenNewsSummary('BTC', 'gpt', 'key');
-    const s2 = await getTokenNewsSummary('BTC', 'gpt', 'key');
+    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
+    const s1 = await getTokenNewsSummary('BTC', 'gpt', 'key', { agentId: 'a1' });
+    const s2 = await getTokenNewsSummary('BTC', 'gpt', 'key', { agentId: 'a1' });
     expect(s1?.comment).toBe('summary text');
     expect(s2?.comment).toBe('summary text');
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(insertReviewRawLogMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
 
@@ -43,6 +53,7 @@ describe('news analyst', () => {
     });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
+    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
     const [r1, r2] = await Promise.all([
       getTokenNewsSummary('ETH', 'gpt', 'key'),
       getTokenNewsSummary('ETH', 'gpt', 'key'),
@@ -57,6 +68,7 @@ describe('news analyst', () => {
     const orig = globalThis.fetch;
     const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
+    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
     const first = await getTokenNewsSummary('DOGE', 'gpt', 'key');
     expect(first).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -71,3 +83,4 @@ describe('news analyst', () => {
     (globalThis as any).fetch = orig;
   });
 });
+
