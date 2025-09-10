@@ -12,7 +12,7 @@ export async function getTechnicalOutlook(
 ): Promise<AnalysisLog> {
   const indicators = await fetchTokenIndicators(token);
   const prompt = { token, timeframe, indicators };
-  const instructions = `You are a crypto technical analyst. Using indicators in input, write a short outlook for a crypto trader about ${token} on timeframe ${timeframe}. Include a bullishness score from 0-10 and key signals.`;
+  const instructions = `You are a crypto technical analyst. Using indicators in input, write a short outlook for a crypto trader about ${token} on timeframe ${timeframe}. Include a bullishness score from 0-10 and key signals. - shortReport ≤255 chars.`;
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
     const res = await callAi(model, instructions, analysisSchema, prompt, apiKey);
