@@ -1,24 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { setCache, getCache, clearCache } from '../src/util/cache.js';
-import type { Analysis } from '../src/services/types.js';
-
-const getPerformanceAnalysisMock = vi.fn(
-  (
-    _input?: unknown,
-    _model?: string,
-    _apiKey?: string,
-    _log?: FastifyBaseLogger,
-  ) =>
-    Promise.resolve({
-      analysis: { comment: 'perf', score: 4 },
-      prompt: { a: 1 },
-      response: 'r',
-    }),
-);
-vi.mock('../src/services/performance-analyst.js', () => ({
-  getPerformanceAnalysis: getPerformanceAnalysisMock,
-}));
+import type { Analysis } from '../src/agents/types.js';
 
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
@@ -45,25 +27,35 @@ function createLogger(): FastifyBaseLogger {
 
 describe('performance analyzer step', () => {
   beforeEach(() => {
-    clearCache();
-    getPerformanceAnalysisMock.mockClear();
     getRecentLimitOrdersMock.mockClear();
     insertReviewRawLogMock.mockClear();
   });
 
-  it('caches performance analysis', async () => {
-    const { runPerformanceAnalyzer } = await import('../src/workflows/portfolio-review.js');
-    await setCache('tokens:gpt', ['BTC']);
-    await setCache('news:gpt:BTC:run1', { comment: 'n', score: 1 });
-    await setCache('tech:gpt:BTC:1d:run1', { comment: 't', score: 2 });
-    await setCache('orderbook:gpt:BTCUSDT:run1', { comment: 'o', score: 3 });
-
-    await runPerformanceAnalyzer(createLogger(), 'gpt', 'key', '1d', 'agent1', 'run1');
-
-    const perf = await getCache<Analysis>('performance:gpt:agent1:run1');
+  it('fetches performance analysis', async () => {
+    const mod = await import('../src/agents/performance-analyst.js');
+    vi.spyOn(mod, 'getPerformanceAnalysis').mockResolvedValue({
+      analysis: { comment: 'perf', score: 4 },
+      prompt: { instructions: '', input: {} },
+      response: 'res',
+    });
+    const reports = [
+      {
+        token: 'BTC',
+        news: { comment: 'n', score: 1 } as Analysis,
+        tech: { comment: 't', score: 2 } as Analysis,
+        orderbook: { comment: 'o', score: 3 } as Analysis,
+      },
+    ];
+    const perf = await mod.runPerformanceAnalyzer(
+      createLogger(),
+      'gpt',
+      'key',
+      'agent1',
+      reports,
+    );
     expect(perf?.comment).toBe('perf');
-    expect(getPerformanceAnalysisMock).toHaveBeenCalled();
     expect(getRecentLimitOrdersMock).toHaveBeenCalled();
+    expect(mod.getPerformanceAnalysis).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

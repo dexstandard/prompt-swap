@@ -57,7 +57,7 @@ vi.mock('../src/services/rebalance.js', () => ({
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 
 beforeAll(async () => {
-  ({ reviewAgentPortfolio } = await import('../src/jobs/review-portfolio.js'));
+  ({ reviewAgentPortfolio } = await import('../src/workflows/portfolio-review.js'));
 });
 
 describe('cleanup open orders', () => {

@@ -32,7 +32,7 @@ describe('news analyst', () => {
       .mockResolvedValue({ ok: true, text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
+    const { getTokenNewsSummary } = await import('../src/agents/news-analyst.js');
     const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('summary text');
     expect(res.prompt).toBeTruthy();
@@ -45,7 +45,7 @@ describe('news analyst', () => {
     const orig = globalThis.fetch;
     const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
-    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
+    const { getTokenNewsSummary } = await import('../src/agents/news-analyst.js');
     const res = await getTokenNewsSummary('DOGE', 'gpt', 'key', createLogger());
     expect(res.analysis).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -61,7 +61,7 @@ describe('news analyst', () => {
       .mockResolvedValue({ ok: true, text: async () => '{"output":[]}' });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
+    const { getTokenNewsSummary } = await import('../src/agents/news-analyst.js');
     const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
@@ -75,7 +75,7 @@ describe('news analyst', () => {
     const orig = globalThis.fetch;
     const fetchMock = vi.fn().mockRejectedValue(new Error('network'));
     (globalThis as any).fetch = fetchMock;
-    const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
+    const { getTokenNewsSummary } = await import('../src/agents/news-analyst.js');
     const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);

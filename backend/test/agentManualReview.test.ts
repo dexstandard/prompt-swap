@@ -8,7 +8,7 @@ const reviewAgentPortfolioMock = vi.fn<(
   log: unknown,
   agentId: string,
 ) => Promise<unknown>>(() => Promise.resolve());
-vi.mock('../src/jobs/review-portfolio.js', () => ({
+vi.mock('../src/workflows/portfolio-review.js', () => ({
   reviewAgentPortfolio: reviewAgentPortfolioMock,
 }));
 

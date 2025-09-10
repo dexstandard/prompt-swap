@@ -1,69 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { getCache, clearCache } from '../src/util/cache.js';
 
-const getTokenNewsSummaryMock = vi.fn(
-  (
-    token: string,
-    _model?: string,
-    _apiKey?: string,
-    _log?: FastifyBaseLogger,
-  ) =>
-    Promise.resolve({
-      analysis: { comment: `news ${token}`, score: 1 },
-      prompt: { token },
-      response: 'r',
-    }),
+const runNewsAnalystMock = vi.fn(() =>
+  Promise.resolve({ BTC: { comment: 'news BTC', score: 1 } }),
 );
-vi.mock('../src/services/news-analyst.js', () => ({
-  getTokenNewsSummary: getTokenNewsSummaryMock,
+vi.mock('../src/agents/news-analyst.js', () => ({
+  runNewsAnalyst: runNewsAnalystMock,
 }));
 
-const getTechnicalOutlookMock = vi.fn(
-  (
-    token: string,
-    _model?: string,
-    _apiKey?: string,
-    _timeframe?: string,
-    _log?: FastifyBaseLogger,
-  ) =>
-    Promise.resolve({
-      analysis: { comment: `tech ${token}`, score: 2 },
-      prompt: { token },
-      response: 'r',
-    }),
+const runTechnicalAnalystMock = vi.fn(() =>
+  Promise.resolve({ BTC: { comment: 'tech BTC', score: 2 } }),
 );
-vi.mock('../src/services/technical-analyst.js', () => ({
-  getTechnicalOutlook: getTechnicalOutlookMock,
+vi.mock('../src/agents/technical-analyst.js', () => ({
+  runTechnicalAnalyst: runTechnicalAnalystMock,
 }));
 
-const getOrderBookAnalysisMock = vi.fn(
-  (
-    pair: string,
-    _model?: string,
-    _apiKey?: string,
-    _log?: FastifyBaseLogger,
-  ) =>
-    Promise.resolve({
-      analysis: { comment: `order ${pair}`, score: 3 },
-      prompt: { pair },
-      response: 'r',
-    }),
+const runOrderBookAnalystMock = vi.fn(() =>
+  Promise.resolve({ BTC: { comment: 'order BTCUSDT', score: 3 } }),
 );
-vi.mock('../src/services/order-book-analyst.js', () => ({
-  getOrderBookAnalysis: getOrderBookAnalysisMock,
+vi.mock('../src/agents/order-book-analyst.js', () => ({
+  runOrderBookAnalyst: runOrderBookAnalystMock,
 }));
 
-const getPerformanceAnalysisMock = vi.fn(() =>
-  Promise.resolve({ analysis: { comment: 'perf', score: 4 }, prompt: { a: 1 }, response: 'r' }),
+const runPerformanceAnalyzerMock = vi.fn(() =>
+  Promise.resolve({ comment: 'perf', score: 4 }),
 );
-vi.mock('../src/services/performance-analyst.js', () => ({
-  getPerformanceAnalysis: getPerformanceAnalysisMock,
-}));
-
-const getRecentLimitOrdersMock = vi.fn(() => Promise.resolve([]));
-vi.mock('../src/repos/limit-orders.js', () => ({
-  getRecentLimitOrders: getRecentLimitOrdersMock,
+vi.mock('../src/agents/performance-analyst.js', () => ({
+  runPerformanceAnalyzer: runPerformanceAnalyzerMock,
 }));
 
 const callAiMock = vi.fn(() =>
@@ -95,6 +58,17 @@ vi.mock('../src/repos/agent-review-raw-log.js', () => ({
   insertReviewRawLog: insertReviewRawLogMock,
 }));
 
+const getRecentLimitOrdersMock = vi.fn(() => Promise.resolve([
+  {
+    planned_json: JSON.stringify({ symbol: 'BTCUSDT', side: 'BUY' }),
+    status: 'filled',
+    created_at: new Date(),
+  },
+]));
+vi.mock('../src/repos/limit-orders.js', () => ({
+  getRecentLimitOrders: getRecentLimitOrdersMock,
+}));
+
 function createLogger(): FastifyBaseLogger {
   const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
   return log;
@@ -102,33 +76,31 @@ function createLogger(): FastifyBaseLogger {
 
 describe('main trader step', () => {
   beforeEach(() => {
-    clearCache();
-    getTokenNewsSummaryMock.mockClear();
-    getTechnicalOutlookMock.mockClear();
-    getOrderBookAnalysisMock.mockClear();
-    getPerformanceAnalysisMock.mockClear();
-    getRecentLimitOrdersMock.mockClear();
+    runNewsAnalystMock.mockClear();
+    runTechnicalAnalystMock.mockClear();
+    runOrderBookAnalystMock.mockClear();
+    runPerformanceAnalyzerMock.mockClear();
     callAiMock.mockClear();
     insertReviewRawLogMock.mockClear();
+    getRecentLimitOrdersMock.mockClear();
   });
 
-  it('caches decision and skips stablecoins', async () => {
-    const { runMainTrader } = await import('../src/workflows/portfolio-review.js');
-    await runMainTrader(
+  it('runs traders and aggregates analyses', async () => {
+    const { runMainTrader } = await import('../src/agents/main-trader.js');
+    const decision = await runMainTrader(
       createLogger(),
       'gpt',
       'key',
       '1d',
       'agent1',
       'pf1',
-      'run1',
     );
 
+    expect(decision?.rebalance).toBe(true);
     expect(insertReviewRawLogMock).toHaveBeenCalled();
-    expect(getPerformanceAnalysisMock).toHaveBeenCalled();
-    expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDT');
-    expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDC');
-    expect(getTechnicalOutlookMock).not.toHaveBeenCalledWith('USDT');
-    expect(getTechnicalOutlookMock).not.toHaveBeenCalledWith('USDC');
+    expect(runPerformanceAnalyzerMock).toHaveBeenCalled();
+    expect(runNewsAnalystMock).toHaveBeenCalled();
+    expect(runTechnicalAnalystMock).toHaveBeenCalled();
+    expect(runOrderBookAnalystMock).toHaveBeenCalled();
   });
 });

@@ -51,10 +51,10 @@ const flatTimeseries = {
 };
 
 const runMainTrader = vi.fn();
-vi.mock('../src/workflows/portfolio-review.js', () => ({ runMainTrader }));
-
-const getCache = vi.fn();
-vi.mock('../src/util/cache.js', () => ({ getCache }));
+vi.mock('../src/agents/main-trader.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, runMainTrader };
+});
 
 vi.mock('../src/util/crypto.js', () => ({
   decrypt: vi.fn().mockReturnValue('key'),
@@ -93,7 +93,7 @@ vi.mock('../src/services/rebalance.js', () => ({
   createRebalanceLimitOrder,
 }));
 
-vi.mock('../src/services/news-analyst.js', () => ({
+vi.mock('../src/agents/news-analyst.js', () => ({
   getTokenNewsSummary: vi.fn().mockResolvedValue({
     analysis: { comment: 'news', score: 1 },
     prompt: {},
@@ -101,7 +101,7 @@ vi.mock('../src/services/news-analyst.js', () => ({
   }),
 }));
 
-vi.mock('../src/services/technical-analyst.js', () => ({
+vi.mock('../src/agents/technical-analyst.js', () => ({
   getTechnicalOutlook: vi.fn().mockResolvedValue({
     analysis: { comment: 'tech', score: 2 },
     prompt: {},
@@ -109,7 +109,7 @@ vi.mock('../src/services/technical-analyst.js', () => ({
   }),
 }));
 
-vi.mock('../src/services/order-book-analyst.js', () => ({
+vi.mock('../src/agents/order-book-analyst.js', () => ({
   getOrderBookAnalysis: vi.fn().mockResolvedValue({
     analysis: { comment: 'order', score: 3 },
     prompt: {},
@@ -117,22 +117,27 @@ vi.mock('../src/services/order-book-analyst.js', () => ({
   }),
 }));
 
-vi.mock('../src/services/performance-analyst.js', () => ({
+vi.mock('../src/agents/performance-analyst.js', () => ({
   getPerformanceAnalysis: vi.fn().mockResolvedValue({
     analysis: { comment: 'perf', score: 4 },
     prompt: {},
     response: 'r',
   }),
+  buildPreviousOrders: vi.fn().mockResolvedValue({}),
 }));
 
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
+let removeWorkflowFromSchedule: (id: string) => void;
 
 beforeAll(async () => {
-  ({ reviewAgentPortfolio } = await import('../src/jobs/review-portfolio.js'));
+  ({ reviewAgentPortfolio, removeWorkflowFromSchedule } = await import(
+    '../src/workflows/portfolio-review.js'
+  ));
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  ['1', '2', '3', '4'].forEach((id) => removeWorkflowFromSchedule(id));
 });
 
 async function setupAgent(id: string, manual = false) {
@@ -160,12 +165,10 @@ describe('reviewPortfolio', () => {
   it('saves decision and logs', async () => {
     await setupAgent('1');
     const decision = { rebalance: false, newAllocation: 40, shortReport: 'ok' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '1');
     expect(runMainTrader).toHaveBeenCalledTimes(1);
-    const runId = runMainTrader.mock.calls[0][6];
-    expect(getCache).toHaveBeenCalledWith(`portfolio:gpt:1:${runId}`);
     const { rows } = await db.query(
       'SELECT prompt, response FROM agent_review_raw_log WHERE agent_id=$1',
       ['1'],
@@ -184,7 +187,7 @@ describe('reviewPortfolio', () => {
   it('calls createRebalanceLimitOrder when rebalance requested', async () => {
     await setupAgent('2');
     const decision = { rebalance: true, newAllocation: 60, shortReport: 's' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '2');
     expect(createRebalanceLimitOrder).toHaveBeenCalledTimes(1);
@@ -196,7 +199,7 @@ describe('reviewPortfolio', () => {
   it('skips createRebalanceLimitOrder when manualRebalance is enabled', async () => {
     await setupAgent('3', true);
     const decision = { rebalance: true, newAllocation: 55, shortReport: 's' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '3');
     expect(createRebalanceLimitOrder).not.toHaveBeenCalled();
@@ -205,7 +208,7 @@ describe('reviewPortfolio', () => {
   it('records error when newAllocation is out of range', async () => {
     await setupAgent('4');
     const decision = { rebalance: true, newAllocation: 150, shortReport: 's' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '4');
     const { rows } = await db.query(
@@ -220,7 +223,7 @@ describe('reviewPortfolio', () => {
   it('records error when newAllocation violates floor', async () => {
     await setupAgent('5');
     const decision = { rebalance: true, newAllocation: 5, shortReport: 's' };
-    getCache.mockResolvedValue(decision);
+    runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '5');
     const { rows } = await db.query(

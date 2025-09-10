@@ -1,4 +1,4 @@
-import type { Analysis } from '../services/types.js';
+import type { Analysis } from '../agents/types.js';
 
 export const developerInstructions = [
   '- You lead a crypto analyst team (news, technical, order-book). Reports from each member are attached.',

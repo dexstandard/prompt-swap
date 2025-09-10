@@ -19,7 +19,7 @@ import {
   deactivateAgentsByUser,
   draftAgentsByUser,
 } from '../repos/agents.js';
-import { removeAgentFromSchedule } from '../jobs/review-portfolio.js';
+import { removeWorkflowFromSchedule } from '../workflows/portfolio-review.js';
 import { cancelOpenOrders } from '../services/binance.js';
 import { requireUserIdMatch, requireAdmin } from '../util/auth.js';
 import {
@@ -131,7 +131,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
           .send(errorResponse(ERROR_MESSAGES.notFound));
       const agents = await getActiveAgentsByUser(id);
       for (const agent of agents) {
-        removeAgentFromSchedule(agent.id);
+        removeWorkflowFromSchedule(agent.id);
         const token1 = agent.tokens[0].token;
         const token2 = agent.tokens[1].token;
         try {
@@ -150,7 +150,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         if (!keyRow?.own && keyRow?.shared) {
           const tAgents = await getActiveAgentsByUser(targetId);
           for (const agent of tAgents) {
-            removeAgentFromSchedule(agent.id);
+            removeWorkflowFromSchedule(agent.id);
             const token1 = agent.tokens[0].token;
             const token2 = agent.tokens[1].token;
             try {
@@ -208,7 +208,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       if (!keyRow?.own && keyRow?.shared) {
         const agents = await getActiveAgentsByUser(target.id);
         for (const agent of agents) {
-          removeAgentFromSchedule(agent.id);
+          removeWorkflowFromSchedule(agent.id);
           const token1 = agent.tokens[0].token;
           const token2 = agent.tokens[1].token;
           try {
@@ -325,7 +325,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       if (err) return reply.code(err.code).send(err.body);
       const agents = await getActiveAgentsByUser(id);
       for (const agent of agents) {
-        removeAgentFromSchedule(agent.id);
+        removeWorkflowFromSchedule(agent.id);
         const token1 = agent.tokens[0].token;
         const token2 = agent.tokens[1].token;
         try {
