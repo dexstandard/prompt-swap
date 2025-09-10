@@ -44,6 +44,7 @@ import { getOrderBookAnalysis } from '../services/order-book-analyst.js';
 import { getPerformanceAnalysis } from '../services/performance-analyst.js';
 import { isStablecoin } from '../util/tokens.js';
 import type { RebalancePrompt, PreviousResponse } from '../util/ai.js';
+import type { AnalysisLog } from '../services/types.js';
 
 type MarketTimeseries = Awaited<ReturnType<typeof fetchMarketTimeseries>>;
 
@@ -138,6 +139,10 @@ async function prepareAgents(
     prompt: RebalancePrompt;
     key: string;
     log: FastifyBaseLogger;
+    tech: Record<string, AnalysisLog>;
+    news: Record<string, AnalysisLog>;
+    orderbook: Record<string, AnalysisLog>;
+    performance: AnalysisLog;
   }[] = [];
 
   for (const row of rows) {
@@ -156,18 +161,116 @@ async function prepareAgents(
       continue;
     }
 
-    const prompt = await buildPrompt(row, balances, log, cache, key);
-    if (!prompt) {
+    try {
+      const {
+        pairData,
+        price1,
+        price2,
+        ind1,
+        ind2,
+        ts1,
+        ts2,
+        openInterest,
+        fundingRate,
+        orderBook,
+      } = await fetchPromptData(row, cache, log);
+
+      const { floor, positions } = computePortfolioValues(
+        row,
+        balances,
+        price1,
+        price2,
+      );
+
+      const prevOrders = await buildPreviousOrders(row.id);
+      const token1 = row.tokens[0].token;
+      const token2 = row.tokens[1].token;
+
+      const [newsLogs, techLogs, orderLogs] = await Promise.all([
+        buildNewsPrompt(row, key, log),
+        buildTechPrompt(row, key, log),
+        buildOrderBookPrompt(row, key, log),
+      ]);
+
+      const reports = [
+        {
+          token: token1,
+          news: newsLogs[token1]?.analysis ?? null,
+          tech: techLogs[token1]?.analysis ?? null,
+          orderbook: orderLogs[token1]?.analysis ?? null,
+        },
+        {
+          token: token2,
+          news: newsLogs[token2]?.analysis ?? null,
+          tech: techLogs[token2]?.analysis ?? null,
+          orderbook: orderLogs[token2]?.analysis ?? null,
+        },
+      ];
+
+      const performanceLog = await buildPerformancePrompt(
+        row,
+        reports,
+        key,
+        log,
+      );
+
+      const marketData = assembleMarketData(
+        row,
+        pairData,
+        ind1,
+        ind2,
+        ts1,
+        ts2,
+        cache.fearGreed,
+        openInterest,
+        fundingRate,
+        orderBook,
+      );
+      const newsReports: Record<string, string> = {};
+      if (newsLogs[token1]?.analysis?.comment)
+        newsReports[token1] = newsLogs[token1].analysis!.comment;
+      if (newsLogs[token2]?.analysis?.comment)
+        newsReports[token2] = newsLogs[token2].analysis!.comment;
+      if (Object.keys(newsReports).length) {
+        (marketData as any).newsReports = newsReports;
+        log.info({ tokens: Object.keys(newsReports) }, 'attached news reports');
+      }
+
+      const prompt: RebalancePrompt = {
+        instructions: row.agent_instructions,
+        policy: { floor },
+        portfolio: {
+          ts: new Date().toISOString(),
+          positions,
+        },
+        ...prevOrders,
+        marketData,
+        reports,
+        performance: performanceLog.analysis,
+      };
+
+      const prevRows = await getRecentReviewResults(row.id, 5);
+      prompt.previous_responses = prevRows
+        .map(extractPreviousResponse)
+        .filter(Boolean) as PreviousResponse[];
+
+      prepared.push({
+        row,
+        prompt,
+        key,
+        log,
+        tech: techLogs,
+        news: newsLogs,
+        orderbook: orderLogs,
+        performance: performanceLog,
+      });
+    } catch (err) {
+      const msg = 'failed to fetch market data';
+      await saveFailure(row, msg);
+      log.error({ err }, 'agent run failed');
       runningAgents.delete(row.id);
       continue;
     }
-
-    const prevRows = await getRecentReviewResults(row.id, 5);
-    prompt.previous_responses = prevRows
-      .map(extractPreviousResponse)
-      .filter(Boolean) as PreviousResponse[];
-
-    prepared.push({ row, prompt, key, log });
   }
 
   return prepared;
@@ -235,147 +338,95 @@ async function fetchBalances(
   return { token1Balance, token2Balance };
 }
 
-async function buildPrompt(
+async function buildNewsPrompt(
   row: ActiveAgentRow,
-  balances: { token1Balance: number; token2Balance: number },
-  log: FastifyBaseLogger,
-  cache: PromptCache,
   apiKey: string,
-): Promise<RebalancePrompt | undefined> {
-  try {
-    const {
-      pairData,
-      price1,
-      price2,
-      ind1,
-      ind2,
-      ts1,
-      ts2,
-      openInterest,
-      fundingRate,
-      orderBook,
-    } = await fetchPromptData(row, cache, log);
-    const { floor, positions } = computePortfolioValues(
-      row,
-      balances,
-      price1,
-      price2,
-    );
-    const prevOrders = await buildPreviousOrders(row.id);
-    const token1 = row.tokens[0].token;
-    const token2 = row.tokens[1].token;
-    const [
-      news1Res,
-      news2Res,
-      tech1Res,
-      tech2Res,
-      ob1Res,
-      ob2Res,
-    ] = await Promise.all([
-      getTokenNewsSummary(token1, row.model, apiKey).catch((err) => {
-        log.error({ err, token: token1 }, 'failed to fetch news summary');
+  log: FastifyBaseLogger,
+): Promise<Record<string, AnalysisLog>> {
+  const tokens = row.tokens.map((t) => t.token);
+  const res = await Promise.all(
+    tokens.map((token) =>
+      getTokenNewsSummary(token, row.model, apiKey).catch((err) => {
+        log.error({ err, token }, 'failed to fetch news summary');
         return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
       }),
-      getTokenNewsSummary(token2, row.model, apiKey).catch((err) => {
-        log.error({ err, token: token2 }, 'failed to fetch news summary');
-        return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-      }),
-      isStablecoin(token1)
+    ),
+  );
+  const out: Record<string, AnalysisLog> = {};
+  tokens.forEach((t, i) => {
+    out[t] = res[i];
+  });
+  return out;
+}
+
+async function buildTechPrompt(
+  row: ActiveAgentRow,
+  apiKey: string,
+  log: FastifyBaseLogger,
+): Promise<Record<string, AnalysisLog>> {
+  const tokens = row.tokens.map((t) => t.token);
+  const res = await Promise.all(
+    tokens.map((token) =>
+      isStablecoin(token)
         ? Promise.resolve({ analysis: null })
-        : getTechnicalOutlook(
-            token1,
-            row.model,
-            apiKey,
-            row.review_interval,
-          ).catch((err) => {
-            log.error({ err, token: token1 }, 'failed to fetch tech outlook');
+        : getTechnicalOutlook(token, row.model, apiKey, row.review_interval).catch(
+            (err) => {
+              log.error({ err, token }, 'failed to fetch tech outlook');
+              return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+            },
+          ),
+    ),
+  );
+  const out: Record<string, AnalysisLog> = {};
+  tokens.forEach((t, i) => {
+    out[t] = res[i];
+  });
+  return out;
+}
+
+async function buildOrderBookPrompt(
+  row: ActiveAgentRow,
+  apiKey: string,
+  log: FastifyBaseLogger,
+): Promise<Record<string, AnalysisLog>> {
+  const tokens = row.tokens.map((t) => t.token);
+  const res = await Promise.all(
+    tokens.map((token) =>
+      isStablecoin(token)
+        ? Promise.resolve({ analysis: null })
+        : getOrderBookAnalysis(`${token}USDT`, row.model, apiKey).catch((err) => {
+            log.error({ err, token }, 'failed to fetch order book');
             return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
           }),
-      isStablecoin(token2)
-        ? Promise.resolve({ analysis: null })
-        : getTechnicalOutlook(
-            token2,
-            row.model,
-            apiKey,
-            row.review_interval,
-          ).catch((err) => {
-            log.error({ err, token: token2 }, 'failed to fetch tech outlook');
-            return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-          }),
-      isStablecoin(token1)
-        ? Promise.resolve({ analysis: null })
-        : getOrderBookAnalysis(`${token1}USDT`, row.model, apiKey).catch((err) => {
-            log.error({ err, token: token1 }, 'failed to fetch order book');
-            return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-          }),
-      isStablecoin(token2)
-        ? Promise.resolve({ analysis: null })
-        : getOrderBookAnalysis(`${token2}USDT`, row.model, apiKey).catch((err) => {
-            log.error({ err, token: token2 }, 'failed to fetch order book');
-            return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-          }),
-    ]);
-    const news1 = news1Res.analysis;
-    const news2 = news2Res.analysis;
-    const tech1 = tech1Res.analysis;
-    const tech2 = tech2Res.analysis;
-    const ob1 = ob1Res.analysis;
-    const ob2 = ob2Res.analysis;
-    const marketData = assembleMarketData(
-      row,
-      pairData,
-      ind1,
-      ind2,
-      ts1,
-      ts2,
-      cache.fearGreed,
-      openInterest,
-      fundingRate,
-      orderBook,
-    );
-    const news: Record<string, string> = {};
-    if (news1?.comment) news[token1] = news1.comment;
-    if (news2?.comment) news[token2] = news2.comment;
-    if (Object.keys(news).length) {
-      (marketData as any).newsReports = news;
-      log.info({ tokens: Object.keys(news) }, 'attached news reports');
-    }
-    const reports = [
-      { token: token1, news: news1, tech: tech1, orderbook: ob1 },
-      { token: token2, news: news2, tech: tech2, orderbook: ob2 },
-    ];
-    const ordersRaw = await getRecentLimitOrders(row.id, 20);
-    const orders = ordersRaw
-      .filter((o) => o.status === 'canceled' || o.status === 'filled')
-      .map((o) => ({
-        status: o.status,
-        created_at: o.created_at.toISOString(),
-        planned: JSON.parse(o.planned_json),
-      }));
-    const perfRes = await getPerformanceAnalysis({ reports, orders }, row.model, apiKey).catch(
-      (err) => {
-        log.error({ err }, 'failed to fetch performance analysis');
-        return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
-      },
-    );
-    return {
-      instructions: row.agent_instructions,
-      policy: { floor },
-      portfolio: {
-        ts: new Date().toISOString(),
-        positions,
-      },
-      ...prevOrders,
-      marketData,
-      reports,
-      performance: perfRes.analysis,
-    };
-  } catch (err) {
-    const msg = 'failed to fetch market data';
-    await saveFailure(row, msg);
-    log.error({ err }, 'agent run failed');
-    return undefined;
-  }
+    ),
+  );
+  const out: Record<string, AnalysisLog> = {};
+  tokens.forEach((t, i) => {
+    out[t] = res[i];
+  });
+  return out;
+}
+
+async function buildPerformancePrompt(
+  row: ActiveAgentRow,
+  reports: { token: string; news: any; tech: any; orderbook: any }[],
+  apiKey: string,
+  log: FastifyBaseLogger,
+): Promise<AnalysisLog> {
+  const ordersRaw = await getRecentLimitOrders(row.id, 20);
+  const orders = ordersRaw
+    .filter((o) => o.status === 'canceled' || o.status === 'filled')
+    .map((o) => ({
+      status: o.status,
+      created_at: o.created_at.toISOString(),
+      planned: JSON.parse(o.planned_json),
+    }));
+  return await getPerformanceAnalysis({ reports, orders }, row.model, apiKey).catch(
+    (err) => {
+      log.error({ err }, 'failed to fetch performance analysis');
+      return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+    },
+  );
 }
 
 async function fetchPromptData(
