@@ -35,6 +35,18 @@ vi.mock('../src/services/order-book-analyst.js', () => ({
   getOrderBookAnalysis: getOrderBookAnalysisMock,
 }));
 
+const getPerformanceAnalysisMock = vi.fn(() =>
+  Promise.resolve({ analysis: { comment: 'perf', score: 4 }, prompt: { a: 1 }, response: 'r' }),
+);
+vi.mock('../src/services/performance-analyst.js', () => ({
+  getPerformanceAnalysis: getPerformanceAnalysisMock,
+}));
+
+const getRecentLimitOrdersMock = vi.fn(() => Promise.resolve([]));
+vi.mock('../src/repos/limit-orders.js', () => ({
+  getRecentLimitOrders: getRecentLimitOrdersMock,
+}));
+
 const callTraderAgentMock = vi.fn(() =>
   Promise.resolve(
     JSON.stringify({
@@ -71,6 +83,8 @@ describe('main trader step', () => {
     getTokenNewsSummaryMock.mockClear();
     getTechnicalOutlookMock.mockClear();
     getOrderBookAnalysisMock.mockClear();
+    getPerformanceAnalysisMock.mockClear();
+    getRecentLimitOrdersMock.mockClear();
     callTraderAgentMock.mockClear();
     insertReviewRawLogMock.mockClear();
   });
@@ -91,6 +105,9 @@ describe('main trader step', () => {
     expect(decision?.rebalance).toBe(true);
     expect(callTraderAgentMock).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
+    expect(getPerformanceAnalysisMock).toHaveBeenCalled();
+    const promptArg = callTraderAgentMock.mock.calls[0][1];
+    expect(promptArg.performance.comment).toBe('perf');
     expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDT');
     expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDC');
     expect(getTechnicalOutlookMock).not.toHaveBeenCalledWith('USDT');

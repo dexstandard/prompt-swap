@@ -1,3 +1,5 @@
+import type { Analysis } from '../services/types.js';
+
 const developerInstructions = [
   '- You lead a crypto analyst team (news, technical, order-book). Reports from each member are attached.',
   '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
@@ -81,6 +83,13 @@ export interface RebalancePrompt {
     newsReports?: Record<string, string>;
   };
   previous_responses?: PreviousResponse[];
+  reports?: {
+    token: string;
+    news: Analysis | null;
+    tech: Analysis | null;
+    orderbook: Analysis | null;
+  }[];
+  performance?: Analysis | null;
 }
 
 const rebalanceResponseSchema = {
