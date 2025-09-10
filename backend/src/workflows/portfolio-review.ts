@@ -23,8 +23,9 @@ export async function runNewsAnalyst(
   // cache token list
   await setCache(`tokens:${model}`, TOKEN_SYMBOLS);
 
-  // summarize news per token
+  // summarize news per token, skip stablecoins
   for (const token of TOKEN_SYMBOLS) {
+    if (isStablecoin(token)) continue;
     const key = `news:${model}:${token}:${runId}`;
     if (await getCache(key)) continue;
     if (!acquireLock(key)) {
@@ -56,6 +57,7 @@ export async function runTechnicalAnalyst(
   const tokens =
     (await getCache<string[]>(`tokens:${model}`)) ?? TOKEN_SYMBOLS;
   for (const token of tokens) {
+    if (isStablecoin(token)) continue;
     const key = `tech:${model}:${token}:${timeframe}:${runId}`;
     if (await getCache(key)) continue;
     if (!acquireLock(key)) {
@@ -201,21 +203,26 @@ export async function runMainTrader(
   }[] = [];
 
   for (const token of tokens) {
-    const news = await getCache<Analysis>(`news:${model}:${token}:${runId}`);
-    const tech = await getCache<Analysis>(`tech:${model}:${token}:${timeframe}:${runId}`);
+    const news = isStablecoin(token)
+      ? null
+      : await getCache<Analysis>(`news:${model}:${token}:${runId}`);
+    const tech = isStablecoin(token)
+      ? null
+      : await getCache<Analysis>(
+          `tech:${model}:${token}:${timeframe}:${runId}`,
+        );
     const pair = `${token}USDT`;
     const orderbook = isStablecoin(token)
       ? null
       : await getCache<Analysis>(`orderbook:${model}:${pair}:${runId}`);
-    reports.push({ token, news: news ?? null, tech: tech ?? null, orderbook });
+    reports.push({ token, news, tech, orderbook });
   }
   const prompt = { portfolioId, reports };
   const res = await callTraderAgent(model, prompt, apiKey);
   await insertReviewRawLog({ agentId, prompt, response: res });
   const decision = extractResult(res);
-  if (decision)
-    await setCache(`portfolio:${model}:${portfolioId}:${runId}`, decision);
-  else
+  if (!decision) {
     log.error('main trader returned invalid response');
+  }
 }
 
