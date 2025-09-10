@@ -3,7 +3,9 @@ import type { RebalancePrompt } from '../src/util/ai.js';
 
 describe('callTraderAgent structured output', () => {
   it('includes json schema in request', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => '' });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '' });
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const { callTraderAgent } = await import('../src/util/ai.js');

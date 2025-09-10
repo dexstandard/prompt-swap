@@ -7,7 +7,10 @@ describe('ip route', () => {
   });
 
   it('returns server ip', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({ text: async () => '1.2.3.4' })) as any);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, text: async () => '1.2.3.4' })) as any,
+    );
     const app = await buildServer();
     const res = await app.inject({ method: 'GET', url: '/api/ip' });
     expect(res.statusCode).toBe(200);

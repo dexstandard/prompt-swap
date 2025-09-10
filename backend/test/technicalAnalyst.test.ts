@@ -22,7 +22,9 @@ describe('technical analyst', () => {
   }));
 
   it('returns outlook', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => responseJson });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d');

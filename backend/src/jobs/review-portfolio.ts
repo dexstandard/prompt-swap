@@ -32,13 +32,16 @@ import {
   fetchOpenInterest,
   fetchFundingRate,
   fetchOrderBook,
-} from '../services/derivatives.js'; 
+} from '../services/derivatives.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import {
   fetchTokenIndicators,
   type TokenIndicators,
 } from '../services/indicators.js';
 import { getTokenNewsSummary } from '../services/news-analyst.js';
+import { getTechnicalOutlook } from '../services/technical-analyst.js';
+import { getOrderBookAnalysis } from '../services/order-book-analyst.js';
+import { getPerformanceAnalysis } from '../services/performance-analyst.js';
 import { isStablecoin } from '../util/tokens.js';
 import type { RebalancePrompt, PreviousResponse } from '../util/ai.js';
 
@@ -261,18 +264,63 @@ async function buildPrompt(
     const prevOrders = await buildPreviousOrders(row.id);
     const token1 = row.tokens[0].token;
     const token2 = row.tokens[1].token;
-    const [news1Res, news2Res] = await Promise.all([
+    const [
+      news1Res,
+      news2Res,
+      tech1Res,
+      tech2Res,
+      ob1Res,
+      ob2Res,
+    ] = await Promise.all([
       getTokenNewsSummary(token1, row.model, apiKey).catch((err) => {
         log.error({ err, token: token1 }, 'failed to fetch news summary');
-        return { analysis: null };
+        return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
       }),
       getTokenNewsSummary(token2, row.model, apiKey).catch((err) => {
         log.error({ err, token: token2 }, 'failed to fetch news summary');
-        return { analysis: null };
+        return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
       }),
+      isStablecoin(token1)
+        ? Promise.resolve({ analysis: null })
+        : getTechnicalOutlook(
+            token1,
+            row.model,
+            apiKey,
+            row.review_interval,
+          ).catch((err) => {
+            log.error({ err, token: token1 }, 'failed to fetch tech outlook');
+            return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+          }),
+      isStablecoin(token2)
+        ? Promise.resolve({ analysis: null })
+        : getTechnicalOutlook(
+            token2,
+            row.model,
+            apiKey,
+            row.review_interval,
+          ).catch((err) => {
+            log.error({ err, token: token2 }, 'failed to fetch tech outlook');
+            return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+          }),
+      isStablecoin(token1)
+        ? Promise.resolve({ analysis: null })
+        : getOrderBookAnalysis(`${token1}USDT`, row.model, apiKey).catch((err) => {
+            log.error({ err, token: token1 }, 'failed to fetch order book');
+            return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+          }),
+      isStablecoin(token2)
+        ? Promise.resolve({ analysis: null })
+        : getOrderBookAnalysis(`${token2}USDT`, row.model, apiKey).catch((err) => {
+            log.error({ err, token: token2 }, 'failed to fetch order book');
+            return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+          }),
     ]);
     const news1 = news1Res.analysis;
     const news2 = news2Res.analysis;
+    const tech1 = tech1Res.analysis;
+    const tech2 = tech2Res.analysis;
+    const ob1 = ob1Res.analysis;
+    const ob2 = ob2Res.analysis;
     const marketData = assembleMarketData(
       row,
       pairData,
@@ -287,13 +335,29 @@ async function buildPrompt(
     );
     const news: Record<string, string> = {};
     if (news1?.comment) news[token1] = news1.comment;
-    else log.info({ token: token1 }, 'no news summary');
     if (news2?.comment) news[token2] = news2.comment;
-    else log.info({ token: token2 }, 'no news summary');
     if (Object.keys(news).length) {
       (marketData as any).newsReports = news;
       log.info({ tokens: Object.keys(news) }, 'attached news reports');
     }
+    const reports = [
+      { token: token1, news: news1, tech: tech1, orderbook: ob1 },
+      { token: token2, news: news2, tech: tech2, orderbook: ob2 },
+    ];
+    const ordersRaw = await getRecentLimitOrders(row.id, 20);
+    const orders = ordersRaw
+      .filter((o) => o.status === 'canceled' || o.status === 'filled')
+      .map((o) => ({
+        status: o.status,
+        created_at: o.created_at.toISOString(),
+        planned: JSON.parse(o.planned_json),
+      }));
+    const perfRes = await getPerformanceAnalysis({ reports, orders }, row.model, apiKey).catch(
+      (err) => {
+        log.error({ err }, 'failed to fetch performance analysis');
+        return { analysis: { comment: `Error: ${String(err)}`, score: 0 } };
+      },
+    );
     return {
       instructions: row.agent_instructions,
       policy: { floor },
@@ -303,6 +367,8 @@ async function buildPrompt(
       },
       ...prevOrders,
       marketData,
+      reports,
+      performance: perfRes.analysis,
     };
   } catch (err) {
     const msg = 'failed to fetch market data';
