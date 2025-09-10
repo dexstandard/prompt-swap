@@ -4,10 +4,19 @@ import { getCache, clearCache } from '../src/util/cache.js';
 import type { Analysis } from '../src/services/types.js';
 
 const getOrderBookAnalysisMock = vi.fn((pair: string) =>
-  Promise.resolve({ comment: `analysis for ${pair}`, score: 3 }),
+  Promise.resolve({
+    analysis: { comment: `analysis for ${pair}`, score: 3 },
+    prompt: { pair },
+    response: 'r',
+  }),
 );
 vi.mock('../src/services/order-book-analyst.js', () => ({
   getOrderBookAnalysis: getOrderBookAnalysisMock,
+}));
+
+const insertReviewRawLogMock = vi.fn();
+vi.mock('../src/repos/agent-review-raw-log.js', () => ({
+  insertReviewRawLog: insertReviewRawLogMock,
 }));
 
 function createLogger(): FastifyBaseLogger {
@@ -19,6 +28,7 @@ describe('order book analyst step', () => {
   beforeEach(() => {
     clearCache();
     getOrderBookAnalysisMock.mockClear();
+    insertReviewRawLogMock.mockClear();
   });
 
   it('caches order book analysis per pair', async () => {
@@ -27,5 +37,6 @@ describe('order book analyst step', () => {
 
     const analysis = await getCache<Analysis>(`orderbook:gpt:BTCUSDT:run1`);
     expect(analysis?.comment).toBe('analysis for BTCUSDT');
+    expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

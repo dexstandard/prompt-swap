@@ -93,7 +93,11 @@ vi.mock('../src/services/news-analyst.js', () => ({
   getTokenNewsSummary: vi
     .fn()
     .mockImplementation((token: string) =>
-      Promise.resolve({ comment: `${token} news`, score: 1 }),
+      Promise.resolve({
+        analysis: { comment: `${token} news`, score: 1 },
+        prompt: { token },
+        response: 'r',
+      }),
     ),
 }));
 
@@ -492,7 +496,11 @@ describe('reviewPortfolio', () => {
     vi.mocked(getTokenNewsSummary)
       .mockImplementationOnce(() => Promise.reject(new Error('fail')))
       .mockImplementationOnce((token: string) =>
-        Promise.resolve({ comment: `${token} news`, score: 1 }),
+        Promise.resolve({
+          analysis: { comment: `${token} news`, score: 1 },
+          prompt: { token },
+          response: 'r',
+        }),
       );
     await db.query('INSERT INTO users (id) VALUES ($1)', ['9']);
     await db.query(

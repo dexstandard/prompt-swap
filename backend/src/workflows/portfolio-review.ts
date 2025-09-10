@@ -62,7 +62,16 @@ export async function runNewsAnalyst(
     log,
     TOKEN_SYMBOLS.filter((t) => !isStablecoin(t)),
     (token) => `news:${model}:${token}:${runId}`,
-    (token) => getTokenNewsSummary(token, model, apiKey, agentId),
+    async (token) => {
+      const { analysis, prompt, response } = await getTokenNewsSummary(
+        token,
+        model,
+        apiKey,
+      );
+      if (prompt && response)
+        await insertReviewRawLog({ agentId, prompt, response });
+      return analysis;
+    },
   );
 }
 
@@ -84,8 +93,17 @@ export async function runTechnicalAnalyst(
     log,
     tokens.filter((t) => !isStablecoin(t)),
     (token) => `tech:${model}:${token}:${timeframe}:${runId}`,
-    (token) =>
-      getTechnicalOutlook(token, model, apiKey, timeframe, agentId),
+    async (token) => {
+      const { analysis, prompt, response } = await getTechnicalOutlook(
+        token,
+        model,
+        apiKey,
+        timeframe,
+      );
+      if (prompt && response)
+        await insertReviewRawLog({ agentId, prompt, response });
+      return analysis;
+    },
   );
 }
 
@@ -109,7 +127,16 @@ export async function runOrderBookAnalyst(
     log,
     pairs,
     (pair) => `orderbook:${model}:${pair}:${runId}`,
-    (pair) => getOrderBookAnalysis(pair, model, apiKey, agentId),
+    async (pair) => {
+      const { analysis, prompt, response } = await getOrderBookAnalysis(
+        pair,
+        model,
+        apiKey,
+      );
+      if (prompt && response)
+        await insertReviewRawLog({ agentId, prompt, response });
+      return analysis;
+    },
   );
 }
 
@@ -153,12 +180,14 @@ export async function runPerformanceAnalyzer(
         created_at: o.created_at.toISOString(),
         planned: JSON.parse(o.planned_json),
       }));
-    return getPerformanceAnalysis(
+    const { analysis, prompt, response } = await getPerformanceAnalysis(
       { reports, orders },
       model,
       apiKey,
-      agentId,
     );
+    if (prompt && response)
+      await insertReviewRawLog({ agentId, prompt, response });
+    return analysis;
   });
 }
 

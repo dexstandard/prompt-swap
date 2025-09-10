@@ -261,16 +261,18 @@ async function buildPrompt(
     const prevOrders = await buildPreviousOrders(row.id);
     const token1 = row.tokens[0].token;
     const token2 = row.tokens[1].token;
-    const [news1, news2] = await Promise.all([
+    const [news1Res, news2Res] = await Promise.all([
       getTokenNewsSummary(token1, row.model, apiKey).catch((err) => {
         log.error({ err, token: token1 }, 'failed to fetch news summary');
-        return null;
+        return { analysis: null };
       }),
       getTokenNewsSummary(token2, row.model, apiKey).catch((err) => {
         log.error({ err, token: token2 }, 'failed to fetch news summary');
-        return null;
+        return { analysis: null };
       }),
     ]);
+    const news1 = news1Res.analysis;
+    const news2 = news2Res.analysis;
     const marketData = assembleMarketData(
       row,
       pairData,

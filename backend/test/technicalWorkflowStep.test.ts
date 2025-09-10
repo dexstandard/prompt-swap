@@ -4,10 +4,19 @@ import { getCache, clearCache } from '../src/util/cache.js';
 import type { Analysis } from '../src/services/types.js';
 
 const getTechnicalOutlookMock = vi.fn((token: string) =>
-  Promise.resolve({ comment: `outlook for ${token}`, score: 2 }),
+  Promise.resolve({
+    analysis: { comment: `outlook for ${token}`, score: 2 },
+    prompt: { token },
+    response: 'r',
+  }),
 );
 vi.mock('../src/services/technical-analyst.js', () => ({
   getTechnicalOutlook: getTechnicalOutlookMock,
+}));
+
+const insertReviewRawLogMock = vi.fn();
+vi.mock('../src/repos/agent-review-raw-log.js', () => ({
+  insertReviewRawLog: insertReviewRawLogMock,
 }));
 
 function createLogger(): FastifyBaseLogger {
@@ -19,6 +28,7 @@ describe('technical analyst step', () => {
   beforeEach(() => {
     clearCache();
     getTechnicalOutlookMock.mockClear();
+    insertReviewRawLogMock.mockClear();
   });
 
   it('caches technical outlook per token', async () => {
@@ -34,5 +44,6 @@ describe('technical analyst step', () => {
 
     const outlook = await getCache<Analysis>(`tech:gpt:BTC:1d:run1`);
     expect(outlook?.comment).toBe('outlook for BTC');
+    expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

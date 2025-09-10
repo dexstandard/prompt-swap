@@ -25,8 +25,10 @@ describe('technical analyst', () => {
     const fetchMock = vi.fn().mockResolvedValue({ text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d', 'a1');
-    expect(res?.comment).toBe('outlook text');
+    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d');
+    expect(res.analysis?.comment).toBe('outlook text');
+    expect(res.prompt).toBeTruthy();
+    expect(res.response).toBe(responseJson);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });

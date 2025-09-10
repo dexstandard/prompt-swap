@@ -12,3 +12,9 @@ export const analysisSchema = {
   required: ['comment', 'score'],
   additionalProperties: false,
 } as const;
+
+export interface AnalysisLog {
+  analysis: Analysis | null;
+  prompt?: unknown;
+  response?: string;
+}

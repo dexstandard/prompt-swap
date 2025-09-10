@@ -1,20 +1,18 @@
 import { callAi, extractJson } from '../util/ai.js';
-import { analysisSchema, type Analysis } from './types.js';
-import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
+import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
 
 export async function getPerformanceAnalysis(
   input: unknown,
   model: string,
   apiKey: string,
-  agentId?: string,
-): Promise<Analysis | null> {
+): Promise<AnalysisLog> {
   const reports = Array.isArray((input as any)?.reports)
     ? (input as any).reports
     : [];
   const orders = Array.isArray((input as any)?.orders)
     ? (input as any).orders
     : [];
-  if (reports.length === 0 && orders.length === 0) return null;
+  if (reports.length === 0 && orders.length === 0) return { analysis: null };
   const body = {
     model,
     input,
@@ -31,7 +29,5 @@ export async function getPerformanceAnalysis(
     },
   };
   const res = await callAi(body, apiKey);
-  if (agentId)
-    await insertReviewRawLog({ agentId, prompt: body, response: res });
-  return extractJson<Analysis>(res);
+  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
 }

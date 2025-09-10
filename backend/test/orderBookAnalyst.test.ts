@@ -40,8 +40,10 @@ describe('order book analyst service', () => {
     const { getOrderBookAnalysis } = await import(
       '../src/services/order-book-analyst.js'
     );
-    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key', 'a1');
-    expect(res?.comment).toBe('order book summary');
+    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key');
+    expect(res.analysis?.comment).toBe('order book summary');
+    expect(res.prompt).toBeTruthy();
+    expect(res.response).toBe(responseJson);
     expect(callAiMock).toHaveBeenCalledTimes(1);
   });
 });

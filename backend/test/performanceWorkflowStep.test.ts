@@ -4,10 +4,15 @@ import { setCache, getCache, clearCache } from '../src/util/cache.js';
 import type { Analysis } from '../src/services/types.js';
 
 const getPerformanceAnalysisMock = vi.fn(() =>
-  Promise.resolve({ comment: 'perf', score: 4 }),
+  Promise.resolve({ analysis: { comment: 'perf', score: 4 }, prompt: { a: 1 }, response: 'r' }),
 );
 vi.mock('../src/services/performance-analyst.js', () => ({
   getPerformanceAnalysis: getPerformanceAnalysisMock,
+}));
+
+const insertReviewRawLogMock = vi.fn();
+vi.mock('../src/repos/agent-review-raw-log.js', () => ({
+  insertReviewRawLog: insertReviewRawLogMock,
 }));
 
 const getRecentLimitOrdersMock = vi.fn(() =>
@@ -33,6 +38,7 @@ describe('performance analyzer step', () => {
     clearCache();
     getPerformanceAnalysisMock.mockClear();
     getRecentLimitOrdersMock.mockClear();
+    insertReviewRawLogMock.mockClear();
   });
 
   it('caches performance analysis', async () => {
@@ -48,5 +54,6 @@ describe('performance analyzer step', () => {
     expect(perf?.comment).toBe('perf');
     expect(getPerformanceAnalysisMock).toHaveBeenCalled();
     expect(getRecentLimitOrdersMock).toHaveBeenCalled();
+    expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

@@ -1,14 +1,12 @@
 import { fetchOrderBook } from './derivatives.js';
 import { callAi, extractJson } from '../util/ai.js';
-import { analysisSchema, type Analysis } from './types.js';
-import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
+import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
 
 export async function getOrderBookAnalysis(
   pair: string,
   model: string,
   apiKey: string,
-  agentId?: string,
-): Promise<Analysis | null> {
+): Promise<AnalysisLog> {
   const snapshot = await fetchOrderBook(pair);
   const prompt = { pair, snapshot };
   const body = {
@@ -27,6 +25,5 @@ export async function getOrderBookAnalysis(
     },
   };
   const res = await callAi(body, apiKey);
-  if (agentId) await insertReviewRawLog({ agentId, prompt: body, response: res });
-  return extractJson<Analysis>(res);
+  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { db } from '../src/db/index.js';
 
 const responseJson = JSON.stringify({
@@ -16,17 +16,8 @@ const responseJson = JSON.stringify({
   ],
 });
 
-const insertReviewRawLogMock = vi.fn();
-vi.mock('../src/repos/agent-review-raw-log.js', () => ({
-  insertReviewRawLog: insertReviewRawLogMock,
-}));
-
 describe('news analyst', () => {
-  beforeEach(() => {
-    insertReviewRawLogMock.mockClear();
-  });
-
-  it('returns summary and logs request', async () => {
+  it('returns summary and raw data', async () => {
     await db.query(
       "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t', 'l', NOW(), ARRAY['BTC'])",
     );
@@ -34,10 +25,11 @@ describe('news analyst', () => {
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
-    const summary = await getTokenNewsSummary('BTC', 'gpt', 'key', 'a1');
-    expect(summary?.comment).toBe('summary text');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key');
+    expect(res.analysis?.comment).toBe('summary text');
+    expect(res.prompt).toBeTruthy();
+    expect(res.response).toBe(responseJson);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(insertReviewRawLogMock).toHaveBeenCalled();
     (globalThis as any).fetch = orig;
   });
 
@@ -46,8 +38,8 @@ describe('news analyst', () => {
     const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
     const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');
-    const summary = await getTokenNewsSummary('DOGE', 'gpt', 'key');
-    expect(summary).toBeNull();
+    const res = await getTokenNewsSummary('DOGE', 'gpt', 'key');
+    expect(res.analysis).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
     (globalThis as any).fetch = orig;
   });

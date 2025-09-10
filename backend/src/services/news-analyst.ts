@@ -1,16 +1,14 @@
 import { getNewsByToken } from '../repos/news.js';
 import { callAi, extractJson } from '../util/ai.js';
-import { analysisSchema, type Analysis } from './types.js';
-import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
+import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
 
 export async function getTokenNewsSummary(
   token: string,
   model: string,
   apiKey: string,
-  agentId?: string,
-): Promise<Analysis | null> {
+): Promise<AnalysisLog> {
   const items = await getNewsByToken(token, 5);
-  if (!items.length) return null;
+  if (!items.length) return { analysis: null };
   const headlines = items.map((i) => `- ${i.title} (${i.link})`).join('\n');
   const prompt = { token, headlines };
   const body = {
@@ -30,6 +28,5 @@ export async function getTokenNewsSummary(
     },
   };
   const res = await callAi(body, apiKey);
-  if (agentId) await insertReviewRawLog({ agentId, prompt: body, response: res });
-  return extractJson<Analysis>(res);
+  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
 }

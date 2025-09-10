@@ -1,15 +1,13 @@
 import { fetchTokenIndicators } from './indicators.js';
 import { callAi, extractJson } from '../util/ai.js';
-import { analysisSchema, type Analysis } from './types.js';
-import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
+import { analysisSchema, type AnalysisLog, type Analysis } from './types.js';
 
 export async function getTechnicalOutlook(
   token: string,
   model: string,
   apiKey: string,
   timeframe: string,
-  agentId?: string,
-): Promise<Analysis | null> {
+): Promise<AnalysisLog> {
   const indicators = await fetchTokenIndicators(token);
   const prompt = { token, timeframe, indicators };
   const body = {
@@ -28,6 +26,5 @@ export async function getTechnicalOutlook(
     },
   };
   const res = await callAi(body, apiKey);
-  if (agentId) await insertReviewRawLog({ agentId, prompt: body, response: res });
-  return extractJson<Analysis>(res);
+  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
 }
