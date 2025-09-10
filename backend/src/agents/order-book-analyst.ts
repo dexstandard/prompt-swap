@@ -14,7 +14,7 @@ export async function getOrderBookAnalysis(
   const snapshot = await fetchOrderBook(pair);
   const prompt = { pair, snapshot };
   const instructions =
-    `You are a crypto market order book analyst. Using the order book snapshot in input, write a short report for a crypto trader about ${pair}. Include a liquidity imbalance score from 0-10.`;
+    `You are a crypto market order book analyst. Using the order book snapshot in input, write a short report for a crypto trader about ${pair}. Include a liquidity imbalance score from 0-10. - shortReport ≤255 chars.`;
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
     const res = await callAi(model, instructions, analysisSchema, prompt, apiKey);
