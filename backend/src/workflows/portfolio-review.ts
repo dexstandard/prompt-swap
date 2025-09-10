@@ -10,6 +10,40 @@ import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import type { Analysis } from '../services/types.js';
 import { getRecentLimitOrders } from '../repos/limit-orders.js';
 
+async function runWithCache<T>(
+  log: FastifyBaseLogger,
+  key: string,
+  fn: () => Promise<T | null>,
+): Promise<T | null> {
+  const cached = await getCache<T>(key);
+  if (cached) return cached;
+  if (!acquireLock(key)) {
+    log.info({ key }, 'step already running');
+    return null;
+  }
+  try {
+    const res = await fn();
+    if (res) await setCache(key, res);
+    return res ?? null;
+  } catch (err) {
+    log.error({ err, key }, 'step failed');
+    return null;
+  } finally {
+    releaseLock(key);
+  }
+}
+
+async function runPerItem<T>(
+  log: FastifyBaseLogger,
+  items: T[],
+  buildKey: (item: T) => string,
+  fn: (item: T) => Promise<Analysis | null>,
+): Promise<void> {
+  for (const item of items) {
+    await runWithCache(log, buildKey(item), () => fn(item));
+  }
+}
+
 /**
  * Step 1: News Analyst
  * Loads token list, fetches news and caches summaries per token.
@@ -24,26 +58,12 @@ export async function runNewsAnalyst(
   // cache token list
   await setCache(`tokens:${model}`, TOKEN_SYMBOLS);
 
-  // summarize news per token, skip stablecoins
-  for (const token of TOKEN_SYMBOLS) {
-    if (isStablecoin(token)) continue;
-    const key = `news:${model}:${token}:${runId}`;
-    if (await getCache(key)) continue;
-    if (!acquireLock(key)) {
-      log.info({ token }, 'news summary already running');
-      continue;
-    }
-    try {
-      const summary = await getTokenNewsSummary(token, model, apiKey, {
-        agentId,
-      });
-      if (summary) await setCache(key, summary);
-    } catch (err) {
-      log.error({ err, token }, 'failed to summarize news');
-    } finally {
-      releaseLock(key);
-    }
-  }
+  await runPerItem(
+    log,
+    TOKEN_SYMBOLS.filter((t) => !isStablecoin(t)),
+    (token) => `news:${model}:${token}:${runId}`,
+    (token) => getTokenNewsSummary(token, model, apiKey, agentId),
+  );
 }
 
 /**
@@ -60,25 +80,13 @@ export async function runTechnicalAnalyst(
 ): Promise<void> {
   const tokens =
     (await getCache<string[]>(`tokens:${model}`)) ?? TOKEN_SYMBOLS;
-  for (const token of tokens) {
-    if (isStablecoin(token)) continue;
-    const key = `tech:${model}:${token}:${timeframe}:${runId}`;
-    if (await getCache(key)) continue;
-    if (!acquireLock(key)) {
-      log.info({ token }, 'technical analysis already running');
-      continue;
-    }
-    try {
-      const outlook = await getTechnicalOutlook(token, model, apiKey, timeframe, {
-        agentId,
-      });
-      if (outlook) await setCache(key, outlook);
-    } catch (err) {
-      log.error({ err, token }, 'failed to compute technical outlook');
-    } finally {
-      releaseLock(key);
-    }
-  }
+  await runPerItem(
+    log,
+    tokens.filter((t) => !isStablecoin(t)),
+    (token) => `tech:${model}:${token}:${timeframe}:${runId}`,
+    (token) =>
+      getTechnicalOutlook(token, model, apiKey, timeframe, agentId),
+  );
 }
 
 /**
@@ -97,22 +105,12 @@ export async function runOrderBookAnalyst(
   const pairs = tokens
     .filter((t) => !isStablecoin(t))
     .map((t) => `${t}USDT`);
-  for (const pair of pairs) {
-    const key = `orderbook:${model}:${pair}:${runId}`;
-    if (await getCache(key)) continue;
-    if (!acquireLock(key)) {
-      log.info({ pair }, 'order book analysis already running');
-      continue;
-    }
-    try {
-      const analysis = await getOrderBookAnalysis(pair, model, apiKey, agentId);
-      if (analysis) await setCache(key, analysis);
-    } catch (err) {
-      log.error({ err, pair }, 'failed to analyze order book');
-    } finally {
-      releaseLock(key);
-    }
-  }
+  await runPerItem(
+    log,
+    pairs,
+    (pair) => `orderbook:${model}:${pair}:${runId}`,
+    (pair) => getOrderBookAnalysis(pair, model, apiKey, agentId),
+  );
 }
 
 /**
@@ -127,13 +125,7 @@ export async function runPerformanceAnalyzer(
   agentId: string,
   runId: string,
 ): Promise<void> {
-  const key = `performance:${model}:${agentId}:${runId}`;
-  if (await getCache(key)) return;
-  if (!acquireLock(key)) {
-    log.info('performance analysis already running');
-    return;
-  }
-  try {
+  await runWithCache(log, `performance:${model}:${agentId}:${runId}`, async () => {
     const tokens =
       (await getCache<string[]>(`tokens:${model}`)) ?? TOKEN_SYMBOLS;
     const reports: {
@@ -144,7 +136,9 @@ export async function runPerformanceAnalyzer(
     }[] = [];
     for (const token of tokens) {
       const news = await getCache<Analysis>(`news:${model}:${token}:${runId}`);
-      const tech = await getCache<Analysis>(`tech:${model}:${token}:${timeframe}:${runId}`);
+      const tech = await getCache<Analysis>(
+        `tech:${model}:${token}:${timeframe}:${runId}`,
+      );
       const pair = `${token}USDT`;
       const orderbook = isStablecoin(token)
         ? null
@@ -159,18 +153,13 @@ export async function runPerformanceAnalyzer(
         created_at: o.created_at.toISOString(),
         planned: JSON.parse(o.planned_json),
       }));
-    const analysis = await getPerformanceAnalysis(
+    return getPerformanceAnalysis(
       { reports, orders },
       model,
       apiKey,
       agentId,
     );
-    if (analysis) await setCache(key, analysis);
-  } catch (err) {
-    log.error({ err }, 'failed to run performance analyzer');
-  } finally {
-    releaseLock(key);
-  }
+  });
 }
 
 function extractResult(res: string): any {
@@ -206,35 +195,44 @@ export async function runMainTrader(
     runOrderBookAnalyst(log, model, apiKey, runId, agentId),
   ]);
 
-  const tokens = (await getCache<string[]>(`tokens:${model}`)) ?? TOKEN_SYMBOLS;
-  const reports: {
-    token: string;
-    news: Analysis | null;
-    tech: Analysis | null;
-    orderbook: Analysis | null;
-  }[] = [];
+  await runWithCache(
+    log,
+    `portfolio:${model}:${portfolioId}:${runId}`,
+    async () => {
+      const tokens =
+        (await getCache<string[]>(`tokens:${model}`)) ?? TOKEN_SYMBOLS;
+      const reports: {
+        token: string;
+        news: Analysis | null;
+        tech: Analysis | null;
+        orderbook: Analysis | null;
+      }[] = [];
 
-  for (const token of tokens) {
-    const news = isStablecoin(token)
-      ? null
-      : await getCache<Analysis>(`news:${model}:${token}:${runId}`);
-    const tech = isStablecoin(token)
-      ? null
-      : await getCache<Analysis>(
-          `tech:${model}:${token}:${timeframe}:${runId}`,
-        );
-    const pair = `${token}USDT`;
-    const orderbook = isStablecoin(token)
-      ? null
-      : await getCache<Analysis>(`orderbook:${model}:${pair}:${runId}`);
-    reports.push({ token, news, tech, orderbook });
-  }
-  const prompt = { portfolioId, reports };
-  const res = await callTraderAgent(model, prompt, apiKey);
-  await insertReviewRawLog({ agentId, prompt, response: res });
-  const decision = extractResult(res);
-  if (!decision) {
-    log.error('main trader returned invalid response');
-  }
+      for (const token of tokens) {
+        const news = isStablecoin(token)
+          ? null
+          : await getCache<Analysis>(`news:${model}:${token}:${runId}`);
+        const tech = isStablecoin(token)
+          ? null
+          : await getCache<Analysis>(
+              `tech:${model}:${token}:${timeframe}:${runId}`,
+            );
+        const pair = `${token}USDT`;
+        const orderbook = isStablecoin(token)
+          ? null
+          : await getCache<Analysis>(`orderbook:${model}:${pair}:${runId}`);
+        reports.push({ token, news, tech, orderbook });
+      }
+      const prompt = { portfolioId, reports };
+      const res = await callTraderAgent(model, prompt, apiKey);
+      await insertReviewRawLog({ agentId, prompt, response: res });
+      const decision = extractResult(res);
+      if (!decision) {
+        log.error('main trader returned invalid response');
+        return null;
+      }
+      return decision;
+    },
+  );
 }
 

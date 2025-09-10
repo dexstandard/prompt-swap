@@ -63,7 +63,7 @@ describe('main trader step', () => {
     insertReviewRawLogMock.mockClear();
   });
 
-  it('runs trader without caching decision or analyzing stablecoins', async () => {
+  it('caches decision and skips stablecoins', async () => {
     const { runMainTrader } = await import('../src/workflows/portfolio-review.js');
     await runMainTrader(
       createLogger(),
@@ -76,7 +76,7 @@ describe('main trader step', () => {
     );
 
     const decision = await getCache<any>(`portfolio:gpt:pf1:run1`);
-    expect(decision).toBeNull();
+    expect(decision?.rebalance).toBe(true);
     expect(callTraderAgentMock).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
     expect(getTokenNewsSummaryMock).not.toHaveBeenCalledWith('USDT');

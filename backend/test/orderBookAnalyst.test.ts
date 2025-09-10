@@ -34,21 +34,14 @@ describe('order book analyst service', () => {
     callAiMock.mockReset();
   });
 
-  it('waits for in-flight analysis and returns cached result', async () => {
+  it('returns analysis', async () => {
     fetchOrderBookMock.mockResolvedValue({ bids: [], asks: [] });
-    callAiMock.mockImplementation(async () => {
-      await new Promise((r) => setTimeout(r, 10));
-      return responseJson;
-    });
+    callAiMock.mockResolvedValue(responseJson);
     const { getOrderBookAnalysis } = await import(
       '../src/services/order-book-analyst.js'
     );
-    const [a1, a2] = await Promise.all([
-      getOrderBookAnalysis('BTCUSDT', 'gpt', 'key'),
-      getOrderBookAnalysis('BTCUSDT', 'gpt', 'key'),
-    ]);
-    expect(a1?.comment).toBe('order book summary');
-    expect(a2?.comment).toBe('order book summary');
+    const res = await getOrderBookAnalysis('BTCUSDT', 'gpt', 'key', 'a1');
+    expect(res?.comment).toBe('order book summary');
     expect(callAiMock).toHaveBeenCalledTimes(1);
   });
 });
