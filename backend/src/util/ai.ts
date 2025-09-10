@@ -145,6 +145,19 @@ export function compactJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
+export function extractJson<T>(res: string): T | null {
+  try {
+    const json = JSON.parse(res);
+    const outputs = Array.isArray((json as any).output) ? (json as any).output : [];
+    const msg = outputs.find((o: any) => o.type === 'message' || o.id?.startsWith('msg_'));
+    const text = msg?.content?.[0]?.text;
+    if (typeof text !== 'string') return null;
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 export async function callTraderAgent(
   model: string,
   input: unknown,

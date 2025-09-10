@@ -1,18 +1,5 @@
-import { callAi } from '../util/ai.js';
+import { callAi, extractJson } from '../util/ai.js';
 import { analysisSchema, type Analysis } from './types.js';
-
-function extractJson(res: string): Analysis | null {
-  try {
-    const json = JSON.parse(res);
-    const outputs = Array.isArray((json as any).output) ? (json as any).output : [];
-    const msg = outputs.find((o: any) => o.type === 'message' || o.id?.startsWith('msg_'));
-    const text = msg?.content?.[0]?.text;
-    if (typeof text !== 'string') return null;
-    return JSON.parse(text) as Analysis;
-  } catch {
-    return null;
-  }
-}
 
 export async function getPerformanceAnalysis(
   input: unknown,
@@ -42,5 +29,5 @@ export async function getPerformanceAnalysis(
     },
   };
   const res = await callAi(body, apiKey);
-  return extractJson(res);
+  return extractJson<Analysis>(res);
 }
