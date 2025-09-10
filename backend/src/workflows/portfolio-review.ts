@@ -224,6 +224,8 @@ export async function runMainTrader(
     runOrderBookAnalyst(log, model, apiKey, runId, agentId),
   ]);
 
+  await runPerformanceAnalyzer(log, model, apiKey, timeframe, agentId, runId);
+
   await runWithCache(
     log,
     `portfolio:${model}:${portfolioId}:${runId}`,
@@ -252,7 +254,10 @@ export async function runMainTrader(
           : await getCache<Analysis>(`orderbook:${model}:${pair}:${runId}`);
         reports.push({ token, news, tech, orderbook });
       }
-      const prompt = { portfolioId, reports };
+      const performance = await getCache<Analysis>(
+        `performance:${model}:${agentId}:${runId}`,
+      );
+      const prompt = { portfolioId, reports, performance };
       const res = await callTraderAgent(model, prompt, apiKey);
       await insertReviewRawLog({ agentId, prompt, response: res });
       const decision = extractResult(res);
