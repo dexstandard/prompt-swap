@@ -16,7 +16,8 @@ import {
   updateLimitOrderStatus,
 } from '../repos/limit-orders.js';
 import { parseExecLog, validateExecResponse } from '../util/parse-exec-log.js';
-import { callTraderAgent } from '../util/ai.js';
+import { runMainTrader } from '../workflows/portfolio-review.js';
+import { getCache } from '../util/cache.js';
 import {
   fetchAccount,
   fetchPairData,
@@ -713,41 +714,57 @@ async function executeAgent(
   log: FastifyBaseLogger,
 ) {
   try {
-    const text = await callTraderAgent(row.model, prompt, key);
+    const runId = Date.now().toString();
+    await runMainTrader(
+      log,
+      row.model,
+      key,
+      row.review_interval,
+      row.id,
+      row.portfolio_id,
+      runId,
+    );
+    const decision =
+      (await getCache<
+        { rebalance: boolean; newAllocation?: number; shortReport: string }
+      >(`portfolio:${row.model}:${row.portfolio_id}:${runId}`)) ?? null;
     const logId = await insertReviewRawLog({
       agentId: row.id,
       prompt,
-      response: text,
+      response: decision,
     });
-    const parsed = parseExecLog(text);
-    const validationError = validateExecResponse(parsed.response, prompt.policy);
+    const validationError = validateExecResponse(
+      decision ?? undefined,
+      prompt.policy,
+    );
     if (validationError) log.error({ err: validationError }, 'validation failed');
     const resultId = await insertReviewResult({
       agentId: row.id,
-      log: parsed.text,
+      log: decision ? JSON.stringify(decision) : '',
       rawLogId: logId,
-      ...(parsed.response && !validationError
+      ...(decision && !validationError
         ? {
-            rebalance: parsed.response.rebalance,
-            newAllocation: parsed.response.newAllocation,
-            shortReport: parsed.response.shortReport,
+            rebalance: decision.rebalance,
+            newAllocation: decision.newAllocation,
+            shortReport: decision.shortReport,
           }
         : {}),
-      ...((parsed.error || validationError)
-        ? { error: parsed.error ?? { message: validationError } }
+      ...((!decision || validationError)
+        ? { error: { message: validationError ?? 'decision unavailable' } }
         : {}),
     });
     if (
+      decision &&
       !validationError &&
       !row.manual_rebalance &&
-      parsed.response?.rebalance &&
-      parsed.response.newAllocation !== undefined
+      decision.rebalance &&
+      decision.newAllocation !== undefined
     ) {
       await createRebalanceLimitOrder({
         userId: row.user_id,
         tokens: row.tokens.map((t) => t.token),
         positions: prompt.portfolio.positions,
-        newAllocation: parsed.response.newAllocation,
+        newAllocation: decision.newAllocation,
         log,
         reviewResultId: resultId,
       });

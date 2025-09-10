@@ -287,6 +287,7 @@ export interface ActiveAgentRow {
   agent_instructions: string;
   ai_api_key_enc: string;
   manual_rebalance: boolean;
+  portfolio_id: string;
 }
 
 export async function getActiveAgents(options?: {
@@ -297,7 +298,8 @@ export async function getActiveAgents(options?: {
                       COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
                                FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
-                      COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance
+                      COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance,
+                      a.id AS portfolio_id
                  FROM agents a
                  LEFT JOIN agent_tokens t ON t.agent_id = a.id
                  LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
@@ -321,14 +323,15 @@ export async function getActiveAgentsByUser(
                       COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
                                FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
-                      COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance
+                      COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance,
+                      a.id AS portfolio_id
                  FROM agents a
                  LEFT JOIN agent_tokens t ON t.agent_id = a.id
                  LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
                  LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
                  LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
                 WHERE a.status = 'active' AND a.user_id = $1
-             GROUP BY a.id, ak.api_key_enc, oak.api_key_enc`;
+            GROUP BY a.id, ak.api_key_enc, oak.api_key_enc`;
   const { rows } = await db.query(sql, [userId]);
   return rows as ActiveAgentRow[];
 }
