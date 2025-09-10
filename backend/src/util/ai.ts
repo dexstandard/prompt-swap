@@ -1,3 +1,5 @@
+import type { Analysis } from '../services/types.js';
+
 const developerInstructions = [
   '- You lead a crypto analyst team (news, technical, order-book). Reports from each member are attached.',
   '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
@@ -81,6 +83,13 @@ export interface RebalancePrompt {
     newsReports?: Record<string, string>;
   };
   previous_responses?: PreviousResponse[];
+  reports?: {
+    token: string;
+    news: Analysis | null;
+    tech: Analysis | null;
+    orderbook: Analysis | null;
+  }[];
+  performance?: Analysis | null;
 }
 
 const rebalanceResponseSchema = {
@@ -137,7 +146,9 @@ export async function callAi(body: any, apiKey: string): Promise<string> {
     },
     body: compactJson(body),
   });
-  return await res.text();
+  const text = await res.text();
+  if (!res.ok) throw new Error(`AI request failed: ${res.status} ${text}`);
+  return text;
 }
 
 export function compactJson(value: unknown): string {
@@ -174,9 +185,9 @@ export async function callTraderAgent(
     input,
     instructions: developerInstructions,
     tools: [{ type: 'web_search_preview' }],
-    text: {
-      format: {
-        type: 'json_schema',
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
         name: 'rebalance_response',
         strict: true,
         schema: rebalanceResponseSchema,

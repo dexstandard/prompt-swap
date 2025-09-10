@@ -15,10 +15,10 @@ export async function getTechnicalOutlook(
     input: prompt,
     instructions:
       `You are a crypto technical analyst. Using indicators in input, write a short outlook for a crypto trader about ${token} on timeframe ${timeframe}. Include a bullishness score from 0-10 and key signals.`,
-    text: {
-      max_output_tokens: 255,
-      format: {
-        type: 'json_schema',
+    max_output_tokens: 255,
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
         name: 'analysis',
         strict: true,
         schema: analysisSchema,
@@ -26,5 +26,7 @@ export async function getTechnicalOutlook(
     },
   };
   const res = await callAi(body, apiKey);
-  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
+  const analysis = extractJson<Analysis>(res);
+  if (!analysis) throw new Error('missing technical analysis');
+  return { analysis, prompt: body, response: res };
 }

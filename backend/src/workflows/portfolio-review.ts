@@ -222,6 +222,7 @@ export async function runMainTrader(
     runNewsAnalyst(log, model, apiKey, runId, agentId),
     runTechnicalAnalyst(log, model, apiKey, timeframe, runId, agentId),
     runOrderBookAnalyst(log, model, apiKey, runId, agentId),
+    runPerformanceAnalyzer(log, model, apiKey, timeframe, agentId, runId),
   ]);
 
   await runWithCache(
@@ -252,7 +253,10 @@ export async function runMainTrader(
           : await getCache<Analysis>(`orderbook:${model}:${pair}:${runId}`);
         reports.push({ token, news, tech, orderbook });
       }
-      const prompt = { portfolioId, reports };
+      const performance = await getCache<Analysis>(
+        `performance:${model}:${agentId}:${runId}`,
+      );
+      const prompt = { portfolioId, reports, performance };
       const res = await callTraderAgent(model, prompt, apiKey);
       await insertReviewRawLog({ agentId, prompt, response: res });
       const decision = extractResult(res);

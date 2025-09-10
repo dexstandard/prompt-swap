@@ -3,7 +3,9 @@ import type { RebalancePrompt } from '../src/util/ai.js';
 
 describe('callTraderAgent structured output', () => {
   it('includes json schema in request', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => '' });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '' });
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const { callTraderAgent } = await import('../src/util/ai.js');
@@ -35,8 +37,8 @@ describe('callTraderAgent structured output', () => {
       { shortReport: 'p1' },
       { rebalance: true, newAllocation: 50 },
     ]);
-    expect(body.text.format.type).toBe('json_schema');
-    const anyOf = body.text.format.schema.properties.result.anyOf;
+    expect(body.response_format.type).toBe('json_schema');
+    const anyOf = body.response_format.json_schema.schema.properties.result.anyOf;
     expect(Array.isArray(anyOf)).toBe(true);
     expect(anyOf).toHaveLength(3);
     (globalThis as any).fetch = originalFetch;

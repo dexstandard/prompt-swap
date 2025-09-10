@@ -14,10 +14,10 @@ export async function getOrderBookAnalysis(
     input: prompt,
     instructions:
       `You are a crypto market order book analyst. Using the order book snapshot in input, write a short report for a crypto trader about ${pair}. Include a liquidity imbalance score from 0-10.`,
-    text: {
-      max_output_tokens: 255,
-      format: {
-        type: 'json_schema',
+    max_output_tokens: 255,
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
         name: 'analysis',
         strict: true,
         schema: analysisSchema,
@@ -25,5 +25,7 @@ export async function getOrderBookAnalysis(
     },
   };
   const res = await callAi(body, apiKey);
-  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
+  const analysis = extractJson<Analysis>(res);
+  if (!analysis) throw new Error('missing order book analysis');
+  return { analysis, prompt: body, response: res };
 }

@@ -17,10 +17,10 @@ export async function getTokenNewsSummary(
     instructions:
       `You are a crypto market news analyst. Using web search and the headlines in input, write a short report for a crypto trader about ${token}. Include a bullishness score from 0-10 and highlight key events.`,
     tools: [{ type: 'web_search_preview' }],
-    text: {
-      max_output_tokens: 255,
-      format: {
-        type: 'json_schema',
+    max_output_tokens: 255,
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
         name: 'analysis',
         strict: true,
         schema: analysisSchema,
@@ -28,5 +28,7 @@ export async function getTokenNewsSummary(
     },
   };
   const res = await callAi(body, apiKey);
-  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
+  const analysis = extractJson<Analysis>(res);
+  if (!analysis) throw new Error('missing news analysis');
+  return { analysis, prompt: body, response: res };
 }
