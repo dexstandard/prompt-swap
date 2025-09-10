@@ -18,16 +18,20 @@ export async function getPerformanceAnalysis(
     input,
     instructions:
       'You are a performance analyst. Review the provided analyst reports and recent order outcomes to evaluate how well the trading team performed. Return a brief comment and a performance score from 0-10.',
+    max_output_tokens: 255,
     text: {
-      max_output_tokens: 255,
       format: {
         type: 'json_schema',
-        name: 'analysis',
-        strict: true,
-        schema: analysisSchema,
+        json_schema: {
+          name: 'analysis',
+          strict: true,
+          schema: analysisSchema,
+        },
       },
     },
   };
   const res = await callAi(body, apiKey);
-  return { analysis: extractJson<Analysis>(res), prompt: body, response: res };
+  const analysis = extractJson<Analysis>(res);
+  if (!analysis) throw new Error('missing performance analysis');
+  return { analysis, prompt: body, response: res };
 }

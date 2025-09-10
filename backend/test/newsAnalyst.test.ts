@@ -21,7 +21,9 @@ describe('news analyst', () => {
     await db.query(
       "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t', 'l', NOW(), ARRAY['BTC'])",
     );
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => responseJson });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
     const { getTokenNewsSummary } = await import('../src/services/news-analyst.js');

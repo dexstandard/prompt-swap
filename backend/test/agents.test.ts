@@ -73,7 +73,7 @@ describe('agent routes', () => {
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -304,7 +304,7 @@ describe('agent routes', () => {
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -378,7 +378,7 @@ describe('agent routes', () => {
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -485,7 +485,7 @@ describe('agent routes', () => {
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -542,7 +542,7 @@ describe('agent routes', () => {
       } as any)
       .mockResolvedValueOnce({ ok: true, json: async () => ({ price: '60' }) } as any)
       .mockResolvedValueOnce({ ok: true, json: async () => ({ price: '40' }) } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const origFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
