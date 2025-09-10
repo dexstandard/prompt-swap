@@ -185,14 +185,12 @@ export async function callTraderAgent(
     input,
     instructions: developerInstructions,
     tools: [{ type: 'web_search_preview' }],
-    response_format: {
-      type: 'json_schema',
+    text: {
+      format: 'json_schema',
       json_schema: {
-        json_schema: {
-          name: 'rebalance_response',
-          strict: true,
-          schema: rebalanceResponseSchema,
-        },
+        name: 'rebalance_response',
+        strict: true,
+        schema: rebalanceResponseSchema,
       },
     },
   };
