@@ -15,12 +15,15 @@ export async function getOrderBookAnalysis(
     instructions:
       `You are a crypto market order book analyst. Using the order book snapshot in input, write a short report for a crypto trader about ${pair}. Include a liquidity imbalance score from 0-10.`,
     max_output_tokens: 255,
+    text: {
     response_format: {
       type: 'json_schema',
       json_schema: {
-        name: 'analysis',
-        strict: true,
-        schema: analysisSchema,
+        json_schema: {
+          name: 'analysis',
+          strict: true,
+          schema: analysisSchema,
+        },
       },
     },
   };

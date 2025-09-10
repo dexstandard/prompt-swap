@@ -188,9 +188,11 @@ export async function callTraderAgent(
     response_format: {
       type: 'json_schema',
       json_schema: {
-        name: 'rebalance_response',
-        strict: true,
-        schema: rebalanceResponseSchema,
+        json_schema: {
+          name: 'rebalance_response',
+          strict: true,
+          schema: rebalanceResponseSchema,
+        },
       },
     },
   };

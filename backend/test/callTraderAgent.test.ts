@@ -38,7 +38,7 @@ describe('callTraderAgent structured output', () => {
       { rebalance: true, newAllocation: 50 },
     ]);
     expect(body.response_format.type).toBe('json_schema');
-    const anyOf = body.response_format.json_schema.schema.properties.result.anyOf;
+    const anyOf = body.response_format.json_schema.json_schema.schema.properties.result.anyOf;
     expect(Array.isArray(anyOf)).toBe(true);
     expect(anyOf).toHaveLength(3);
     (globalThis as any).fetch = originalFetch;
