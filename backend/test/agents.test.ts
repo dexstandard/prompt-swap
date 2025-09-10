@@ -11,7 +11,7 @@ import { authCookies } from './helpers.js';
 
 vi.mock('../src/workflows/portfolio-review.js', () => ({
   reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
-  removeAgentFromSchedule: vi.fn(),
+  removeWorkflowFromSchedule: vi.fn(),
 }));
 
 vi.mock('../src/services/binance.js', async () => {

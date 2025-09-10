@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { callAi, extractJson } from '../util/ai.js';
 import { type AnalysisLog, type Analysis, analysisSchema } from './types.js';
+import { getRecentLimitOrders } from '../repos/limit-orders.js';
 
 export async function getPerformanceAnalysis(
   input: unknown,
@@ -30,4 +31,21 @@ export async function getPerformanceAnalysis(
     log.error({ err }, 'performance analyst call failed');
     return { analysis: fallback };
   }
+}
+
+export async function buildPreviousOrders(agentId: string, limit = 5) {
+  const rows = await getRecentLimitOrders(agentId, limit);
+  if (!rows.length) return {};
+  return {
+    prev_orders: rows.map((r) => {
+      const planned = JSON.parse(r.planned_json) as Record<string, any>;
+      return {
+        symbol: planned.symbol,
+        side: planned.side,
+        amount: planned.quantity,
+        datetime: new Date(r.created_at).toISOString(),
+        status: r.status,
+      };
+    }),
+  } as const;
 }

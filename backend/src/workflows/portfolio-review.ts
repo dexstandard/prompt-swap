@@ -2,7 +2,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { getTokenNewsSummary } from '../services/news-analyst.js';
 import { getTechnicalOutlook } from '../services/technical-analyst.js';
 import { getOrderBookAnalysis } from '../services/order-book-analyst.js';
-import { getPerformanceAnalysis } from '../services/performance-analyst.js';
+import { getPerformanceAnalysis, buildPreviousOrders } from '../services/performance-analyst.js';
 import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';
 import { setCache, getCache, acquireLock, releaseLock } from '../util/cache.js';
 import {
@@ -311,15 +311,15 @@ export async function runMainTrader(
 
 /*
  * -----------------------------------------------------------------------------
- * Portfolio review orchestration (migrated from jobs/review-portfolio.ts)
+ * Portfolio review workflow orchestration
  * -----------------------------------------------------------------------------
  */
 
-/** Agents currently under review. Used to avoid concurrent runs. */
-const runningAgents = new Set<string>();
+/** Workflows currently running. Used to avoid concurrent runs. */
+const runningWorkflows = new Set<string>();
 
-export function removeAgentFromSchedule(id: string) {
-  runningAgents.delete(id);
+export function removeWorkflowFromSchedule(id: string) {
+  runningWorkflows.delete(id);
 }
 
 export async function reviewAgentPortfolio(
@@ -327,7 +327,7 @@ export async function reviewAgentPortfolio(
   agentId: string,
 ): Promise<void> {
   const agents = await getActiveAgents({ agentId });
-  const { toRun, skipped } = filterRunningAgents(agents);
+  const { toRun, skipped } = filterRunningWorkflows(agents);
   if (skipped.length) throw new Error('Agent is already reviewing portfolio');
   await runAgents(log, toRun);
 }
@@ -337,7 +337,7 @@ export default async function reviewPortfolios(
   interval: string,
 ): Promise<void> {
   const agents = await getActiveAgents({ interval });
-  const { toRun } = filterRunningAgents(agents);
+  const { toRun } = filterRunningWorkflows(agents);
   if (!toRun.length) return;
   await runAgents(log, toRun);
 }
@@ -351,19 +351,19 @@ async function runAgents(
   await Promise.all(
     prepared.map(({ row, prompt, key, log: lg }) =>
       executeAgent(row, prompt, key, lg).finally(() => {
-        runningAgents.delete(row.id);
+        runningWorkflows.delete(row.id);
       }),
     ),
   );
 }
 
-function filterRunningAgents(agents: ActiveAgentRow[]) {
+function filterRunningWorkflows(agents: ActiveAgentRow[]) {
   const toRun: ActiveAgentRow[] = [];
   const skipped: ActiveAgentRow[] = [];
   for (const row of agents) {
-    if (runningAgents.has(row.id)) skipped.push(row);
+    if (runningWorkflows.has(row.id)) skipped.push(row);
     else {
-      runningAgents.add(row.id);
+      runningWorkflows.add(row.id);
       toRun.push(row);
     }
   }
@@ -393,7 +393,7 @@ async function prepareAgents(
 
     const balances = await fetchBalances(row, log);
     if (!balances) {
-      runningAgents.delete(row.id);
+      runningWorkflows.delete(row.id);
       continue;
     }
 
@@ -440,7 +440,7 @@ async function prepareAgents(
       const msg = 'failed to fetch market data';
       await saveFailure(row, msg);
       log.error({ err }, 'agent run failed');
-      runningAgents.delete(row.id);
+      runningWorkflows.delete(row.id);
       continue;
     }
   }
@@ -541,23 +541,6 @@ function computePortfolioValues(
     },
   ];
   return { floor, positions };
-}
-
-async function buildPreviousOrders(agentId: string) {
-  const rows = await getRecentLimitOrders(agentId, 5);
-  if (!rows.length) return {};
-  return {
-    prev_orders: rows.map((r) => {
-      const planned = JSON.parse(r.planned_json) as Record<string, any>;
-      return {
-        symbol: planned.symbol,
-        side: planned.side,
-        amount: planned.quantity,
-        datetime: new Date(r.created_at).toISOString(),
-        status: r.status,
-      };
-    }),
-  } as const;
 }
 
 async function executeAgent(

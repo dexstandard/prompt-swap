@@ -51,7 +51,10 @@ const flatTimeseries = {
 };
 
 const runMainTrader = vi.fn();
-vi.mock('../src/workflows/portfolio-review.js', () => ({ runMainTrader }));
+vi.mock('../src/workflows/portfolio-review.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, runMainTrader };
+});
 
 const getCache = vi.fn();
 vi.mock('../src/util/cache.js', () => ({ getCache }));
@@ -123,16 +126,21 @@ vi.mock('../src/services/performance-analyst.js', () => ({
     prompt: {},
     response: 'r',
   }),
+  buildPreviousOrders: vi.fn().mockResolvedValue({}),
 }));
 
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
+let removeWorkflowFromSchedule: (id: string) => void;
 
 beforeAll(async () => {
-  ({ reviewAgentPortfolio } = await import('../src/workflows/portfolio-review.js'));
+  ({ reviewAgentPortfolio, removeWorkflowFromSchedule } = await import(
+    '../src/workflows/portfolio-review.js'
+  ));
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  ['1', '2', '3', '4'].forEach((id) => removeWorkflowFromSchedule(id));
 });
 
 async function setupAgent(id: string, manual = false) {
