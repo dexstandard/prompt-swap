@@ -82,16 +82,6 @@ export default function PortfolioReviewForm({
     }
   }, [topTokens, initializedTopTokens, replace, onTokensChange, tokensWatch]);
 
-  useEffect(() => {
-    const totalOther = tokensWatch
-      .slice(1)
-      .reduce((sum, t) => sum + (t.minAllocation || 0), 0);
-    const first = Math.max(0, 95 - totalOther);
-    if (tokensWatch[0]?.minAllocation !== first) {
-      setValue(`tokens.0.minAllocation`, first);
-    }
-  }, [tokensWatch, setValue]);
-
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
     const previewData = {
@@ -145,13 +135,13 @@ export default function PortfolioReviewForm({
       >
         <h2 className="text-lg md:text-xl font-bold">Binance Portfolio Workflow</h2>
         <div className="space-y-2">
-          <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium text-left">
-            <span className="text-left">Token</span>
-            <span className="text-left">Spot</span>
-            <span className="text-left">Earn</span>
-            <span className="text-left">Total (USD)</span>
-            <span className="text-left">Min %</span>
-            <span />
+          <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
+            <div className="text-left">Token</div>
+            <div className="text-left">Spot</div>
+            <div className="text-left">Earn</div>
+            <div className="text-left">Total (USD)</div>
+            <div className="text-left">Min %</div>
+            <div />
           </div>
           {fields.map((field, index) => {
             const token = tokensWatch[index]?.token;
@@ -191,21 +181,21 @@ export default function PortfolioReviewForm({
                   />
                   )}
                 />
-                <span className="text-sm">
+                <span className="text-sm text-left">
                   {balanceInfo?.isLoading
                     ? t('loading')
                     : balanceInfo
                     ? balanceInfo.walletBalance.toFixed(5)
                     : '0.00000'}
                 </span>
-                <span className="text-sm">
+                <span className="text-sm text-left">
                   {balanceInfo?.isLoading
                     ? t('loading')
                     : balanceInfo
                     ? balanceInfo.earnBalance.toFixed(5)
                     : '0.00000'}
                 </span>
-                <span className="text-sm">
+                <span className="text-sm text-left">
                   {balanceInfo?.isLoading
                     ? t('loading')
                     : balanceInfo

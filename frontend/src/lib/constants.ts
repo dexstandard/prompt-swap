@@ -81,7 +81,7 @@ export const portfolioReviewSchema = z
     const total = data.tokens.reduce((sum, t) => sum + t.minAllocation, 0);
     return total === 95;
   }, {
-    message: 'Min allocations must sum to 95%',
+    message: 'Min allocations must not exceed 95% total',
     path: ['tokens'],
   });
 
