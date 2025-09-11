@@ -54,7 +54,7 @@ export const portfolioReviewSchema = z
             .max(95, 'Must be 95 or less'),
         }),
       )
-      .min(1)
+      .min(2)
       .max(5),
     risk: z.enum(['low', 'medium', 'high']),
     reviewInterval: z.enum([
@@ -88,7 +88,10 @@ export const portfolioReviewSchema = z
 export type PortfolioReviewFormValues = z.infer<typeof portfolioReviewSchema>;
 
 export const portfolioReviewDefaults: PortfolioReviewFormValues = {
-  tokens: [{ token: 'USDT', minAllocation: 0 }],
+  tokens: [
+    { token: 'USDT', minAllocation: 0 },
+    { token: 'BTC', minAllocation: 0 },
+  ],
   risk: 'low',
   reviewInterval: '30m',
 };
