@@ -8,7 +8,7 @@ import {
   type RebalancePrompt,
   extractJson,
 } from '../util/ai.js';
-import { TOKEN_SYMBOLS } from '../util/tokens.js';
+import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';
 import { fetchAccount, fetchPairData } from '../services/binance.js';
 import { getRecentReviewResults } from '../repos/agent-review-result.js';
 import type { ActivePortfolioWorkflowRow } from '../repos/portfolio-workflow.js';
@@ -107,7 +107,7 @@ export async function collectPromptData(
     policy: { floor },
     portfolio: { ts: new Date().toISOString(), positions },
     marketData: { currentPrice: pair.currentPrice },
-    reports: TOKEN_SYMBOLS.map((token) => ({
+    reports: TOKEN_SYMBOLS.filter((t) => !isStablecoin(t)).map((token) => ({
       token,
       news: null,
       tech: null,

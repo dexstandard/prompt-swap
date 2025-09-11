@@ -14,9 +14,9 @@ export async function getTokenNewsSummary(
   const items = await getNewsByToken(token, 5);
   if (!items.length) return { analysis: null };
   const headlines = items.map((i) => `- ${i.title} (${i.link})`).join('\n');
-  const prompt = { token, headlines };
+  const prompt = { headlines };
   const instructions =
-    `You are a crypto market news analyst. Using web search and the headlines in input, write a short report for a crypto trader about ${token}. Include a bullishness score from 0-10 and highlight key events. - shortReport ≤255 chars.`;
+    `You are a crypto market news analyst. Given the headlines, estimate the overall news tone for ${token}. Include a bullishness score from 0-10 and highlight key events. - shortReport ≤255 chars.`;
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
     const res = await callAi(
