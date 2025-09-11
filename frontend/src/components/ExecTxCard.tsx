@@ -17,7 +17,7 @@ export default function ExecTxCard({ agentId, logId, orders, onCancel }: Props) 
     setCanceling(id);
     try {
       await api.post(
-        `/agents/${agentId}/exec-log/${logId}/orders/${id}/cancel`,
+        `/portfolio-workflows/${agentId}/exec-log/${logId}/orders/${id}/cancel`,
       );
       await onCancel?.();
     } finally {

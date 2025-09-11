@@ -73,7 +73,7 @@ async function getAgentForRequest(
 
 export default async function agentRoutes(app: FastifyInstance) {
   app.get(
-    '/agents/paginated',
+    '/portfolio-workflows/paginated',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
       const userId = requireUserId(req, reply);
@@ -99,7 +99,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
     app.post(
-      '/agents',
+      '/portfolio-workflows',
       { config: { rateLimit: RATE_LIMITS.TIGHT } },
       async (req, reply) => {
         const body = req.body as AgentInput;
@@ -132,7 +132,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     );
 
   app.get(
-    '/agents/:id/exec-log',
+    '/portfolio-workflows/:id/exec-log',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -177,7 +177,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.get(
-    '/agents/:id/exec-log/:logId/prompt',
+    '/portfolio-workflows/:id/exec-log/:logId/prompt',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -198,7 +198,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.get(
-    '/agents/:id/exec-log/:logId/orders',
+    '/portfolio-workflows/:id/exec-log/:logId/orders',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -226,7 +226,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.post(
-    '/agents/:id/exec-log/:logId/rebalance',
+    '/portfolio-workflows/:id/exec-log/:logId/rebalance',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -357,7 +357,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   const orderIdParams = z.object({ logId: z.string(), orderId: z.string() });
 
   app.post(
-    '/agents/:id/exec-log/:logId/orders/:orderId/cancel',
+    '/portfolio-workflows/:id/exec-log/:logId/orders/:orderId/cancel',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -394,7 +394,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.get(
-    '/agents/:id/exec-log/:logId/rebalance/preview',
+    '/portfolio-workflows/:id/exec-log/:logId/rebalance/preview',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -475,7 +475,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.get(
-    '/agents/:id',
+    '/portfolio-workflows/:id',
     { config: { rateLimit: RATE_LIMITS.RELAXED } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -487,7 +487,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
     app.put(
-      '/agents/:id',
+      '/portfolio-workflows/:id',
       { config: { rateLimit: RATE_LIMITS.TIGHT } },
       async (req, reply) => {
         const ctx = await getAgentForRequest(req, reply);
@@ -525,7 +525,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     );
 
   app.delete(
-    '/agents/:id',
+    '/portfolio-workflows/:id',
     { config: { rateLimit: RATE_LIMITS.TIGHT } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -549,7 +549,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.post(
-    '/agents/:id/start',
+    '/portfolio-workflows/:id/start',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -582,7 +582,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.post(
-    '/agents/:id/stop',
+    '/portfolio-workflows/:id/stop',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);
@@ -596,7 +596,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   );
 
   app.post(
-    '/agents/:id/review',
+    '/portfolio-workflows/:id/review',
     { config: { rateLimit: RATE_LIMITS.VERY_TIGHT } },
     async (req, reply) => {
       const ctx = await getAgentForRequest(req, reply);

@@ -24,7 +24,7 @@ export function useAgentData(id?: string) {
   return useQuery({
     queryKey: ['agent', id, user?.id],
     queryFn: async () => {
-      const res = await api.get(`/agents/${id}`);
+      const res = await api.get(`/portfolio-workflows/${id}`);
       return res.data as Agent;
     },
     enabled: !!id && !!user,

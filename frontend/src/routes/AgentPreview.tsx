@@ -187,7 +187,7 @@ export default function AgentPreview({ draft }: Props) {
               setIsSavingDraft(true);
               try {
                 if (isDraft) {
-                  await api.put(`/agents/${draft!.id}`, {
+                  await api.put(`/portfolio-workflows/${draft!.id}`, {
                     userId: draft!.userId,
                     model,
                     name: agentData.name,
@@ -202,7 +202,7 @@ export default function AgentPreview({ draft }: Props) {
                     status: 'draft',
                   });
                 } else {
-                  await api.post('/agents', {
+                  await api.post('/portfolio-workflows', {
                     userId: user.id,
                     model,
                     name: agentData.name,

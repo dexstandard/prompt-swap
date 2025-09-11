@@ -73,7 +73,7 @@ export default function CreateAgentForm({
             agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
             manualRebalance: false,
         };
-        navigate('/agent-preview', {state: previewData});
+        navigate('/portfolio-workflow-preview', {state: previewData});
     });
 
     return (

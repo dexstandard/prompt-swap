@@ -61,7 +61,7 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
 
   const updateMut = useMutation({
     mutationFn: async () => {
-      await api.put(`/agents/${agent.id}`, {
+      await api.put(`/portfolio-workflows/${agent.id}`, {
         userId: agent.userId,
         model,
         status: agent.status,

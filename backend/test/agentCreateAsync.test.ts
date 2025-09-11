@@ -65,7 +65,7 @@ describe('agent creation', () => {
 
     const createPromise = app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(userId),
       payload,
     });

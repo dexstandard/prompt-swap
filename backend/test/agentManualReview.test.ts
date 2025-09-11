@@ -35,7 +35,7 @@ describe('manual review endpoint', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/review`,
+      url: `/api/portfolio-workflows/${agentId}/review`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -69,7 +69,7 @@ describe('manual review endpoint', () => {
     );
     const res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agentId}/review`,
+      url: `/api/portfolio-workflows/${agentId}/review`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);

@@ -44,7 +44,7 @@ describe('agent exec log routes', () => {
     );
     let res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/orders`,
       cookies: authCookies(user1Id),
     });
     expect(res.statusCode).toBe(200);
@@ -62,7 +62,7 @@ describe('agent exec log routes', () => {
     });
     res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/orders`,
       cookies: authCookies(user2Id),
     });
     expect(res.statusCode).toBe(403);
@@ -102,7 +102,7 @@ describe('agent exec log routes', () => {
     const spy = vi.spyOn(binance, 'cancelOrder').mockResolvedValue({} as any);
     let res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders/2/cancel`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/orders/2/cancel`,
       cookies: authCookies(user1Id),
     });
     expect(res.statusCode).toBe(200);
@@ -114,7 +114,7 @@ describe('agent exec log routes', () => {
     expect(row.rows[0].status).toBe('canceled');
     res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/orders/2/cancel`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/orders/2/cancel`,
       cookies: authCookies(user2Id),
     });
     expect(res.statusCode).toBe(403);
@@ -155,14 +155,14 @@ describe('agent exec log routes', () => {
     });
     let res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/prompt`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/prompt`,
       cookies: authCookies(user1Id),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ prompt: { a: 1 } });
     res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/prompt`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/prompt`,
       cookies: authCookies(user2Id),
     });
     expect(res.statusCode).toBe(403);
@@ -209,7 +209,7 @@ describe('agent exec log routes', () => {
 
     let res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agentId}/exec-log?page=1&pageSize=2`,
+      url: `/api/portfolio-workflows/${agentId}/exec-log?page=1&pageSize=2`,
       cookies: authCookies(user1Id),
     });
     expect(res.statusCode).toBe(200);
@@ -218,7 +218,7 @@ describe('agent exec log routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agentId}/exec-log?page=1&pageSize=2`,
+      url: `/api/portfolio-workflows/${agentId}/exec-log?page=1&pageSize=2`,
       cookies: authCookies(user2Id),
     });
     expect(res.statusCode).toBe(403);
@@ -269,7 +269,7 @@ describe('agent exec log routes', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
+      url: `/api/portfolio-workflows/${agentId}/exec-log?page=1&pageSize=10`,
       cookies: authCookies(userId),
     });
 
@@ -326,7 +326,7 @@ describe('agent exec log routes', () => {
     });
     const res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agentId}/exec-log?page=1&pageSize=10`,
+      url: `/api/portfolio-workflows/${agentId}/exec-log?page=1&pageSize=10`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -379,7 +379,7 @@ describe('agent exec log routes', () => {
     vi.spyOn(binance, 'createLimitOrder').mockResolvedValue({ orderId: 1 } as any);
     let res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/rebalance`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(201);
@@ -391,7 +391,7 @@ describe('agent exec log routes', () => {
     expect(JSON.parse(rows[0].planned_json)).toMatchObject({ price: 99.9 });
     res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/rebalance`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
@@ -445,7 +445,7 @@ describe('agent exec log routes', () => {
       .mockResolvedValue({ orderId: 1 } as any);
     const res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/rebalance`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
@@ -503,7 +503,7 @@ describe('agent exec log routes', () => {
       .mockResolvedValue({ orderId: 1 } as any);
     const res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/rebalance`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
@@ -560,7 +560,7 @@ describe('agent exec log routes', () => {
     } as any);
     const res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance/preview`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/rebalance/preview`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -622,7 +622,7 @@ describe('agent exec log routes', () => {
     );
     const res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${agent.id}/exec-log/${reviewResultId}/rebalance`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/rebalance`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(400);
@@ -655,7 +655,7 @@ describe('agent exec log routes', () => {
     await insertReviewResult({ portfolioId: agent.id, log: 'yes', rebalance: true });
     const res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${agent.id}/exec-log?rebalanceOnly=true`,
+      url: `/api/portfolio-workflows/${agent.id}/exec-log?rebalanceOnly=true`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
