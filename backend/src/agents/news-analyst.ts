@@ -65,13 +65,15 @@ export async function runNewsAnalyst(
   prompt: RebalancePrompt,
 ): Promise<void> {
   if (!prompt.reports) return;
-  for (const report of prompt.reports) {
-    const { token } = report;
-    if (isStablecoin(token)) continue;
-    const { analysis, prompt: p, response } =
-      await getTokenNewsSummaryCached(token, model, apiKey, log);
-    if (p && response)
-      await insertReviewRawLog({ portfolioId, prompt: p, response });
-    report.news = analysis ? analysis.comment : null;
-  }
+  await Promise.all(
+    prompt.reports.map(async (report) => {
+      const { token } = report;
+      if (isStablecoin(token)) return;
+      const { analysis, prompt: p, response } =
+        await getTokenNewsSummaryCached(token, model, apiKey, log);
+      if (p && response)
+        await insertReviewRawLog({ portfolioId, prompt: p, response });
+      report.news = analysis ? analysis.comment : null;
+    }),
+  );
 }
