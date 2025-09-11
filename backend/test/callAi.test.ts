@@ -18,7 +18,7 @@ describe('callAi structured output', () => {
           { sym: 'USDT', qty: 1, price_usdt: 1, value_usdt: 1 },
         ],
       },
-      marketData: { currentPrice: 1 },
+      marketData: { currentPrice: 1, minNotional: 10 },
       previous_responses: [
         { shortReport: 'p1' },
         { rebalance: true, newAllocation: 50 },

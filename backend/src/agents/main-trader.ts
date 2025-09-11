@@ -9,7 +9,7 @@ import {
   extractJson,
 } from '../util/ai.js';
 import { isStablecoin } from '../util/tokens.js';
-import { fetchAccount, fetchPairData } from '../services/binance.js';
+import { fetchAccount, fetchPairData, fetchPairInfo } from '../services/binance.js';
 import { getRecentReviewResults } from '../repos/agent-review-result.js';
 import type { ActivePortfolioWorkflowRow } from '../repos/portfolio-workflow.js';
 import type { RunParams } from './types.js';
@@ -80,7 +80,7 @@ export async function collectPromptData(
     return undefined;
   }
 
-  const [pair, price1Data, price2Data] = await Promise.all([
+  const [pair, price1Data, price2Data, info] = await Promise.all([
     fetchPairData(token1, token2),
     token1 === 'USDT' || token1 === 'USDC'
       ? Promise.resolve({ currentPrice: 1 })
@@ -88,6 +88,7 @@ export async function collectPromptData(
     token2 === 'USDT' || token2 === 'USDC'
       ? Promise.resolve({ currentPrice: 1 })
       : fetchPairData(token2, 'USDT'),
+    fetchPairInfo(token1, token2),
   ]);
 
   const { floor, positions } = computePortfolioValues(
@@ -106,7 +107,7 @@ export async function collectPromptData(
     instructions: row.agent_instructions,
     policy: { floor },
     portfolio: { ts: new Date().toISOString(), positions },
-    marketData: { currentPrice: pair.currentPrice },
+    marketData: { currentPrice: pair.currentPrice, minNotional: info.minNotional },
     reports: row.tokens
       .map((t) => t.token)
       .filter((t) => !isStablecoin(t))
