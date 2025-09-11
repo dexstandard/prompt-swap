@@ -38,7 +38,7 @@ describe('news analyst step', () => {
       prompt,
     );
     const report = prompt.reports?.find((r: any) => r.token === 'BTC');
-    expect(report?.news?.comment).toBe('summary for BTC');
+    expect(report?.news).toBe('summary for BTC');
     const stable = prompt.reports?.find((r: any) => r.token === 'USDC');
     expect(stable?.news).toBeNull();
     expect(insertReviewRawLogMock).toHaveBeenCalled();

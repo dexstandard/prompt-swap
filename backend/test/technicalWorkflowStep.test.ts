@@ -38,6 +38,7 @@ describe('technical analyst step', () => {
   it('fetches technical outlook per token', async () => {
     const mod = await import('../src/agents/technical-analyst.js');
     const prompt: any = {
+      marketData: {},
       reports: [
         { token: 'BTC', news: null, tech: null },
         { token: 'USDC', news: null, tech: null },
@@ -56,6 +57,7 @@ describe('technical analyst step', () => {
     const report = prompt.reports?.find((r: any) => r.token === 'BTC');
     expect(report?.tech?.comment).toBe('outlook for BTC');
     expect(prompt.reports?.find((r: any) => r.token === 'USDC')?.tech).toBeNull();
+    expect(prompt.marketData.indicators.BTC).toBeDefined();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
     expect(callAiMock).toHaveBeenCalledTimes(1);
   });

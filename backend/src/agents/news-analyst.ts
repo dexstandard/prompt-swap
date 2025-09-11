@@ -72,6 +72,6 @@ export async function runNewsAnalyst(
       await getTokenNewsSummaryCached(token, model, apiKey, log);
     if (p && response)
       await insertReviewRawLog({ portfolioId, prompt: p, response });
-    report.news = analysis;
+    report.news = analysis ? analysis.comment : null;
   }
 }

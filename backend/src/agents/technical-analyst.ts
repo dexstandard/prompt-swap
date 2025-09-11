@@ -59,6 +59,7 @@ export async function runTechnicalAnalyst(
   for (const report of prompt.reports) {
     const { token } = report;
     if (isStablecoin(token)) continue;
+    const indicators = await fetchTokenIndicators(token);
     const { analysis, prompt: p, response } = await getTechnicalOutlookCached(
       token,
       model,
@@ -69,5 +70,7 @@ export async function runTechnicalAnalyst(
     if (p && response)
       await insertReviewRawLog({ portfolioId, prompt: p, response });
     report.tech = analysis;
+    if (!prompt.marketData.indicators) prompt.marketData.indicators = {};
+    (prompt.marketData.indicators as Record<string, any>)[token] = indicators;
   }
 }
