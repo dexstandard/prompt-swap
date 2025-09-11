@@ -12,7 +12,6 @@ import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import PortfolioReviewForm from '../components/forms/PortfolioReviewForm';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
-import WalletBalances from '../components/WalletBalances';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useToast } from '../lib/useToast';
 import Toggle from '../components/ui/Toggle';
@@ -260,7 +259,7 @@ function AgentBlock({
 export default function Dashboard() {
   const { user } = useUser();
   const [page, setPage] = useState(1);
-  const [tokens, setTokens] = useState(['USDT']);
+  const [tokens, setTokens] = useState(['USDT', 'BTC']);
   const [onlyActive, setOnlyActive] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -379,12 +378,6 @@ export default function Dashboard() {
               onTokensChange={handleTokensChange}
             />
           )}
-        </div>
-        <div className="hidden md:flex flex-1 flex-col gap-4">
-          <WalletBalances
-            balances={balances}
-            hasBinanceKey={hasBinanceKey}
-          />
         </div>
       </div>
         <ErrorBoundary>
