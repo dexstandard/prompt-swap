@@ -1,6 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
-import { getTechnicalOutlook } from '../src/agents/technical-analyst.js';
+
+vi.mock('../src/services/indicators.js', () => ({
+  fetchTokenIndicators: vi.fn().mockResolvedValue({ rsi: 50 }),
+}));
+vi.mock('../src/services/derivatives.js', () => ({
+  fetchOrderBook: vi.fn().mockResolvedValue({ bid: [0, 0], ask: [0, 0] }),
+}));
+
+import {
+  getTechnicalOutlook,
+  getTechnicalOutlookCached,
+} from '../src/agents/technical-analyst.js';
 
 function createLogger(): FastifyBaseLogger {
   const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
@@ -23,13 +34,6 @@ const responseJson = JSON.stringify({
 });
 
 describe('technical analyst', () => {
-vi.mock('../src/services/indicators.js', () => ({
-  fetchTokenIndicators: vi.fn().mockResolvedValue({ rsi: 50 }),
-}));
-vi.mock('../src/services/derivatives.js', () => ({
-  fetchOrderBook: vi.fn().mockResolvedValue({ bid: [0, 0], ask: [0, 0] }),
-}));
-
   it('returns outlook', async () => {
     const fetchMock = vi
       .fn()
@@ -63,6 +67,20 @@ vi.mock('../src/services/derivatives.js', () => ({
     const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
+    (globalThis as any).fetch = orig;
+  });
+
+  it('caches token outlooks and dedupes concurrent calls', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => responseJson });
+    const orig = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+    const p1 = getTechnicalOutlookCached('BTC', 'gpt', 'key', '1d', createLogger());
+    const p2 = getTechnicalOutlookCached('BTC', 'gpt', 'key', '1d', createLogger());
+    await Promise.all([p1, p2]);
+    await getTechnicalOutlookCached('BTC', 'gpt', 'key', '1d', createLogger());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
 });
