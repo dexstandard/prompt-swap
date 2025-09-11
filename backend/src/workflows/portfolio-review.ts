@@ -4,7 +4,7 @@ import {
   getActivePortfolioWorkflowsByInterval,
   type ActivePortfolioWorkflowRow,
 } from '../repos/portfolio-workflow.js';
-import { runMainTrader } from '../agents/main-trader.js';
+import { run as runMainTrader, collectPromptData } from '../agents/main-trader.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import {
   getOpenLimitOrdersForAgent,
@@ -12,20 +12,14 @@ import {
 } from '../repos/limit-orders.js';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
-import {
-  insertReviewResult,
-  getRecentReviewResults,
-} from '../repos/agent-review-result.js';
+import { insertReviewResult } from '../repos/agent-review-result.js';
 import { parseExecLog, validateExecResponse } from '../util/parse-exec-log.js';
 import {
-  fetchAccount,
-  fetchPairData,
   cancelOrder,
   parseBinanceError,
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
-import { TOKEN_SYMBOLS } from '../util/tokens.js';
-import { type RebalancePrompt, type PreviousResponse } from '../util/ai.js';
+import { type RebalancePrompt } from '../util/ai.js';
 
 /** Workflows currently running. Used to avoid concurrent runs. */
 const runningWorkflows = new Set<string>();
@@ -85,15 +79,6 @@ function filterRunningWorkflows(workflowRows: ActivePortfolioWorkflowRow[]) {
 }
 
 
-function extractPreviousResponse(r: any): PreviousResponse | undefined {
-  const res: PreviousResponse = {};
-  if (typeof r.rebalance === 'boolean') res.rebalance = r.rebalance;
-  if (typeof r.newAllocation === 'number') res.newAllocation = r.newAllocation;
-  if (typeof r.shortReport === 'string') res.shortReport = r.shortReport;
-  if (r.error !== undefined && r.error !== null) res.error = r.error;
-  return Object.keys(res).length ? res : undefined;
-}
-
 async function cleanupAgentOpenOrders(
   row: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
@@ -119,67 +104,6 @@ async function cleanupAgentOpenOrders(
   }
 }
 
-async function fetchBalances(
-  row: ActivePortfolioWorkflowRow,
-  log: FastifyBaseLogger,
-): Promise<{ token1Balance: number; token2Balance: number } | undefined> {
-  const token1 = row.tokens[0].token;
-  const token2 = row.tokens[1].token;
-  let token1Balance: number | undefined;
-  let token2Balance: number | undefined;
-  try {
-    const account = await fetchAccount(row.user_id);
-    if (account) {
-      const bal1 = account.balances.find((b) => b.asset === token1);
-      if (bal1) token1Balance = Number(bal1.free) + Number(bal1.locked);
-      const bal2 = account.balances.find((b) => b.asset === token2);
-      if (bal2) token2Balance = Number(bal2.free) + Number(bal2.locked);
-    }
-  } catch (err) {
-    log.error({ err }, 'failed to fetch balance');
-  }
-  if (token1Balance === undefined || token2Balance === undefined) {
-    const msg = 'failed to fetch token balances';
-    await saveFailure(row, msg);
-    log.error({ err: msg }, 'workflow run failed');
-    return undefined;
-  }
-  return { token1Balance, token2Balance };
-}
-
-function computePortfolioValues(
-  row: ActivePortfolioWorkflowRow,
-  balances: { token1Balance: number; token2Balance: number },
-  price1: number,
-  price2: number,
-) {
-  const token1 = row.tokens[0].token;
-  const token2 = row.tokens[1].token;
-  const min1 = row.tokens[0].min_allocation;
-  const min2 = row.tokens[1].min_allocation;
-  const value1 = balances.token1Balance * price1;
-  const value2 = balances.token2Balance * price2;
-  const floor: Record<string, number> = {
-    [token1]: min1,
-    [token2]: min2,
-  };
-  const positions = [
-    {
-      sym: token1,
-      qty: balances.token1Balance,
-      price_usdt: price1,
-      value_usdt: value1,
-    },
-    {
-      sym: token2,
-      qty: balances.token2Balance,
-      price_usdt: price2,
-      value_usdt: value2,
-    },
-  ];
-  return { floor, positions };
-}
-
 export async function executeWorkflow(
   row: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
@@ -190,58 +114,20 @@ export async function executeWorkflow(
 
     const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
 
-    const balances = await fetchBalances(row, log);
-    if (!balances) {
+    prompt = await collectPromptData(row, log);
+    if (!prompt) {
+      await saveFailure(row, 'failed to collect prompt data');
       return;
     }
 
-    const token1 = row.tokens[0].token;
-    const token2 = row.tokens[1].token;
-    const [pair, price1Data, price2Data] = await Promise.all([
-      fetchPairData(token1, token2),
-      token1 === 'USDT' || token1 === 'USDC'
-        ? Promise.resolve({ currentPrice: 1 })
-        : fetchPairData(token1, 'USDT'),
-      token2 === 'USDT' || token2 === 'USDC'
-        ? Promise.resolve({ currentPrice: 1 })
-        : fetchPairData(token2, 'USDT'),
-    ]);
-
-    const { floor, positions } = computePortfolioValues(
-      row,
-      balances,
-      price1Data.currentPrice,
-      price2Data.currentPrice,
-    );
-
-    prompt = {
-      instructions: row.agent_instructions,
-      policy: { floor },
-      portfolio: {
-        ts: new Date().toISOString(),
-        positions,
-      },
-      marketData: { currentPrice: pair.currentPrice },
-      reports: TOKEN_SYMBOLS.map((token) => ({
-        token,
-        news: null,
-        tech: null,
-        orderbook: null,
-      })),
-    };
-
-    const prevRows = await getRecentReviewResults(row.id, 5);
-    prompt.previous_responses = prevRows
-      .map(extractPreviousResponse)
-      .filter(Boolean) as PreviousResponse[];
-
     const decision = await runMainTrader(
-      log,
-      row.model,
-      key,
-      row.review_interval,
-      row.id,
-      row.portfolio_id,
+      {
+        log,
+        model: row.model,
+        apiKey: key,
+        timeframe: row.review_interval,
+        agentId: row.id,
+      },
       prompt,
     );
     const logId = await insertReviewRawLog({

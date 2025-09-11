@@ -106,7 +106,7 @@ describe('main trader step', () => {
   });
 
   it('runs traders and aggregates analyses', async () => {
-    const { runMainTrader } = await import('../src/agents/main-trader.js');
+    const { run } = await import('../src/agents/main-trader.js');
     const prompt = {
       instructions: '',
       policy: { floor: {} },
@@ -114,13 +114,14 @@ describe('main trader step', () => {
       marketData: { currentPrice: 0 },
       reports: [{ token: 'BTC', news: null, tech: null, orderbook: null }],
     };
-    const decision = await runMainTrader(
-      createLogger(),
-      'gpt',
-      'key',
-      '1d',
-      'agent1',
-      'pf1',
+    const decision = await run(
+      {
+        log: createLogger(),
+        model: 'gpt',
+        apiKey: 'key',
+        timeframe: '1d',
+        agentId: 'agent1',
+      },
       prompt,
     );
 
