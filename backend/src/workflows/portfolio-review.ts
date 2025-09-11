@@ -95,7 +95,7 @@ async function cleanupOpenOrders(
   log: FastifyBaseLogger,
 ) {
   const orders = await getOpenLimitOrdersForAgent(wf.id);
-  const limit = pLimit(5);
+  const limit = (pLimit as any)(5);
   await Promise.all(
     orders.map((o) =>
       limit(async () => {

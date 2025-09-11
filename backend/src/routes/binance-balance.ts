@@ -14,6 +14,34 @@ const idTokenParams = z.object({
 
 export default async function binanceBalanceRoutes(app: FastifyInstance) {
   app.get(
+    '/users/:id/binance-account',
+    { config: { rateLimit: RATE_LIMITS.RELAXED } },
+    async (req, reply) => {
+      const params = parseParams(idParams, req.params, reply);
+      if (!params) return;
+      const { id } = params;
+      if (!requireUserIdMatch(req, reply, id)) return;
+      let account;
+      try {
+        account = await fetchAccount(id);
+      } catch {
+        return reply
+          .code(500)
+          .send(errorResponse('failed to fetch account'));
+      }
+      if (!account)
+        return reply.code(404).send(errorResponse(ERROR_MESSAGES.notFound));
+      return {
+        balances: account.balances.map((b) => ({
+          asset: b.asset,
+          free: Number(b.free),
+          locked: Number(b.locked),
+        })),
+      };
+    },
+  );
+
+  app.get(
     '/users/:id/binance-balance',
     { config: { rateLimit: RATE_LIMITS.MODERATE } },
     async (req, reply) => {

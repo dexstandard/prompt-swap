@@ -19,7 +19,11 @@ export default function TokenSelect({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const selected = options.find((o) => o.value === value);
+  const filtered = options.filter((o) =>
+    o.value.toLowerCase().includes(query.toLowerCase()),
+  );
 
   return (
     <div className="relative">
@@ -27,7 +31,11 @@ export default function TokenSelect({
         type="button"
         id={id}
         disabled={disabled}
-        onClick={() => !disabled && setOpen(!open)}
+        onClick={() => {
+          if (disabled) return;
+          setOpen(!open);
+          setQuery('');
+        }}
         className="w-full border rounded px-2 py-1 flex items-center justify-between"
       >
         {selected ? (
@@ -38,22 +46,32 @@ export default function TokenSelect({
         <span className="ml-2">▾</span>
       </button>
       {open && !disabled && (
-        <ul className="absolute z-10 w-full bg-white border rounded mt-1 max-h-40 overflow-auto">
-          {options.map((opt) => (
-            <li key={opt.value}>
-              <button
-                type="button"
-                className="w-full text-left px-2 py-1 hover:bg-gray-100 flex items-center"
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-              >
-                <TokenDisplay token={opt.value} />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="absolute z-10 w-full bg-white border rounded mt-1">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search..."
+            className="w-full px-2 py-1 border-b"
+            autoFocus
+          />
+          <ul className="max-h-40 overflow-auto">
+            {filtered.map((opt) => (
+              <li key={opt.value}>
+                <button
+                  type="button"
+                  className="w-full text-left px-2 py-1 hover:bg-gray-100 flex items-center"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                >
+                  <TokenDisplay token={opt.value} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
