@@ -5,6 +5,10 @@ import {
   type ActivePortfolioWorkflowRow,
 } from '../repos/portfolio-workflow.js';
 import { run as runMainTrader, collectPromptData } from '../agents/main-trader.js';
+import { runNewsAnalyst } from '../agents/news-analyst.js';
+import { runTechnicalAnalyst } from '../agents/technical-analyst.js';
+import { runOrderBookAnalyst } from '../agents/order-book-analyst.js';
+import { runPerformanceAnalyzer } from '../agents/performance-analyst.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import {
   getOpenLimitOrdersForAgent,
@@ -120,16 +124,15 @@ export async function executeWorkflow(
       return;
     }
 
-    const decision = await runMainTrader(
-      {
-        log,
-        model: wf.model,
-        apiKey: key,
-        timeframe: wf.review_interval,
-        agentId: wf.id,
-      },
-      prompt,
-    );
+    const params = { log, model: wf.model, apiKey: key, portfolioId: wf.id };
+    await Promise.all([
+      runNewsAnalyst(params, prompt),
+      runTechnicalAnalyst({ ...params, timeframe: wf.review_interval }, prompt),
+      runOrderBookAnalyst(params, prompt),
+      runPerformanceAnalyzer(params, prompt),
+    ]);
+
+    const decision = await runMainTrader(params, prompt);
     const logId = await insertReviewRawLog({
       agentId: wf.id,
       prompt,

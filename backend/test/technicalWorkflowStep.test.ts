@@ -40,11 +40,13 @@ describe('technical analyst step', () => {
     const mod = await import('../src/agents/technical-analyst.js');
     const prompt: any = {};
     await mod.runTechnicalAnalyst(
-      createLogger(),
-      'gpt',
-      'key',
-      '1d',
-      'agent1',
+      {
+        log: createLogger(),
+        model: 'gpt',
+        apiKey: 'key',
+        timeframe: '1d',
+        portfolioId: 'agent1',
+      },
       prompt,
     );
     const report = prompt.reports?.find((r: any) => r.token === 'BTC');
