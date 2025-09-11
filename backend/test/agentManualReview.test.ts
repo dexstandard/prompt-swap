@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import buildServer from '../src/server.js';
 import { insertUser } from './repos/users.js';
-import { insertAgent } from './repos/agents.js';
+import { insertAgent } from './repos/portfolio-workflow.js';
 import { authCookies } from './helpers.js';
 
 const reviewAgentPortfolioMock = vi.fn<(

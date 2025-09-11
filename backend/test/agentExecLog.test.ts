@@ -5,7 +5,7 @@ import buildServer from '../src/server.js';
 import { parseExecLog } from '../src/util/parse-exec-log.js';
 import { insertReviewResult } from '../src/repos/agent-review-result.js';
 import { insertUser } from './repos/users.js';
-import { insertAgent } from './repos/agents.js';
+import { insertAgent } from './repos/portfolio-workflow.js';
 import { insertReviewRawLog } from './repos/agent-review-raw-log.js';
 import { db } from '../src/db/index.js';
 import * as binance from '../src/services/binance.js';

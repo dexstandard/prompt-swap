@@ -1,5 +1,9 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { getActiveAgents, type ActiveAgentRow } from '../repos/agents.js';
+import {
+  getActivePortfolioWorkflowById,
+  getActivePortfolioWorkflowsByInterval,
+  type ActivePortfolioWorkflowRow,
+} from '../repos/portfolio-workflow.js';
 import { runMainTrader } from '../agents/main-trader.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import {
@@ -34,8 +38,9 @@ export async function reviewPortfolio(
   log: FastifyBaseLogger,
   agentId: string,
 ): Promise<void> {
-  const agents = await getActiveAgents({ agentId });
-  const { toRun, skipped } = filterRunningWorkflows(agents);
+  const agent = await getActivePortfolioWorkflowById(agentId);
+  if (!agent) return;
+  const { toRun, skipped } = filterRunningWorkflows([agent]);
   if (skipped.length) throw new Error('Agent is already reviewing portfolio');
   await runReviewWorkflows(log, toRun);
 }
@@ -44,7 +49,7 @@ export default async function reviewPortfolios(
   log: FastifyBaseLogger,
   interval: string,
 ): Promise<void> {
-  const agents = await getActiveAgents({ interval });
+  const agents = await getActivePortfolioWorkflowsByInterval(interval);
   const { toRun } = filterRunningWorkflows(agents);
   if (!toRun.length) return;
   await runReviewWorkflows(log, toRun);
@@ -52,7 +57,7 @@ export default async function reviewPortfolios(
 
 async function runReviewWorkflows(
   log: FastifyBaseLogger,
-  agents: ActiveAgentRow[],
+  agents: ActivePortfolioWorkflowRow[],
 ) {
   const prepared = await prepareAgents(agents, log);
   const preparedIds = new Set(prepared.map((p) => p.row.id));
@@ -69,9 +74,9 @@ async function runReviewWorkflows(
   );
 }
 
-function filterRunningWorkflows(agents: ActiveAgentRow[]) {
-  const toRun: ActiveAgentRow[] = [];
-  const skipped: ActiveAgentRow[] = [];
+function filterRunningWorkflows(agents: ActivePortfolioWorkflowRow[]) {
+  const toRun: ActivePortfolioWorkflowRow[] = [];
+  const skipped: ActivePortfolioWorkflowRow[] = [];
   for (const row of agents) {
     if (runningWorkflows.has(row.id)) skipped.push(row);
     else {
@@ -83,11 +88,11 @@ function filterRunningWorkflows(agents: ActiveAgentRow[]) {
 }
 
 export async function prepareAgents(
-  rows: ActiveAgentRow[],
+  rows: ActivePortfolioWorkflowRow[],
   parentLog: FastifyBaseLogger,
 ) {
   const prepared: {
-    row: ActiveAgentRow;
+    row: ActivePortfolioWorkflowRow;
     prompt: RebalancePrompt;
     key: string;
     log: FastifyBaseLogger;
@@ -168,7 +173,7 @@ function extractPreviousResponse(r: any): PreviousResponse | undefined {
 }
 
 async function cleanupAgentOpenOrders(
-  row: ActiveAgentRow,
+  row: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
 ) {
   const orders = await getOpenLimitOrdersForAgent(row.id);
@@ -193,7 +198,7 @@ async function cleanupAgentOpenOrders(
 }
 
 async function fetchBalances(
-  row: ActiveAgentRow,
+  row: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
 ): Promise<{ token1Balance: number; token2Balance: number } | undefined> {
   const token1 = row.tokens[0].token;
@@ -221,7 +226,7 @@ async function fetchBalances(
 }
 
 function computePortfolioValues(
-  row: ActiveAgentRow,
+  row: ActivePortfolioWorkflowRow,
   balances: { token1Balance: number; token2Balance: number },
   price1: number,
   price2: number,
@@ -254,7 +259,7 @@ function computePortfolioValues(
 }
 
 export async function executeAgent(
-  row: ActiveAgentRow,
+  row: ActivePortfolioWorkflowRow,
   prompt: RebalancePrompt,
   key: string,
   log: FastifyBaseLogger,
@@ -317,7 +322,7 @@ export async function executeAgent(
 }
 
 async function saveFailure(
-  row: ActiveAgentRow,
+  row: ActivePortfolioWorkflowRow,
   message: string,
   prompt?: RebalancePrompt,
 ) {

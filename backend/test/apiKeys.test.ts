@@ -20,8 +20,8 @@ import {
   setBinanceKey,
   shareAiKey,
 } from '../src/repos/api-keys.js';
-import { insertAgent } from './repos/agents.js';
-import { getUserApiKeys } from '../src/repos/agents.js';
+import { insertAgent } from './repos/portfolio-workflow.js';
+import { getUserApiKeys } from '../src/repos/portfolio-workflow.js';
 import { db } from '../src/db/index.js';
 import { encrypt } from '../src/util/crypto.js';
 import { removeWorkflowFromSchedule } from '../src/workflows/portfolio-review.js';

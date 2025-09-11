@@ -3,7 +3,7 @@ import {
   getUserApiKeys,
   findIdenticalDraftAgent,
   findActiveTokenConflicts,
-} from '../repos/agents.js';
+} from '../repos/portfolio-workflow.js';
 import { getAiKeyRow } from '../repos/api-keys.js';
 import {
   errorResponse,

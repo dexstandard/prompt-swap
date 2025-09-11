@@ -1,9 +1,9 @@
 import { db } from '../db/index.js';
 import { AgentStatus } from '../util/agents.js';
 
-export interface AgentTokenRow { token: string; min_allocation: number; }
+export interface PortfolioWorkflowTokenRow { token: string; min_allocation: number; }
 
-export interface AgentRow {
+export interface PortfolioWorkflowRow {
   id: string;
   user_id: string;
   model: string;
@@ -11,7 +11,7 @@ export interface AgentRow {
   created_at: string;
   start_balance: number | null;
   name: string;
-  tokens: AgentTokenRow[];
+  tokens: PortfolioWorkflowTokenRow[];
   risk: string;
   review_interval: string;
   agent_instructions: string;
@@ -20,7 +20,7 @@ export interface AgentRow {
   exchange_api_key_id: string | null;
 }
 
-export function toApi(row: AgentRow) {
+export function toApi(row: PortfolioWorkflowRow) {
   return {
     id: row.id,
     userId: row.user_id,
@@ -49,19 +49,19 @@ const baseSelect = `
          a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance,
          COALESCE(ak.id, oak.id) AS ai_api_key_id, ek.id AS exchange_api_key_id
     FROM portfolio_workflow a
-    LEFT JOIN agent_tokens t ON t.agent_id = a.id
+    LEFT JOIN portfolio_workflow_tokens t ON t.portfolio_workflow_id = a.id
     LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
     LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
     LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
     LEFT JOIN exchange_keys ek ON ek.user_id = a.user_id AND ek.provider = 'binance'
 `;
 
-export async function getAgent(id: string): Promise<AgentRow | undefined> {
+export async function getAgent(id: string): Promise<PortfolioWorkflowRow | undefined> {
   const { rows } = await db.query(
     `${baseSelect} WHERE a.id = $1 AND a.status != $2 GROUP BY a.id, ak.id, oak.id, ek.id`,
     [id, AgentStatus.Retired],
   );
-  return rows[0] as AgentRow | undefined;
+  return rows[0] as PortfolioWorkflowRow | undefined;
 }
 
 export async function getAgentsPaginated(
@@ -81,7 +81,7 @@ export async function getAgentsPaginated(
       `${baseSelect} ${where} GROUP BY a.id, ak.id, oak.id, ek.id LIMIT $3 OFFSET $4`,
       [userId, status, limit, offset],
     );
-    return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
+    return { rows: rows as PortfolioWorkflowRow[], total: Number(totalRes.rows[0].count) };
   }
   const where = 'WHERE a.user_id = $1 AND a.status != $2';
   const totalRes = await db.query(
@@ -92,7 +92,7 @@ export async function getAgentsPaginated(
     `${baseSelect} ${where} GROUP BY a.id, ak.id, oak.id, ek.id LIMIT $3 OFFSET $4`,
     [userId, AgentStatus.Retired, limit, offset],
   );
-  return { rows: rows as AgentRow[], total: Number(totalRes.rows[0].count) };
+  return { rows: rows as PortfolioWorkflowRow[], total: Number(totalRes.rows[0].count) };
 }
 
 export async function findIdenticalDraftAgent(
@@ -110,10 +110,10 @@ export async function findIdenticalDraftAgent(
 ) {
   const query = `SELECT a.id, a.name FROM portfolio_workflow a
     LEFT JOIN (
-      SELECT agent_id,
+      SELECT portfolio_workflow_id,
              json_agg(json_build_object('token', token, 'min_allocation', min_allocation) ORDER BY position) AS tokens
-        FROM agent_tokens GROUP BY agent_id
-    ) t ON t.agent_id = a.id
+        FROM portfolio_workflow_tokens GROUP BY portfolio_workflow_id
+    ) t ON t.portfolio_workflow_id = a.id
     WHERE a.user_id = $1 AND a.status = 'draft' AND ($2::bigint IS NULL OR a.id != $2)
       AND a.model = $3 AND a.name = $4
       AND a.risk = $5 AND a.review_interval = $6 AND a.agent_instructions = $7 AND a.manual_rebalance = $8
@@ -144,7 +144,7 @@ export async function findActiveTokenConflicts(
   excludeId?: string,
 ) {
   const query = `SELECT a.id, a.name, t.token FROM portfolio_workflow a
-      JOIN agent_tokens t ON t.agent_id = a.id
+      JOIN portfolio_workflow_tokens t ON t.portfolio_workflow_id = a.id
      WHERE a.user_id = $1 AND a.status = 'active' AND ($2::bigint IS NULL OR a.id != $2)
        AND t.token = ANY($3::text[])`;
   const params: unknown[] = [userId, excludeId ?? null, tokens];
@@ -177,7 +177,7 @@ export async function insertAgent(data: {
   reviewInterval: string;
   agentInstructions: string;
   manualRebalance: boolean;
-}): Promise<AgentRow> {
+}): Promise<PortfolioWorkflowRow> {
   const { rows } = await db.query(
     `INSERT INTO portfolio_workflow (user_id, model, status, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -203,7 +203,7 @@ export async function insertAgent(data: {
   });
   if (values.length)
     await db.query(
-      `INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ${values.join(
+      `INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ${values.join(
         ', ',
       )}`,
       params,
@@ -237,7 +237,7 @@ export async function updateAgent(data: {
       data.id,
     ],
   );
-  await db.query('DELETE FROM agent_tokens WHERE agent_id = $1', [data.id]);
+  await db.query('DELETE FROM portfolio_workflow_tokens WHERE portfolio_workflow_id = $1', [data.id]);
   const params: any[] = [data.id];
   const values: string[] = [];
   data.tokens.forEach((t, i) => {
@@ -246,7 +246,7 @@ export async function updateAgent(data: {
   });
   if (values.length)
     await db.query(
-      `INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ${values.join(
+      `INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ${values.join(
         ', ',
       )}`,
       params,
@@ -277,11 +277,11 @@ export async function stopAgent(id: string): Promise<void> {
   );
 }
 
-export interface ActiveAgentRow {
+export interface ActivePortfolioWorkflowRow {
   id: string;
   user_id: string;
   model: string;
-  tokens: AgentTokenRow[];
+  tokens: PortfolioWorkflowTokenRow[];
   risk: string;
   review_interval: string;
   agent_instructions: string;
@@ -290,50 +290,91 @@ export interface ActiveAgentRow {
   portfolio_id: string;
 }
 
-export async function getActiveAgents(options?: {
-  agentId?: string;
-  interval?: string;
-}): Promise<ActiveAgentRow[]> {
+export async function getActivePortfolioWorkflowById(
+  portfolioWorkflowId: string,
+): Promise<ActivePortfolioWorkflowRow | undefined> {
   const sql = `SELECT a.id, a.user_id, a.model,
-                      COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
-                               FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
+                      COALESCE(t.tokens, '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
-                      COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance,
+                      COALESCE(
+                        (SELECT api_key_enc FROM ai_api_keys WHERE user_id = a.user_id AND provider = 'openai'),
+                        (
+                          SELECT oak.api_key_enc
+                            FROM ai_api_key_shares s
+                            JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
+                           WHERE s.target_user_id = a.user_id
+                           LIMIT 1
+                        )
+                      ) AS ai_api_key_enc,
+                      a.manual_rebalance,
                       a.id AS portfolio_id
                  FROM portfolio_workflow a
-                 LEFT JOIN agent_tokens t ON t.agent_id = a.id
-                 LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
-                 LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
-                 LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
-                WHERE a.status = 'active'
-                  AND ($1::bigint IS NULL OR a.id = $1)
-                  AND ($2::text IS NULL OR a.review_interval = $2)
-             GROUP BY a.id, ak.api_key_enc, oak.api_key_enc`;
-  const { rows } = await db.query(sql, [
-    options?.agentId ?? null,
-    options?.interval ?? null,
-  ]);
-  return rows as ActiveAgentRow[];
+                 LEFT JOIN LATERAL (
+                   SELECT json_agg(json_build_object('token', token, 'min_allocation', min_allocation) ORDER BY position) AS tokens
+                     FROM portfolio_workflow_tokens
+                    WHERE portfolio_workflow_id = a.id
+                 ) t ON true
+                WHERE a.status = 'active' AND a.id = $1`;
+  const { rows } = await db.query(sql, [portfolioWorkflowId]);
+  return rows[0] as ActivePortfolioWorkflowRow | undefined;
 }
 
-export async function getActiveAgentsByUser(
-  userId: string,
-): Promise<ActiveAgentRow[]> {
+export async function getActivePortfolioWorkflowsByInterval(
+  interval: string,
+): Promise<ActivePortfolioWorkflowRow[]> {
   const sql = `SELECT a.id, a.user_id, a.model,
-                      COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
-                               FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
+                      COALESCE(t.tokens, '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
-                      COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance,
+                      COALESCE(
+                        (SELECT api_key_enc FROM ai_api_keys WHERE user_id = a.user_id AND provider = 'openai'),
+                        (
+                          SELECT oak.api_key_enc
+                            FROM ai_api_key_shares s
+                            JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
+                           WHERE s.target_user_id = a.user_id
+                           LIMIT 1
+                        )
+                      ) AS ai_api_key_enc,
+                      a.manual_rebalance,
                       a.id AS portfolio_id
                  FROM portfolio_workflow a
-                 LEFT JOIN agent_tokens t ON t.agent_id = a.id
-                 LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
-                 LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
-                 LEFT JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
-                WHERE a.status = 'active' AND a.user_id = $1
-            GROUP BY a.id, ak.api_key_enc, oak.api_key_enc`;
+                 LEFT JOIN LATERAL (
+                   SELECT json_agg(json_build_object('token', token, 'min_allocation', min_allocation) ORDER BY position) AS tokens
+                     FROM portfolio_workflow_tokens
+                    WHERE portfolio_workflow_id = a.id
+                 ) t ON true
+                WHERE a.status = 'active' AND a.review_interval = $1`;
+  const { rows } = await db.query(sql, [interval]);
+  return rows as ActivePortfolioWorkflowRow[];
+}
+ 
+export async function getActivePortfolioWorkflowsByUser(
+  userId: string,
+): Promise<ActivePortfolioWorkflowRow[]> {
+  const sql = `SELECT a.id, a.user_id, a.model,
+                      COALESCE(t.tokens, '[]') AS tokens,
+                      a.risk, a.review_interval, a.agent_instructions,
+                      COALESCE(
+                        (SELECT api_key_enc FROM ai_api_keys WHERE user_id = a.user_id AND provider = 'openai'),
+                        (
+                          SELECT oak.api_key_enc
+                            FROM ai_api_key_shares s
+                            JOIN ai_api_keys oak ON oak.user_id = s.owner_user_id AND oak.provider = 'openai'
+                           WHERE s.target_user_id = a.user_id
+                           LIMIT 1
+                        )
+                      ) AS ai_api_key_enc,
+                      a.manual_rebalance,
+                      a.id AS portfolio_id
+                 FROM portfolio_workflow a
+                 LEFT JOIN LATERAL (
+                   SELECT json_agg(json_build_object('token', token, 'min_allocation', min_allocation) ORDER BY position) AS tokens
+                     FROM portfolio_workflow_tokens
+                    WHERE portfolio_workflow_id = a.id
+                 ) t ON true
+                WHERE a.status = 'active' AND a.user_id = $1`;
   const { rows } = await db.query(sql, [userId]);
-  return rows as ActiveAgentRow[];
+  return rows as ActivePortfolioWorkflowRow[];
 }
 
 export async function deactivateAgentsByUser(
