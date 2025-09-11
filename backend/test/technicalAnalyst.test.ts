@@ -1,9 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 
-vi.mock('../src/services/indicators.js', () => ({
-  fetchTokenIndicators: vi.fn().mockResolvedValue({ rsi: 50 }),
-}));
 vi.mock('../src/services/derivatives.js', () => ({
   fetchOrderBook: vi.fn().mockResolvedValue({ bid: [0, 0], ask: [0, 0] }),
 }));
@@ -33,6 +30,18 @@ const responseJson = JSON.stringify({
   ],
 });
 
+const indicators = {
+  ret: {},
+  sma_dist: {},
+  macd_hist: 0,
+  vol: {},
+  range: {},
+  volume: {},
+  corr: {},
+  regime: {},
+  osc: {},
+} as const;
+
 describe('technical analyst', () => {
   it('returns outlook', async () => {
     const fetchMock = vi
@@ -40,7 +49,7 @@ describe('technical analyst', () => {
       .mockResolvedValue({ ok: true, text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d', createLogger());
+    const res = await getTechnicalOutlook('BTC', indicators, 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('outlook text');
     expect(res.prompt).toBeTruthy();
     expect(res.response).toBe(responseJson);
@@ -54,7 +63,7 @@ describe('technical analyst', () => {
       .mockResolvedValue({ ok: true, text: async () => '{"output":[]}' });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d', createLogger());
+    const res = await getTechnicalOutlook('BTC', indicators, 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
     (globalThis as any).fetch = orig;
@@ -64,7 +73,7 @@ describe('technical analyst', () => {
     const orig = globalThis.fetch;
     const fetchMock = vi.fn().mockRejectedValue(new Error('network'));
     (globalThis as any).fetch = fetchMock;
-    const res = await getTechnicalOutlook('BTC', 'gpt', 'key', '1d', createLogger());
+    const res = await getTechnicalOutlook('BTC', indicators, 'gpt', 'key', createLogger());
     expect(res.analysis?.comment).toBe('Analysis unavailable');
     expect(res.analysis?.score).toBe(0);
     (globalThis as any).fetch = orig;
@@ -76,10 +85,10 @@ describe('technical analyst', () => {
       .mockResolvedValue({ ok: true, text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const p1 = getTechnicalOutlookCached('BTC', 'gpt', 'key', '1d', createLogger());
-    const p2 = getTechnicalOutlookCached('BTC', 'gpt', 'key', '1d', createLogger());
+    const p1 = getTechnicalOutlookCached('BTC', indicators, 'gpt', 'key', createLogger());
+    const p2 = getTechnicalOutlookCached('BTC', indicators, 'gpt', 'key', createLogger());
     await Promise.all([p1, p2]);
-    await getTechnicalOutlookCached('BTC', 'gpt', 'key', '1d', createLogger());
+    await getTechnicalOutlookCached('BTC', indicators, 'gpt', 'key', createLogger());
     expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });

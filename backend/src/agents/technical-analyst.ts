@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { fetchTokenIndicators } from '../services/indicators.js';
+import { fetchTokenIndicators, type TokenIndicators } from '../services/indicators.js';
 import { fetchOrderBook } from '../services/derivatives.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import { callAi, extractJson, type RebalancePrompt } from '../util/ai.js';
@@ -11,15 +11,15 @@ const cache = new Map<string, { promise: Promise<AnalysisLog>; expires: number }
 
 export function getTechnicalOutlookCached(
   token: string,
+  indicators: TokenIndicators,
   model: string,
   apiKey: string,
-  timeframe: string,
   log: FastifyBaseLogger,
 ): Promise<AnalysisLog> {
   const now = Date.now();
   const cached = cache.get(token);
   if (cached && cached.expires > now) return cached.promise;
-  const promise = getTechnicalOutlook(token, model, apiKey, timeframe, log);
+  const promise = getTechnicalOutlook(token, indicators, model, apiKey, log);
   cache.set(token, { promise, expires: now + CACHE_MS });
   promise.catch(() => cache.delete(token));
   return promise;
@@ -27,15 +27,14 @@ export function getTechnicalOutlookCached(
 
 export async function getTechnicalOutlook(
   token: string,
+  indicators: TokenIndicators,
   model: string,
   apiKey: string,
-  timeframe: string,
   log: FastifyBaseLogger,
 ): Promise<AnalysisLog> {
-  const indicators = await fetchTokenIndicators(token);
   const orderBook = await fetchOrderBook(`${token}USDT`);
   const prompt = { indicators, orderBook };
-  const instructions = `You are a crypto technical analyst. Given the indicators and order book snapshot, write a short outlook for ${token} on timeframe ${timeframe}. Include a bullishness score from 0-10 and key signals. - shortReport ≤255 chars.`;
+  const instructions = `You are a crypto technical analyst. Given the indicators and order book snapshot, write a short outlook for ${token} covering short, mid, and long-term timeframes. Include a bullishness score from 0-10 and key signals. - shortReport ≤255 chars.`;
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
     const res = await callAi(model, instructions, analysisSchema, prompt, apiKey);
@@ -52,7 +51,7 @@ export async function getTechnicalOutlook(
 }
 
 export async function runTechnicalAnalyst(
-  { log, model, apiKey, timeframe, portfolioId }: RunParams,
+  { log, model, apiKey, portfolioId }: RunParams,
   prompt: RebalancePrompt,
 ): Promise<void> {
   if (!prompt.reports) return;
@@ -62,9 +61,9 @@ export async function runTechnicalAnalyst(
     const indicators = await fetchTokenIndicators(token);
     const { analysis, prompt: p, response } = await getTechnicalOutlookCached(
       token,
+      indicators,
       model,
       apiKey,
-      timeframe!,
       log,
     );
     if (p && response)

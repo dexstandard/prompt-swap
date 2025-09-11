@@ -26,5 +26,4 @@ export interface RunParams {
   model: string;
   apiKey: string;
   portfolioId: string;
-  timeframe?: string;
 }
