@@ -37,7 +37,7 @@ export async function reviewPortfolio(
   const agents = await getActiveAgents({ agentId });
   const { toRun, skipped } = filterRunningWorkflows(agents);
   if (skipped.length) throw new Error('Agent is already reviewing portfolio');
-  await runAgents(log, toRun);
+  await runReviewWorkflows(log, toRun);
 }
 
 export default async function reviewPortfolios(
@@ -47,10 +47,10 @@ export default async function reviewPortfolios(
   const agents = await getActiveAgents({ interval });
   const { toRun } = filterRunningWorkflows(agents);
   if (!toRun.length) return;
-  await runAgents(log, toRun);
+  await runReviewWorkflows(log, toRun);
 }
 
-async function runAgents(
+async function runReviewWorkflows(
   log: FastifyBaseLogger,
   agents: ActiveAgentRow[],
 ) {
