@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 import { getLimitOrders } from './repos/limit-orders.js';
 import { insertUser } from './repos/users.js';
-import { insertAgent } from './repos/agents.js';
+import { insertAgent } from './repos/portfolio-workflow.js';
 import { insertReviewResult } from './repos/agent-review-result.js';
 import { db } from '../src/db/index.js';
 

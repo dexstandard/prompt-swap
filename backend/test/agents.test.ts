@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
-import { getActiveAgents, getAgent } from '../src/repos/agents.js';
+import { getActivePortfolioWorkflowById, getAgent } from '../src/repos/portfolio-workflow.js';
 import { db } from '../src/db/index.js';
 import { insertUser } from './repos/users.js';
 import { setAiKey, setBinanceKey, shareAiKey } from '../src/repos/api-keys.js';
-import { setAgentStatus } from './repos/agents.js';
+import { setAgentStatus } from './repos/portfolio-workflow.js';
 import { cancelOpenOrders } from '../src/services/binance.js';
 import { authCookies } from './helpers.js';
 
@@ -180,7 +180,7 @@ describe('agent routes', () => {
     ]);
     expect(deletedRow.rows[0].status).toBe('retired');
     expect(await getAgent(id)).toBeUndefined();
-    expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
+    expect(await getActivePortfolioWorkflowById(id)).toBeUndefined();
     expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
     const execRow = await db.query(
       'SELECT status FROM limit_order WHERE review_result_id = $1',
@@ -316,7 +316,7 @@ describe('agent routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'active' });
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect((await getActiveAgents()).find((a) => a.id === id)).toBeDefined();
+    expect(await getActivePortfolioWorkflowById(id)).toBeDefined();
 
     res = await app.inject({
       method: 'POST',
@@ -325,7 +325,7 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'inactive' });
-    expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
+    expect(await getActivePortfolioWorkflowById(id)).toBeUndefined();
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
@@ -506,10 +506,9 @@ describe('agent routes', () => {
     });
     const draft2Id = resDraft2.json().id as string;
 
-    const activeAgents = await getActiveAgents();
-    expect(activeAgents.find((a) => a.id === activeId)).toBeDefined();
-    expect(activeAgents.find((a) => a.id === draftId)).toBeUndefined();
-    expect(activeAgents.find((a) => a.id === draft2Id)).toBeUndefined();
+    expect(await getActivePortfolioWorkflowById(activeId)).toBeDefined();
+    expect(await getActivePortfolioWorkflowById(draftId)).toBeUndefined();
+    expect(await getActivePortfolioWorkflowById(draft2Id)).toBeUndefined();
 
     await app.close();
     (globalThis as any).fetch = originalFetch;

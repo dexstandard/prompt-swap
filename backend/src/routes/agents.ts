@@ -9,7 +9,7 @@ import {
   deleteAgent as repoDeleteAgent,
   startAgent as repoStartAgent,
   stopAgent as repoStopAgent,
-} from '../repos/agents.js';
+} from '../repos/portfolio-workflow.js';
 import { getAgentReviewResults } from '../repos/agent-review-result.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 import {

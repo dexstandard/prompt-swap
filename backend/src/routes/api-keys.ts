@@ -15,10 +15,10 @@ import {
 
 } from '../repos/api-keys.js';
 import {
-  getActiveAgentsByUser,
+  getActivePortfolioWorkflowsByUser,
   deactivateAgentsByUser,
   draftAgentsByUser,
-} from '../repos/agents.js';
+} from '../repos/portfolio-workflow.js';
 import { removeWorkflowFromSchedule } from '../workflows/portfolio-review.js';
 import { cancelOpenOrders } from '../services/binance.js';
 import { requireUserIdMatch, requireAdmin } from '../util/auth.js';
@@ -129,7 +129,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         return reply
           .code(404)
           .send(errorResponse(ERROR_MESSAGES.notFound));
-      const agents = await getActiveAgentsByUser(id);
+      const agents = await getActivePortfolioWorkflowsByUser(id);
       for (const agent of agents) {
         removeWorkflowFromSchedule(agent.id);
         const token1 = agent.tokens[0].token;
@@ -148,7 +148,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       for (const targetId of targets) {
         const keyRow = await getAiKeyRow(targetId);
         if (!keyRow?.own && keyRow?.shared) {
-          const tAgents = await getActiveAgentsByUser(targetId);
+          const tAgents = await getActivePortfolioWorkflowsByUser(targetId);
           for (const agent of tAgents) {
             removeWorkflowFromSchedule(agent.id);
             const token1 = agent.tokens[0].token;
@@ -206,7 +206,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         return reply.code(404).send(errorResponse('share not found'));
       const keyRow = await getAiKeyRow(target.id);
       if (!keyRow?.own && keyRow?.shared) {
-        const agents = await getActiveAgentsByUser(target.id);
+        const agents = await getActivePortfolioWorkflowsByUser(target.id);
         for (const agent of agents) {
           removeWorkflowFromSchedule(agent.id);
           const token1 = agent.tokens[0].token;
@@ -323,7 +323,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         'binance_api_secret_enc',
       ]);
       if (err) return reply.code(err.code).send(err.body);
-      const agents = await getActiveAgentsByUser(id);
+      const agents = await getActivePortfolioWorkflowsByUser(id);
       for (const agent of agents) {
         removeWorkflowFromSchedule(agent.id);
         const token1 = agent.tokens[0].token;

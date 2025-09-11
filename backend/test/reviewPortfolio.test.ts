@@ -151,7 +151,7 @@ async function setupAgent(id: string, manual = false) {
     [id, id, manual],
   );
   await db.query(
-    "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+    "INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
     [id],
   );
 }

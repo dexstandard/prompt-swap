@@ -4,7 +4,7 @@ import {
   startAgent,
   stopAgent,
   deleteAgent,
-} from '../../src/repos/agents.js';
+} from '../../src/repos/portfolio-workflow.js';
 
 export const insertAgent = insertAgentProd;
 export { startAgent, stopAgent, deleteAgent };
