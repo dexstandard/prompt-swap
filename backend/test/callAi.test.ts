@@ -1,12 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RebalancePrompt } from '../src/util/ai.js';
 
-describe('callRebalancingAgent structured output', () => {
+describe('callAi structured output', () => {
   it('includes json schema in request', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => '' });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '' });
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const { callRebalancingAgent } = await import('../src/util/ai.js');
+    const { callAi, developerInstructions, rebalanceResponseSchema } = await import('../src/util/ai.js');
     const prompt: RebalancePrompt = {
       instructions: 'inst',
       policy: { floor: { USDT: 20 } },
@@ -22,20 +24,20 @@ describe('callRebalancingAgent structured output', () => {
         { rebalance: true, newAllocation: 50 },
       ],
     };
-    await callRebalancingAgent('gpt-test', prompt, 'key');
+    await callAi('gpt-test', developerInstructions, rebalanceResponseSchema, prompt, 'key');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);
     expect(opts.body).toBe(JSON.stringify(body));
     expect(body.instructions).toMatch(/- Decide whether to rebalance/i);
     expect(body.instructions).toMatch(/On error, return \{error:"message"\}/i);
-    const parsedInput = JSON.parse(body.input);
-    expect(parsedInput.previous_responses).toEqual([
+    expect(typeof body.input).toBe('string');
+    const parsed = JSON.parse(body.input);
+    expect(parsed.previous_responses).toEqual([
       { shortReport: 'p1' },
       { rebalance: true, newAllocation: 50 },
     ]);
-    expect(body.input).not.toMatch(/":\s/);
-    expect(body.input).not.toMatch(/,\s/);
+    expect(body.tools).toBeUndefined();
     expect(body.text.format.type).toBe('json_schema');
     const anyOf = body.text.format.schema.properties.result.anyOf;
     expect(Array.isArray(anyOf)).toBe(true);
@@ -43,16 +45,24 @@ describe('callRebalancingAgent structured output', () => {
     (globalThis as any).fetch = originalFetch;
   });
 
-  it('removes extraneous whitespace from json input', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => '' });
+  it('adds web search tool when enabled', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '' });
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const { callRebalancingAgent } = await import('../src/util/ai.js');
-    const prompt = '{\n  "a": 1,\n  "b": 2\n}';
-    await callRebalancingAgent('gpt-test', prompt as any, 'key');
+    const { callAi, developerInstructions, rebalanceResponseSchema } = await import('../src/util/ai.js');
+    await callAi(
+      'gpt-test',
+      developerInstructions,
+      rebalanceResponseSchema,
+      {},
+      'key',
+      true,
+    );
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);
-    expect(body.input).toBe('{"a":1,"b":2}');
+    expect(body.tools).toEqual([{ type: 'web_search_preview' }]);
     (globalThis as any).fetch = originalFetch;
   });
 });

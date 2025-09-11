@@ -15,7 +15,9 @@ const sampleIndicators = {
 };
 
 vi.mock('../src/util/ai.js', () => ({
-  callRebalancingAgent: vi.fn().mockResolvedValue('ok'),
+  callAi: vi.fn().mockResolvedValue('ok'),
+  developerInstructions: '',
+  rebalanceResponseSchema: {},
 }));
 
 vi.mock('../src/util/crypto.js', () => ({
@@ -55,7 +57,7 @@ vi.mock('../src/services/rebalance.js', () => ({
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 
 beforeAll(async () => {
-  ({ reviewAgentPortfolio } = await import('../src/jobs/review-portfolio.js'));
+  ({ reviewAgentPortfolio } = await import('../src/workflows/portfolio-review.js'));
 });
 
 describe('cleanup open orders', () => {
@@ -63,11 +65,11 @@ describe('cleanup open orders', () => {
     await db.query('INSERT INTO users (id) VALUES ($1)', ['1']);
     await db.query("INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)", ['1', 'enc']);
     await db.query(
-      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'A', 'low', '1h', 'inst', false)",
+      "INSERT INTO portfolio_workflow (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'A', 'low', '1h', 'inst', false)",
       ['1', '1'],
     );
     await db.query(
-      "INSERT INTO agent_tokens (agent_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      "INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
       ['1'],
     );
     const rr = await db.query(

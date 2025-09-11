@@ -1,5 +1,10 @@
-const developerInstructions = [
-  '- Decide whether to rebalance based on portfolio and market data.',
+import type { Analysis } from '../agents/types.js';
+import {MainTraderDecision} from "../agents/main-trader.js";
+
+export const developerInstructions = [
+  '- You lead a crypto analyst team (news, technical). Reports from each member are attached.',
+  '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
+  '- Decide whether to rebalance based on portfolio, market data, and analyst reports.',
   '- If rebalancing, return {rebalance:true,newAllocation:0-100 for first token,shortReport}.',
   '- If not, return {rebalance:false,shortReport}.',
   '- shortReport ≤255 chars.',
@@ -72,16 +77,20 @@ export interface RebalancePrompt {
     fearGreedIndex?: { value: number; classification: string };
     openInterest?: number;
     fundingRate?: number;
-    orderBook?: { bid: [number, number]; ask: [number, number] };
     /**
      * News analyst report for each token.
      */
     newsReports?: Record<string, string>;
   };
   previous_responses?: PreviousResponse[];
+  reports?: {
+    token: string;
+    news: string | null;
+    tech: Analysis | null;
+  }[];
 }
 
-const rebalanceResponseSchema = {
+export const rebalanceResponseSchema = {
     type: 'object',
     properties: {
       result: {
@@ -120,7 +129,28 @@ const rebalanceResponseSchema = {
     additionalProperties: false,
   };
 
-export async function callAi(body: unknown, apiKey: string): Promise<string> {
+export async function callAi(
+  model: string,
+  developerInstructions: string,
+  schema: unknown,
+  input: unknown,
+  apiKey: string,
+  webSearch = false,
+): Promise<string> {
+  const body: Record<string, unknown> = {
+    model,
+    input: compactJson(input),
+    instructions: developerInstructions,
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'rebalance_response',
+        strict: true,
+        schema,
+      },
+    },
+  };
+  if (webSearch) body.tools = [{ type: 'web_search_preview' }];
   const res = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -129,10 +159,12 @@ export async function callAi(body: unknown, apiKey: string): Promise<string> {
     },
     body: compactJson(body),
   });
-  return await res.text();
+  const text = await res.text();
+  if (!res.ok) throw new Error(`AI request failed: ${res.status} ${text}`);
+  return text;
 }
 
-function compactJson(value: unknown): string {
+export function compactJson(value: unknown): string {
   if (typeof value === 'string') {
     try {
       return JSON.stringify(JSON.parse(value));
@@ -143,24 +175,15 @@ function compactJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export async function callRebalancingAgent(
-  model: string,
-  input: RebalancePrompt,
-  apiKey: string,
-): Promise<string> {
-  const body = {
-    model,
-    input: compactJson(input),
-    instructions: developerInstructions,
-    tools: [{ type: 'web_search_preview' }],
-    text: {
-      format: {
-        type: 'json_schema',
-        name: 'rebalance_response',
-        strict: true,
-        schema: rebalanceResponseSchema,
-      },
-    },
-  };
-  return callAi(body, apiKey);
+export function extractJson<T>(res: string): T | null {
+  try {
+    const json = JSON.parse(res);
+    const outputs = Array.isArray((json as any).output) ? (json as any).output : [];
+    const msg = outputs.find((o: any) => o.type === 'message' || o.id?.startsWith('msg_'));
+    const text = msg?.content?.[0]?.text;
+    if (typeof text !== 'string') return null;
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
 }

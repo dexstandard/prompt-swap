@@ -20,10 +20,12 @@ export default function WalletBalances({ balances, hasBinanceKey }: Props) {
     <div>
       <h3 className="text-md font-bold mb-2">{t('binance_balances')}</h3>
       {balances.map((b) => (
-        <p key={b.token} className="flex items-center gap-1">
-          <TokenDisplay token={b.token} className="font-bold" />
-          <span>:</span>
-          <span>{b.isLoading ? t('loading') : b.balance}</span>
+        <p key={b.token} className="flex flex-wrap items-center gap-1">
+          <TokenDisplay token={b.token} className="font-bold shrink-0" />
+          <span className="shrink-0">:</span>
+          <span className="break-all">
+            {b.isLoading ? t('loading') : b.balance}
+          </span>
         </p>
       ))}
     </div>

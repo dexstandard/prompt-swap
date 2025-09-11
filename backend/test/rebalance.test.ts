@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 import { getLimitOrders } from './repos/limit-orders.js';
 import { insertUser } from './repos/users.js';
-import { insertAgent } from './repos/agents.js';
+import { insertAgent } from './repos/portfolio-workflow.js';
 import { insertReviewResult } from './repos/agent-review-result.js';
 import { db } from '../src/db/index.js';
 
@@ -44,7 +44,7 @@ describe('createRebalanceLimitOrder', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await createRebalanceLimitOrder({
       userId,
       tokens: ['BTC', 'ETH'],
@@ -96,7 +96,7 @@ describe('createRebalanceLimitOrder', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await createRebalanceLimitOrder({
       userId,
       tokens: ['ETH', 'BTC'],
@@ -142,7 +142,7 @@ describe('createRebalanceLimitOrder', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await createRebalanceLimitOrder({
       userId,
       tokens: ['BTC', 'ETH'],
@@ -185,7 +185,7 @@ describe('createRebalanceLimitOrder', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     vi.mocked(createLimitOrder).mockClear();
     await createRebalanceLimitOrder({
       userId,
@@ -221,7 +221,7 @@ describe('createRebalanceLimitOrder', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     vi.mocked(fetchPairData).mockResolvedValueOnce({ currentPrice: 1 });
     vi.mocked(fetchPairInfo).mockResolvedValueOnce({
       symbol: 'BTCUSDT',
@@ -266,7 +266,7 @@ describe('createRebalanceLimitOrder', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     vi.mocked(fetchPairInfo).mockResolvedValueOnce({
       symbol: 'BTCETH',
       baseAsset: 'BTC',

@@ -1,68 +1,105 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { FastifyBaseLogger } from 'fastify';
 import { db } from '../src/db/index.js';
-import { getTokenNewsSummary } from '../src/services/news-analyst.js';
+
+function createLogger(): FastifyBaseLogger {
+  const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
+  return log;
+}
 
 const responseJson = JSON.stringify({
   object: 'response',
   output: [
     {
       id: 'msg_1',
-      content: [{ type: 'output_text', text: 'summary text' }],
+      content: [
+        {
+          type: 'output_text',
+          text: JSON.stringify({ comment: 'summary text', score: 1 }),
+        },
+      ],
     },
   ],
 });
 
 describe('news analyst', () => {
-  it('caches summary by token', async () => {
+  it('returns summary and raw data', async () => {
     await db.query(
       "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t', 'l', NOW(), ARRAY['BTC'])",
     );
-    const fetchMock = vi.fn().mockResolvedValue({ text: async () => responseJson });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => responseJson });
     const orig = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
-    const s1 = await getTokenNewsSummary('BTC', 'gpt', 'key');
-    const s2 = await getTokenNewsSummary('BTC', 'gpt', 'key');
-    expect(s1).toBe('summary text');
-    expect(s2).toBe('summary text');
+    const { getTokenNewsSummary } = await import('../src/agents/news-analyst.js');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
+    expect(res.analysis?.comment).toBe('summary text');
+    expect(res.prompt).toBeTruthy();
+    expect(res.response).toBe(responseJson);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
 
-  it('dedupes concurrent requests', async () => {
-    await db.query(
-      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t', 'l', NOW(), ARRAY['ETH'])",
-    );
-    const fetchMock = vi.fn().mockImplementation(async () => {
-      await new Promise((r) => setTimeout(r, 10));
-      return { text: async () => responseJson };
-    });
-    const orig = globalThis.fetch;
-    (globalThis as any).fetch = fetchMock;
-    const [r1, r2] = await Promise.all([
-      getTokenNewsSummary('ETH', 'gpt', 'key'),
-      getTokenNewsSummary('ETH', 'gpt', 'key'),
-    ]);
-    expect(r1).toBe('summary text');
-    expect(r2).toBe('summary text');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    (globalThis as any).fetch = orig;
-  });
-
-  it('does not cache empty summaries', async () => {
+  it('returns null when no news available', async () => {
     const orig = globalThis.fetch;
     const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
-    const first = await getTokenNewsSummary('DOGE', 'gpt', 'key');
-    expect(first).toBe('');
+    const { getTokenNewsSummary } = await import('../src/agents/news-analyst.js');
+    const res = await getTokenNewsSummary('DOGE', 'gpt', 'key', createLogger());
+    expect(res.analysis).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+    (globalThis as any).fetch = orig;
+  });
+
+  it('falls back when AI response is malformed', async () => {
     await db.query(
-      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t', 'l', NOW(), ARRAY['DOGE'])",
+      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t2', 'l2', NOW(), ARRAY['BTC'])",
     );
-    const fetchMock2 = vi.fn().mockResolvedValue({ text: async () => responseJson });
-    (globalThis as any).fetch = fetchMock2;
-    const second = await getTokenNewsSummary('DOGE', 'gpt', 'key');
-    expect(second).toBe('summary text');
-    expect(fetchMock2).toHaveBeenCalledTimes(1);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '{"output":[]}' });
+    const orig = globalThis.fetch;
+    (globalThis as any).fetch = fetchMock;
+    const { getTokenNewsSummary } = await import('../src/agents/news-analyst.js');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
+    expect(res.analysis?.comment).toBe('Analysis unavailable');
+    expect(res.analysis?.score).toBe(0);
+    (globalThis as any).fetch = orig;
+  });
+
+  it('falls back when AI request fails', async () => {
+    await db.query(
+      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t3', 'l3', NOW(), ARRAY['BTC'])",
+    );
+    const orig = globalThis.fetch;
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network'));
+    (globalThis as any).fetch = fetchMock;
+    const { getTokenNewsSummary } = await import('../src/agents/news-analyst.js');
+    const res = await getTokenNewsSummary('BTC', 'gpt', 'key', createLogger());
+    expect(res.analysis?.comment).toBe('Analysis unavailable');
+    expect(res.analysis?.score).toBe(0);
+    (globalThis as any).fetch = orig;
+  });
+
+  it('caches token reviews and dedupes concurrent calls', async () => {
+    await db.query(
+      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t4', 'l4', NOW(), ARRAY['BTC'])",
+    );
+    const orig = globalThis.fetch;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => responseJson });
+    (globalThis as any).fetch = fetchMock;
+    const { getTokenNewsSummaryCached } = await import(
+      '../src/agents/news-analyst.js'
+    );
+    const p1 = getTokenNewsSummaryCached('BTC', 'gpt', 'key', createLogger());
+    const p2 = getTokenNewsSummaryCached('BTC', 'gpt', 'key', createLogger());
+    await Promise.all([p1, p2]);
+    await getTokenNewsSummaryCached('BTC', 'gpt', 'key', createLogger());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     (globalThis as any).fetch = orig;
   });
 });
+

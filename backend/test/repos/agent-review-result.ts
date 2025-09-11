@@ -3,7 +3,7 @@ import { insertReviewResult as insertReviewResultProd } from '../../src/repos/ag
 
 export function insertReviewResult(entry: any) {
   return insertReviewResultProd({
-    agentId: entry.agentId,
+    portfolioId: entry.portfolioId,
     log: entry.log,
     rebalance: entry.rebalance,
     newAllocation: entry.newAllocation,

@@ -94,7 +94,7 @@ export async function getAllOpenLimitOrders() {
     `SELECT e.user_id, e.order_id, e.planned_json, r.agent_id, a.status AS agent_status
        FROM limit_order e
        JOIN agent_review_result r ON e.review_result_id = r.id
-       JOIN agents a ON r.agent_id = a.id
+       JOIN portfolio_workflow a ON r.agent_id = a.id
       WHERE e.status = 'open'`,
   );
   return rows as {

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import buildServer from '../src/server.js';
 import { insertUser } from './repos/users.js';
-import { insertAgent } from './repos/agents.js';
+import { insertAgent } from './repos/portfolio-workflow.js';
 import { authCookies } from './helpers.js';
 
 const reviewAgentPortfolioMock = vi.fn<(
   log: unknown,
   agentId: string,
 ) => Promise<unknown>>(() => Promise.resolve());
-vi.mock('../src/jobs/review-portfolio.js', () => ({
+vi.mock('../src/workflows/portfolio-review.js', () => ({
   reviewAgentPortfolio: reviewAgentPortfolioMock,
 }));
 

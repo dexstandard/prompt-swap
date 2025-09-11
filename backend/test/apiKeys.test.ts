@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../src/jobs/review-portfolio.js', () => ({
-  removeAgentFromSchedule: vi.fn(),
+vi.mock('../src/workflows/portfolio-review.js', () => ({
+  removeWorkflowFromSchedule: vi.fn(),
 }));
 
 vi.mock('../src/services/binance.js', async () => {
@@ -20,11 +20,11 @@ import {
   setBinanceKey,
   shareAiKey,
 } from '../src/repos/api-keys.js';
-import { insertAgent } from './repos/agents.js';
-import { getUserApiKeys } from '../src/repos/agents.js';
+import { insertAgent } from './repos/portfolio-workflow.js';
+import { getUserApiKeys } from '../src/repos/portfolio-workflow.js';
 import { db } from '../src/db/index.js';
 import { encrypt } from '../src/util/crypto.js';
-import { removeAgentFromSchedule } from '../src/jobs/review-portfolio.js';
+import { removeWorkflowFromSchedule } from '../src/workflows/portfolio-review.js';
 import { cancelOpenOrders } from '../src/services/binance.js';
 import { authCookies } from './helpers.js';
 
@@ -358,7 +358,7 @@ describe('Binance API key routes', () => {
 
 describe('key deletion effects on agents', () => {
   beforeEach(() => {
-    (removeAgentFromSchedule as any).mockClear();
+    (removeWorkflowFromSchedule as any).mockClear();
     (cancelOpenOrders as any).mockClear();
   });
   it('stops agents when binance key is deleted', async () => {
@@ -391,11 +391,11 @@ describe('key deletion effects on agents', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('inactive');
-    expect(removeAgentFromSchedule).toHaveBeenCalledWith(agent.id);
+    expect(removeWorkflowFromSchedule).toHaveBeenCalledWith(agent.id);
     expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
     await app.close();
   });
@@ -430,12 +430,12 @@ describe('key deletion effects on agents', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('draft');
     expect(row.rows[0].model).toBeNull();
-    expect(removeAgentFromSchedule).toHaveBeenCalledWith(agent.id);
+    expect(removeWorkflowFromSchedule).toHaveBeenCalledWith(agent.id);
     expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
     await app.close();
   });
@@ -479,12 +479,12 @@ describe('key deletion effects on agents', () => {
       payload: { email: 'user@example.com' },
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('draft');
     expect(row.rows[0].model).toBeNull();
-    expect(removeAgentFromSchedule).toHaveBeenCalledWith(agent.id);
+    expect(removeWorkflowFromSchedule).toHaveBeenCalledWith(agent.id);
     expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
     await app.close();
   });
@@ -527,12 +527,12 @@ describe('key deletion effects on agents', () => {
       cookies: authCookies(adminId),
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('draft');
     expect(row.rows[0].model).toBeNull();
-    expect(removeAgentFromSchedule).toHaveBeenCalledWith(agent.id);
+    expect(removeWorkflowFromSchedule).toHaveBeenCalledWith(agent.id);
     expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
     const keyRow = await getUserApiKeys(userId);
     expect(keyRow?.ai_api_key_enc).toBeNull();
@@ -585,12 +585,12 @@ describe('key deletion effects on agents', () => {
       payload: { email: 'user@example.com' },
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('active');
     expect(row.rows[0].model).toBe('gpt-5');
-    expect(removeAgentFromSchedule).not.toHaveBeenCalled();
+    expect(removeWorkflowFromSchedule).not.toHaveBeenCalled();
     expect(cancelOpenOrders).not.toHaveBeenCalled();
     const keyRow = await getUserApiKeys(userId);
     expect(keyRow?.ai_api_key_enc).toBeDefined();
@@ -637,12 +637,12 @@ describe('key deletion effects on agents', () => {
       payload: { email: 'user@example.com' },
     });
     expect(res.statusCode).toBe(404);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('active');
     expect(row.rows[0].model).toBe('gpt-5');
-    expect(removeAgentFromSchedule).not.toHaveBeenCalled();
+    expect(removeWorkflowFromSchedule).not.toHaveBeenCalled();
     expect(cancelOpenOrders).not.toHaveBeenCalled();
     await app.close();
   });

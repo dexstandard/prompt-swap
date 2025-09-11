@@ -9,13 +9,13 @@ import {
   deleteAgent as repoDeleteAgent,
   startAgent as repoStartAgent,
   stopAgent as repoStopAgent,
-} from '../repos/agents.js';
+} from '../repos/portfolio-workflow.js';
 import { getAgentReviewResults } from '../repos/agent-review-result.js';
 import { errorResponse, ERROR_MESSAGES } from '../util/errorMessages.js';
 import {
   reviewAgentPortfolio,
-  removeAgentFromSchedule,
-} from '../jobs/review-portfolio.js';
+  removeWorkflowFromSchedule,
+} from '../workflows/portfolio-review.js';
 import { requireUserId } from '../util/auth.js';
 import { RATE_LIMITS } from '../rate-limit.js';
 import {
@@ -532,7 +532,7 @@ export default async function agentRoutes(app: FastifyInstance) {
       if (!ctx) return;
       const { userId, id, log, agent } = ctx;
       await repoDeleteAgent(id);
-      removeAgentFromSchedule(id);
+      removeWorkflowFromSchedule(id);
       const token1 = agent.tokens[0].token;
       const token2 = agent.tokens[1].token;
       try {

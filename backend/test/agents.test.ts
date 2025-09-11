@@ -1,17 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
-import { getActiveAgents, getAgent } from '../src/repos/agents.js';
+import { getActivePortfolioWorkflowById, getAgent } from '../src/repos/portfolio-workflow.js';
 import { db } from '../src/db/index.js';
 import { insertUser } from './repos/users.js';
 import { setAiKey, setBinanceKey, shareAiKey } from '../src/repos/api-keys.js';
-import { setAgentStatus } from './repos/agents.js';
+import { setAgentStatus } from './repos/portfolio-workflow.js';
 import { cancelOpenOrders } from '../src/services/binance.js';
 import { authCookies } from './helpers.js';
 
-vi.mock('../src/jobs/review-portfolio.js', () => ({
+vi.mock('../src/workflows/portfolio-review.js', () => ({
   reviewAgentPortfolio: vi.fn(() => Promise.resolve()),
-  removeAgentFromSchedule: vi.fn(),
+  removeWorkflowFromSchedule: vi.fn(),
 }));
 
 vi.mock('../src/services/binance.js', async () => {
@@ -73,7 +73,7 @@ describe('agent routes', () => {
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -175,12 +175,12 @@ describe('agent routes', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    const deletedRow = await db.query('SELECT status FROM agents WHERE id = $1', [
+    const deletedRow = await db.query('SELECT status FROM portfolio_workflow WHERE id = $1', [
       id,
     ]);
     expect(deletedRow.rows[0].status).toBe('retired');
     expect(await getAgent(id)).toBeUndefined();
-    expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
+    expect(await getActivePortfolioWorkflowById(id)).toBeUndefined();
     expect(cancelOpenOrders).toHaveBeenCalledWith(userId, { symbol: 'BTCETH' });
     const execRow = await db.query(
       'SELECT status FROM limit_order WHERE review_result_id = $1',
@@ -304,7 +304,7 @@ describe('agent routes', () => {
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -316,7 +316,7 @@ describe('agent routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'active' });
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect((await getActiveAgents()).find((a) => a.id === id)).toBeDefined();
+    expect(await getActivePortfolioWorkflowById(id)).toBeDefined();
 
     res = await app.inject({
       method: 'POST',
@@ -325,7 +325,7 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'inactive' });
-    expect((await getActiveAgents()).find((a) => a.id === id)).toBeUndefined();
+    expect(await getActivePortfolioWorkflowById(id)).toBeUndefined();
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
@@ -378,7 +378,7 @@ describe('agent routes', () => {
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -485,7 +485,7 @@ describe('agent routes', () => {
         ok: true,
         json: async () => ({ balances: [] }),
       } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -506,10 +506,9 @@ describe('agent routes', () => {
     });
     const draft2Id = resDraft2.json().id as string;
 
-    const activeAgents = await getActiveAgents();
-    expect(activeAgents.find((a) => a.id === activeId)).toBeDefined();
-    expect(activeAgents.find((a) => a.id === draftId)).toBeUndefined();
-    expect(activeAgents.find((a) => a.id === draft2Id)).toBeUndefined();
+    expect(await getActivePortfolioWorkflowById(activeId)).toBeDefined();
+    expect(await getActivePortfolioWorkflowById(draftId)).toBeUndefined();
+    expect(await getActivePortfolioWorkflowById(draft2Id)).toBeUndefined();
 
     await app.close();
     (globalThis as any).fetch = originalFetch;
@@ -542,7 +541,7 @@ describe('agent routes', () => {
       } as any)
       .mockResolvedValueOnce({ ok: true, json: async () => ({ price: '60' }) } as any)
       .mockResolvedValueOnce({ ok: true, json: async () => ({ price: '40' }) } as any);
-    fetchMock.mockResolvedValue({ text: async () => 'ok' } as any);
+    fetchMock.mockResolvedValue({ ok: true, text: async () => 'ok' } as any);
     const origFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
