@@ -10,5 +10,5 @@ export const insertAgent = insertAgentProd;
 export { startAgent, stopAgent, deleteAgent };
 
 export async function setAgentStatus(id: string, status: string) {
-  await db.query('UPDATE agents SET status = $1 WHERE id = $2', [status, id]);
+  await db.query('UPDATE portfolio_workflow SET status = $1 WHERE id = $2', [status, id]);
 }

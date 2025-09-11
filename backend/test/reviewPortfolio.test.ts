@@ -147,7 +147,7 @@ async function setupAgent(id: string, manual = false) {
     [id, 'enc'],
   );
   await db.query(
-    "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent', 'low', '1h', 'inst', $3)",
+    "INSERT INTO portfolio_workflow (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent', 'low', '1h', 'inst', $3)",
     [id, id, manual],
   );
   await db.query(

@@ -65,7 +65,7 @@ describe('cleanup open orders', () => {
     await db.query('INSERT INTO users (id) VALUES ($1)', ['1']);
     await db.query("INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)", ['1', 'enc']);
     await db.query(
-      "INSERT INTO agents (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'A', 'low', '1h', 'inst', false)",
+      "INSERT INTO portfolio_workflow (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'A', 'low', '1h', 'inst', false)",
       ['1', '1'],
     );
     await db.query(
