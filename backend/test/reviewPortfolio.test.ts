@@ -117,14 +117,6 @@ vi.mock('../src/agents/order-book-analyst.js', () => ({
   }),
 }));
 
-vi.mock('../src/agents/performance-analyst.js', () => ({
-  getPerformanceAnalysis: vi.fn().mockResolvedValue({
-    analysis: { comment: 'perf', score: 4 },
-    prompt: {},
-    response: 'r',
-  }),
-  buildPreviousOrders: vi.fn().mockResolvedValue({}),
-}));
 
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let removeWorkflowFromSchedule: (id: string) => void;

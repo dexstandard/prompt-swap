@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { callAi, extractJson } from '../util/ai.js';
+import { callAi, extractJson, type RebalancePrompt } from '../util/ai.js';
 import { type AnalysisLog, type Analysis, analysisSchema } from './types.js';
 import { getRecentLimitOrders } from '../repos/limit-orders.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
@@ -39,20 +39,10 @@ export async function runPerformanceAnalyzer(
   model: string,
   apiKey: string,
   agentId: string,
-  reports: {
-    token: string;
-    news: Analysis | null;
-    tech: Analysis | null;
-    orderbook: Analysis | null;
-  }[],
-  ordersRaw?: {
-    planned_json: string;
-    status: string;
-    created_at: Date;
-  }[],
-): Promise<Analysis | null> {
+  prompt: RebalancePrompt,
+): Promise<void> {
   try {
-    const fetched = ordersRaw ?? (await getRecentLimitOrders(agentId, 20));
+    const fetched = await getRecentLimitOrders(agentId, 20);
     const orders = fetched
       .filter((o) => o.status === 'canceled' || o.status === 'filled')
       .map((o) => ({
@@ -60,35 +50,27 @@ export async function runPerformanceAnalyzer(
         created_at: o.created_at.toISOString(),
         planned: JSON.parse(o.planned_json),
       }));
-    if (!orders.length) return null;
-    const { analysis, prompt, response } = await getPerformanceAnalysis(
-      { reports, orders },
+    if (!orders.length) {
+      prompt.performance = null;
+      return;
+    }
+    const { analysis, prompt: p, response } = await getPerformanceAnalysis(
+      { reports: prompt.reports, orders },
       model,
       apiKey,
       log,
     );
-    if (prompt && response)
-      await insertReviewRawLog({ agentId, prompt, response });
-    return analysis ?? null;
+    if (p && response) await insertReviewRawLog({ agentId, prompt: p, response });
+    prompt.performance = analysis ?? null;
+    prompt.prev_orders = orders.map((o) => ({
+      symbol: o.planned.symbol,
+      side: o.planned.side,
+      amount: o.planned.quantity,
+      datetime: o.created_at,
+      status: o.status,
+    }));
   } catch (err) {
     log.error({ err }, 'performance analyzer step failed');
-    return null;
+    prompt.performance = null;
   }
-}
-
-export async function buildPreviousOrders(agentId: string, limit = 5) {
-  const rows = await getRecentLimitOrders(agentId, limit);
-  if (!rows.length) return {};
-  return {
-    prev_orders: rows.map((r) => {
-      const planned = JSON.parse(r.planned_json) as Record<string, any>;
-      return {
-        symbol: planned.symbol,
-        side: planned.side,
-        amount: planned.quantity,
-        datetime: new Date(r.created_at).toISOString(),
-        status: r.status,
-      };
-    }),
-  } as const;
 }

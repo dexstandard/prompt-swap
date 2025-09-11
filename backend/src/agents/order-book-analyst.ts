@@ -1,7 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { fetchOrderBook } from '../services/derivatives.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
-import { callAi, extractJson } from '../util/ai.js';
+import { callAi, extractJson, type RebalancePrompt } from '../util/ai.js';
 import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';
 import { type AnalysisLog, type Analysis, analysisSchema } from './types.js';
 
@@ -35,20 +35,24 @@ export async function runOrderBookAnalyst(
   model: string,
   apiKey: string,
   agentId: string,
-): Promise<Record<string, Analysis | null>> {
-  const books: Record<string, Analysis | null> = {};
+  prompt: RebalancePrompt,
+): Promise<void> {
+  if (!prompt.reports) prompt.reports = [];
   for (const token of TOKEN_SYMBOLS) {
     if (isStablecoin(token)) continue;
     const pair = `${token}USDT`;
-    const { analysis, prompt, response } = await getOrderBookAnalysis(
+    const { analysis, prompt: p, response } = await getOrderBookAnalysis(
       pair,
       model,
       apiKey,
       log,
     );
-    if (prompt && response)
-      await insertReviewRawLog({ agentId, prompt, response });
-    books[token] = analysis;
+    if (p && response) await insertReviewRawLog({ agentId, prompt: p, response });
+    let report = prompt.reports.find((r) => r.token === token);
+    if (!report) {
+      report = { token, news: null, tech: null, orderbook: null };
+      prompt.reports.push(report);
+    }
+    report.orderbook = analysis;
   }
-  return books;
 }
