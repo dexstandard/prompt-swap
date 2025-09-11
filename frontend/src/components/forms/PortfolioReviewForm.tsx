@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,7 +43,10 @@ export default function PortfolioReviewForm({
     defaultValues: portfolioReviewDefaults,
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'tokens' });
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: 'tokens',
+  });
   const tokensWatch = watch('tokens');
 
   const navigate = useNavigate();
@@ -64,6 +67,19 @@ export default function PortfolioReviewForm({
     .sort((a, b) => b.total - a.total)
     .slice(0, 3)
     .map((b) => b.token);
+
+  const [initializedTopTokens, setInitializedTopTokens] = useState(false);
+
+  useEffect(() => {
+    if (initializedTopTokens) return;
+    if (topTokens.length > 0) {
+      const stable = tokensWatch[0]?.token;
+      const newTokens = [stable, ...topTokens].slice(0, 5);
+      replace(newTokens.map((t) => ({ token: t, minAllocation: 0 })));
+      onTokensChange?.(newTokens);
+      setInitializedTopTokens(true);
+    }
+  }, [topTokens, initializedTopTokens, replace, onTokensChange, tokensWatch]);
 
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
@@ -117,19 +133,14 @@ export default function PortfolioReviewForm({
         } md:block`}
       >
         <h2 className="text-lg md:text-xl font-bold">Binance Portfolio Workflow</h2>
-        {topTokens.length > 0 && (
-          <p className="text-sm text-gray-600">
-            Top tokens: {topTokens.join(', ')}
-          </p>
-        )}
         <div className="space-y-2">
           <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
-            <span>Token</span>
-            <span>Spot</span>
-            <span>Earn</span>
-            <span>Total (USD)</span>
-            <span>Min %</span>
-            <span />
+            <div className="text-left">Token</div>
+            <div className="text-left">Spot</div>
+            <div className="text-left">Earn</div>
+            <div className="text-left">Total (USD)</div>
+            <div className="text-left">Min %</div>
+            <div />
           </div>
           {fields.map((field, index) => {
             const token = tokensWatch[index]?.token;
@@ -169,22 +180,26 @@ export default function PortfolioReviewForm({
                   />
                   )}
                 />
-                <span className="text-sm">
-                  {balanceInfo?.isLoading
-                    ? t('loading')
-                    : balanceInfo?.walletBalance ?? 0}
-                </span>
-                <span className="text-sm">
-                  {balanceInfo?.isLoading
-                    ? t('loading')
-                    : balanceInfo?.earnBalance ?? 0}
-                </span>
-                <span className="text-sm">
+                <span className="text-sm text-left">
                   {balanceInfo?.isLoading
                     ? t('loading')
                     : balanceInfo
-                    ? balanceInfo.usdValue.toFixed(2)
-                    : 0}
+                    ? balanceInfo.walletBalance.toFixed(5)
+                    : '0.00000'}
+                </span>
+                <span className="text-sm text-left">
+                  {balanceInfo?.isLoading
+                    ? t('loading')
+                    : balanceInfo
+                    ? balanceInfo.earnBalance.toFixed(5)
+                    : '0.00000'}
+                </span>
+                <span className="text-sm text-left">
+                  {balanceInfo?.isLoading
+                    ? t('loading')
+                    : balanceInfo
+                    ? balanceInfo.usdValue.toFixed(5)
+                    : '0.00000'}
                 </span>
                 <Controller
                   name={`tokens.${index}.minAllocation`}
