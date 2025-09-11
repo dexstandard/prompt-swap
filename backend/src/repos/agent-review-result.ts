@@ -1,12 +1,16 @@
 import { db } from '../db/index.js';
 
+export interface ReviewResultError {
+  message: string;
+}
+
 export interface ReviewResultInsert {
   portfolioId: string;
   log: string;
   rebalance?: boolean;
   newAllocation?: number;
   shortReport?: string;
-  error?: Record<string, unknown>;
+  error?: ReviewResultError;
   rawLogId?: string;
 }
 
@@ -40,7 +44,9 @@ export async function getRecentReviewResults(portfolioId: string, limit: number)
     ...(r.rebalance !== null ? { rebalance: r.rebalance } : {}),
     ...(r.new_allocation !== null ? { newAllocation: r.new_allocation } : {}),
     ...(r.short_report !== null ? { shortReport: r.short_report } : {}),
-    ...(r.error !== null ? { error: JSON.parse(r.error) } : {}),
+    ...(r.error !== null
+      ? { error: JSON.parse(r.error) as ReviewResultError }
+      : {}),
   }));
 }
 
