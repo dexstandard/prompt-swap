@@ -100,11 +100,12 @@ export default function PortfolioReviewForm({
       >
         <h2 className="text-lg md:text-xl font-bold">Binance Portfolio Workflow</h2>
         <div className="space-y-2">
-          <div className="grid grid-cols-[1.5fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
+          <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
             <span>Token</span>
             <span>Spot</span>
             <span>Earn</span>
-            <span>Min allocation</span>
+            <span>Total (USD)</span>
+            <span>Min %</span>
             <span />
           </div>
           {fields.map((field, index) => {
@@ -115,7 +116,7 @@ export default function PortfolioReviewForm({
             return (
               <div
                 key={field.id}
-                className="grid grid-cols-[1.5fr_2fr_2fr_1fr_auto] gap-2 items-center"
+                className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 items-center"
               >
                 <Controller
                   name={`tokens.${index}.token`}
@@ -148,6 +149,13 @@ export default function PortfolioReviewForm({
                   {balanceInfo?.isLoading
                     ? t('loading')
                     : balanceInfo?.earnBalance ?? 0}
+                </span>
+                <span className="text-sm">
+                  {balanceInfo?.isLoading
+                    ? t('loading')
+                    : balanceInfo
+                    ? balanceInfo.usdValue.toFixed(2)
+                    : 0}
                 </span>
                 <Controller
                   name={`tokens.${index}.minAllocation`}
