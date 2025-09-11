@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,13 +37,17 @@ export default function PortfolioReviewForm({
     handleSubmit,
     watch,
     control,
+    setValue,
     formState: { isSubmitting },
   } = useForm<PortfolioReviewFormValues>({
     resolver: zodResolver(portfolioReviewSchema),
     defaultValues: portfolioReviewDefaults,
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'tokens' });
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: 'tokens',
+  });
   const tokensWatch = watch('tokens');
 
   const navigate = useNavigate();
@@ -64,6 +68,29 @@ export default function PortfolioReviewForm({
     .sort((a, b) => b.total - a.total)
     .slice(0, 3)
     .map((b) => b.token);
+
+  const [initializedTopTokens, setInitializedTopTokens] = useState(false);
+
+  useEffect(() => {
+    if (initializedTopTokens) return;
+    if (topTokens.length > 0) {
+      const stable = tokensWatch[0]?.token;
+      const newTokens = [stable, ...topTokens].slice(0, 5);
+      replace(newTokens.map((t) => ({ token: t, minAllocation: 0 })));
+      onTokensChange?.(newTokens);
+      setInitializedTopTokens(true);
+    }
+  }, [topTokens, initializedTopTokens, replace, onTokensChange, tokensWatch]);
+
+  useEffect(() => {
+    const totalOther = tokensWatch
+      .slice(1)
+      .reduce((sum, t) => sum + (t.minAllocation || 0), 0);
+    const first = Math.max(0, 95 - totalOther);
+    if (tokensWatch[0]?.minAllocation !== first) {
+      setValue(`tokens.0.minAllocation`, first);
+    }
+  }, [tokensWatch, setValue]);
 
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
@@ -117,18 +144,13 @@ export default function PortfolioReviewForm({
         } md:block`}
       >
         <h2 className="text-lg md:text-xl font-bold">Binance Portfolio Workflow</h2>
-        {topTokens.length > 0 && (
-          <p className="text-sm text-gray-600">
-            Top tokens: {topTokens.join(', ')}
-          </p>
-        )}
         <div className="space-y-2">
-          <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
-            <span>Token</span>
-            <span>Spot</span>
-            <span>Earn</span>
-            <span>Total (USD)</span>
-            <span>Min %</span>
+          <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium text-left">
+            <span className="text-left">Token</span>
+            <span className="text-left">Spot</span>
+            <span className="text-left">Earn</span>
+            <span className="text-left">Total (USD)</span>
+            <span className="text-left">Min %</span>
             <span />
           </div>
           {fields.map((field, index) => {
@@ -172,19 +194,23 @@ export default function PortfolioReviewForm({
                 <span className="text-sm">
                   {balanceInfo?.isLoading
                     ? t('loading')
-                    : balanceInfo?.walletBalance ?? 0}
-                </span>
-                <span className="text-sm">
-                  {balanceInfo?.isLoading
-                    ? t('loading')
-                    : balanceInfo?.earnBalance ?? 0}
+                    : balanceInfo
+                    ? balanceInfo.walletBalance.toFixed(5)
+                    : '0.00000'}
                 </span>
                 <span className="text-sm">
                   {balanceInfo?.isLoading
                     ? t('loading')
                     : balanceInfo
-                    ? balanceInfo.usdValue.toFixed(2)
-                    : 0}
+                    ? balanceInfo.earnBalance.toFixed(5)
+                    : '0.00000'}
+                </span>
+                <span className="text-sm">
+                  {balanceInfo?.isLoading
+                    ? t('loading')
+                    : balanceInfo
+                    ? balanceInfo.usdValue.toFixed(5)
+                    : '0.00000'}
                 </span>
                 <Controller
                   name={`tokens.${index}.minAllocation`}
@@ -195,6 +221,7 @@ export default function PortfolioReviewForm({
                       type="number"
                       min={0}
                       max={95}
+                      disabled={index === 0}
                       {...field}
                       onChange={(e) =>
                         field.onChange(
