@@ -1,4 +1,5 @@
 import type { Analysis } from '../agents/types.js';
+import {MainTraderDecision} from "../agents/main-trader.js";
 
 export const developerInstructions = [
   '- You lead a crypto analyst team (news, technical, order-book). Reports from each member are attached.',
@@ -189,4 +190,3 @@ export function extractJson<T>(res: string): T | null {
     return null;
   }
 }
-

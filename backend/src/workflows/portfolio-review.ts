@@ -54,12 +54,12 @@ async function runReviewWorkflows(
   workflowRows: ActivePortfolioWorkflowRow[],
 ) {
   await Promise.all(
-    workflowRows.map((row) =>
+    workflowRows.map((wf) =>
       executeWorkflow(
-        row,
-        log.child({ userId: row.user_id, agentId: row.id }),
+        wf,
+        log.child({ userId: wf.user_id, agentId: wf.id }),
       ).finally(() => {
-        runningWorkflows.delete(row.id);
+        runningWorkflows.delete(wf.id);
       }),
     ),
   );
@@ -79,11 +79,11 @@ function filterRunningWorkflows(workflowRows: ActivePortfolioWorkflowRow[]) {
 }
 
 
-async function cleanupAgentOpenOrders(
-  row: ActivePortfolioWorkflowRow,
+async function cleanupOpenOrders(
+  wf: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
 ) {
-  const orders = await getOpenLimitOrdersForAgent(row.id);
+  const orders = await getOpenLimitOrdersForAgent(wf.id);
   for (const o of orders) {
     const planned = JSON.parse(o.planned_json);
     try {
@@ -105,33 +105,33 @@ async function cleanupAgentOpenOrders(
 }
 
 export async function executeWorkflow(
-  row: ActivePortfolioWorkflowRow,
+  wf: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
 ) {
   let prompt: RebalancePrompt | undefined;
   try {
-    await cleanupAgentOpenOrders(row, log);
+    await cleanupOpenOrders(wf, log);
 
-    const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
+    const key = decrypt(wf.ai_api_key_enc, env.KEY_PASSWORD);
 
-    prompt = await collectPromptData(row, log);
+    prompt = await collectPromptData(wf, log);
     if (!prompt) {
-      await saveFailure(row, 'failed to collect prompt data');
+      await saveFailure(wf, 'failed to collect prompt data');
       return;
     }
 
     const decision = await runMainTrader(
       {
         log,
-        model: row.model,
+        model: wf.model,
         apiKey: key,
-        timeframe: row.review_interval,
-        agentId: row.id,
+        timeframe: wf.review_interval,
+        agentId: wf.id,
       },
       prompt,
     );
     const logId = await insertReviewRawLog({
-      agentId: row.id,
+      agentId: wf.id,
       prompt,
       response: decision,
     });
@@ -141,7 +141,7 @@ export async function executeWorkflow(
     );
     if (validationError) log.error({ err: validationError }, 'validation failed');
     const resultId = await insertReviewResult({
-      agentId: row.id,
+      agentId: wf.id,
       log: decision ? JSON.stringify(decision) : '',
       rawLogId: logId,
       ...(decision && !validationError
@@ -158,13 +158,13 @@ export async function executeWorkflow(
     if (
       decision &&
       !validationError &&
-      !row.manual_rebalance &&
+      !wf.manual_rebalance &&
       decision.rebalance &&
       decision.newAllocation !== undefined
     ) {
       await createRebalanceLimitOrder({
-        userId: row.user_id,
-        tokens: row.tokens.map((t) => t.token),
+        userId: wf.user_id,
+        tokens: wf.tokens.map((t) => t.token),
         positions: prompt.portfolio.positions,
         newAllocation: decision.newAllocation,
         log,
@@ -173,7 +173,7 @@ export async function executeWorkflow(
     }
     log.info('workflow run complete');
   } catch (err) {
-    await saveFailure(row, String(err), prompt);
+    await saveFailure(wf, String(err), prompt);
     log.error({ err }, 'workflow run failed');
   }
 }

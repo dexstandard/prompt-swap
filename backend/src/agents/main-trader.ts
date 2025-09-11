@@ -9,7 +9,7 @@ import {
   rebalanceResponseSchema,
   type RebalancePosition,
   type PreviousResponse,
-  type RebalancePrompt,
+  type RebalancePrompt, extractJson,
 } from '../util/ai.js';
 import { TOKEN_SYMBOLS } from '../util/tokens.js';
 import { fetchAccount, fetchPairData } from '../services/binance.js';
