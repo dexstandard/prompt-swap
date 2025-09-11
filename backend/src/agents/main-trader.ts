@@ -1,20 +1,18 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { runNewsAnalyst } from './news-analyst.js';
-import { runTechnicalAnalyst } from './technical-analyst.js';
-import { runOrderBookAnalyst } from './order-book-analyst.js';
-import { runPerformanceAnalyzer } from './performance-analyst.js';
 import {
   callAi,
   developerInstructions,
   rebalanceResponseSchema,
   type RebalancePosition,
   type PreviousResponse,
-  type RebalancePrompt, extractJson,
+  type RebalancePrompt,
+  extractJson,
 } from '../util/ai.js';
 import { TOKEN_SYMBOLS } from '../util/tokens.js';
 import { fetchAccount, fetchPairData } from '../services/binance.js';
 import { getRecentReviewResults } from '../repos/agent-review-result.js';
 import type { ActivePortfolioWorkflowRow } from '../repos/portfolio-workflow.js';
+import type { RunParams } from './types.js';
 
 function computePortfolioValues(
   row: ActivePortfolioWorkflowRow,
@@ -122,14 +120,6 @@ export async function collectPromptData(
   return prompt;
 }
 
-export interface RunParams {
-  log: FastifyBaseLogger;
-  model: string;
-  apiKey: string;
-  timeframe: string;
-  agentId: string;
-}
-
 export interface MainTraderDecision {
   rebalance: boolean;
   newAllocation?: number;
@@ -151,15 +141,9 @@ function extractResult(res: string): MainTraderDecision | null {
 }
 
 export async function run(
-  { log, model, apiKey, timeframe, agentId }: RunParams,
+  { log, model, apiKey }: RunParams,
   prompt: RebalancePrompt,
 ): Promise<MainTraderDecision | null> {
-  await Promise.all([
-    runNewsAnalyst(log, model, apiKey, agentId, prompt),
-    runTechnicalAnalyst(log, model, apiKey, timeframe, agentId, prompt),
-    runOrderBookAnalyst(log, model, apiKey, agentId, prompt),
-  ]);
-  await runPerformanceAnalyzer(log, model, apiKey, agentId, prompt);
   const res = await callAi(
     model,
     developerInstructions,

@@ -30,10 +30,7 @@ describe('order book analyst step', () => {
     const mod = await import('../src/agents/order-book-analyst.js');
     const prompt: any = {};
     await mod.runOrderBookAnalyst(
-      createLogger(),
-      'gpt',
-      'key',
-      'agent1',
+      { log: createLogger(), model: 'gpt', apiKey: 'key', portfolioId: 'agent1' },
       prompt,
     );
     const report = prompt.reports?.find((r: any) => r.token === 'BTC');

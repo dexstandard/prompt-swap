@@ -3,7 +3,7 @@ import { fetchOrderBook } from '../services/derivatives.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import { callAi, extractJson, type RebalancePrompt } from '../util/ai.js';
 import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';
-import { type AnalysisLog, type Analysis, analysisSchema } from './types.js';
+import { type AnalysisLog, type Analysis, analysisSchema, type RunParams } from './types.js';
 
 export async function getOrderBookAnalysis(
   pair: string,
@@ -31,10 +31,7 @@ export async function getOrderBookAnalysis(
 }
 
 export async function runOrderBookAnalyst(
-  log: FastifyBaseLogger,
-  model: string,
-  apiKey: string,
-  agentId: string,
+  { log, model, apiKey, portfolioId }: RunParams,
   prompt: RebalancePrompt,
 ): Promise<void> {
   if (!prompt.reports) prompt.reports = [];
@@ -47,7 +44,8 @@ export async function runOrderBookAnalyst(
       apiKey,
       log,
     );
-    if (p && response) await insertReviewRawLog({ agentId, prompt: p, response });
+    if (p && response)
+      await insertReviewRawLog({ portfolioId, prompt: p, response });
     let report = prompt.reports.find((r) => r.token === token);
     if (!report) {
       report = { token, news: null, tech: null, orderbook: null };

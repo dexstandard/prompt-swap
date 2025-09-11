@@ -93,28 +93,33 @@ vi.mock('../src/services/rebalance.js', () => ({
   createRebalanceLimitOrder,
 }));
 
-vi.mock('../src/agents/news-analyst.js', () => ({
-  getTokenNewsSummary: vi.fn().mockResolvedValue({
-    analysis: { comment: 'news', score: 1 },
-    prompt: {},
-    response: 'r',
-  }),
-}));
+const runNewsAnalyst = vi.fn((_params: any, prompt: any) => {
+  const report = prompt.reports?.find((r: any) => r.token === 'BTC');
+  if (report) report.news = { comment: 'news', score: 1 };
+  return Promise.resolve();
+});
+vi.mock('../src/agents/news-analyst.js', () => ({ runNewsAnalyst }));
 
-vi.mock('../src/agents/technical-analyst.js', () => ({
-  getTechnicalOutlook: vi.fn().mockResolvedValue({
-    analysis: { comment: 'tech', score: 2 },
-    prompt: {},
-    response: 'r',
-  }),
-}));
+const runTechnicalAnalyst = vi.fn((_params: any, prompt: any) => {
+  const report = prompt.reports?.find((r: any) => r.token === 'BTC');
+  if (report) report.tech = { comment: 'tech', score: 2 };
+  return Promise.resolve();
+});
+vi.mock('../src/agents/technical-analyst.js', () => ({ runTechnicalAnalyst }));
 
-vi.mock('../src/agents/order-book-analyst.js', () => ({
-  getOrderBookAnalysis: vi.fn().mockResolvedValue({
-    analysis: { comment: 'order', score: 3 },
-    prompt: {},
-    response: 'r',
-  }),
+const runOrderBookAnalyst = vi.fn((_params: any, prompt: any) => {
+  const report = prompt.reports?.find((r: any) => r.token === 'BTC');
+  if (report) report.orderbook = { comment: 'order', score: 3 };
+  return Promise.resolve();
+});
+vi.mock('../src/agents/order-book-analyst.js', () => ({ runOrderBookAnalyst }));
+
+const runPerformanceAnalyzer = vi.fn((_params: any, prompt: any) => {
+  (prompt as any).performance = { comment: 'perf', score: 4 };
+  return Promise.resolve();
+});
+vi.mock('../src/agents/performance-analyst.js', () => ({
+  runPerformanceAnalyzer,
 }));
 
 
@@ -161,6 +166,10 @@ describe('reviewPortfolio', () => {
     const log = createLogger();
     await reviewAgentPortfolio(log, '1');
     expect(runMainTrader).toHaveBeenCalledTimes(1);
+    expect(runNewsAnalyst).toHaveBeenCalled();
+    expect(runTechnicalAnalyst).toHaveBeenCalled();
+    expect(runOrderBookAnalyst).toHaveBeenCalled();
+    expect(runPerformanceAnalyzer).toHaveBeenCalled();
     const { rows } = await db.query(
       'SELECT prompt, response FROM agent_review_raw_log WHERE agent_id=$1',
       ['1'],
