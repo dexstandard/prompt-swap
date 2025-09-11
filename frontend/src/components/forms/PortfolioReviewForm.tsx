@@ -14,7 +14,9 @@ import {
   riskOptions,
   reviewIntervalOptions,
   tokens,
+  stableCoins,
 } from '../../lib/constants';
+import { useBinanceAccount } from '../../lib/useBinanceAccount';
 import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import SelectInput from './SelectInput';
@@ -46,6 +48,16 @@ export default function PortfolioReviewForm({
 
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const accountQuery = useBinanceAccount();
+  const topTokens = (accountQuery.data?.balances ?? [])
+    .map((b) => ({
+      token: b.asset.toUpperCase(),
+      total: b.free + b.locked,
+    }))
+    .filter((b) => b.total > 0 && !stableCoins.includes(b.token))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 3)
+    .map((b) => b.token);
 
   const onSubmit = handleSubmit(async (values) => {
     if (!user) return;
@@ -73,7 +85,7 @@ export default function PortfolioReviewForm({
   };
 
   const handleRemoveToken = (index: number) => {
-    if (fields.length <= 2) return;
+    if (index === 0 || fields.length <= 2) return;
     const newTokens = tokensWatch
       .filter((_, i) => i !== index)
       .map((t) => t.token);
@@ -99,6 +111,11 @@ export default function PortfolioReviewForm({
         } md:block`}
       >
         <h2 className="text-lg md:text-xl font-bold">Binance Portfolio Workflow</h2>
+        {topTokens.length > 0 && (
+          <p className="text-sm text-gray-600">
+            Top tokens: {topTokens.join(', ')}
+          </p>
+        )}
         <div className="space-y-2">
           <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
             <span>Token</span>
@@ -132,12 +149,18 @@ export default function PortfolioReviewForm({
                         );
                         onTokensChange?.(newTokens.map((t) => t.token));
                       }}
-                      options={tokens.filter(
-                        (t) =>
-                          t.value === field.value ||
-                          !tokensWatch.some((tw, i) => tw.token === t.value && i !== index),
-                      )}
-                    />
+                    options={
+                      index === 0
+                        ? tokens.filter((t) => stableCoins.includes(t.value))
+                        : tokens.filter(
+                            (t) =>
+                              t.value === field.value ||
+                              !tokensWatch.some(
+                                (tw, i) => tw.token === t.value && i !== index,
+                              ),
+                          )
+                    }
+                  />
                   )}
                 />
                 <span className="text-sm">
@@ -180,7 +203,7 @@ export default function PortfolioReviewForm({
                 <button
                   type="button"
                   onClick={() => handleRemoveToken(index)}
-                  disabled={fields.length <= 2}
+                  disabled={index === 0 || fields.length <= 2}
                   className="text-red-600 disabled:opacity-50"
                 >
                   <Trash className="w-4 h-4" />
