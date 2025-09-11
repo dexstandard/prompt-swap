@@ -93,7 +93,7 @@ describe('agent routes', () => {
 
     let res = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(userId),
       payload,
     });
@@ -106,7 +106,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${id}`,
+      url: `/api/portfolio-workflows/${id}`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -116,7 +116,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents/paginated?page=1&pageSize=10',
+      url: '/api/portfolio-workflows/paginated?page=1&pageSize=10',
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -125,7 +125,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents/paginated?page=1&pageSize=10&status=active',
+      url: '/api/portfolio-workflows/paginated?page=1&pageSize=10&status=active',
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -135,7 +135,7 @@ describe('agent routes', () => {
     const update = { ...payload, model: 'o3', status: 'draft' };
     res = await app.inject({
       method: 'PUT',
-      url: `/api/agents/${id}`,
+      url: `/api/portfolio-workflows/${id}`,
       cookies: authCookies(userId),
       payload: update,
     });
@@ -144,7 +144,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents/paginated?page=1&pageSize=10&status=active',
+      url: '/api/portfolio-workflows/paginated?page=1&pageSize=10&status=active',
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -153,7 +153,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents/paginated?page=1&pageSize=10&status=draft',
+      url: '/api/portfolio-workflows/paginated?page=1&pageSize=10&status=draft',
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -171,7 +171,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'DELETE',
-      url: `/api/agents/${id}`,
+      url: `/api/portfolio-workflows/${id}`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -190,14 +190,14 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents/paginated?page=1&pageSize=10',
+      url: '/api/portfolio-workflows/paginated?page=1&pageSize=10',
       cookies: authCookies(userId),
     });
     expect(res.json().items).toHaveLength(0);
 
     res = await app.inject({
       method: 'GET',
-      url: '/api/agents/paginated?page=1&pageSize=10&status=retired',
+      url: '/api/portfolio-workflows/paginated?page=1&pageSize=10&status=retired',
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
@@ -205,14 +205,14 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'GET',
-      url: `/api/agents/${id}`,
+      url: `/api/portfolio-workflows/${id}`,
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(404);
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies('999'),
       payload: { ...payload, userId, name: 'A2' },
     });
@@ -240,7 +240,7 @@ describe('agent routes', () => {
     };
     const resCreate = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(userId),
       payload,
     });
@@ -248,7 +248,7 @@ describe('agent routes', () => {
     const id = resCreate.json().id as string;
     const resGet = await app.inject({
       method: 'GET',
-      url: `/api/agents/${id}`,
+      url: `/api/portfolio-workflows/${id}`,
       cookies: authCookies(userId),
     });
     expect(resGet.statusCode).toBe(200);
@@ -275,7 +275,7 @@ describe('agent routes', () => {
     };
     const resCreate = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(starterId),
       payload: draftPayload,
     });
@@ -310,7 +310,7 @@ describe('agent routes', () => {
 
     let res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${id}/start`,
+      url: `/api/portfolio-workflows/${id}/start`,
       cookies: authCookies(starterId),
     });
     expect(res.statusCode).toBe(200);
@@ -320,7 +320,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: `/api/agents/${id}/stop`,
+      url: `/api/portfolio-workflows/${id}/stop`,
       cookies: authCookies(starterId),
     });
     expect(res.statusCode).toBe(200);
@@ -398,7 +398,7 @@ describe('agent routes', () => {
 
     const resCreate = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(updateUserId),
       payload: createPayload,
     });
@@ -414,7 +414,7 @@ describe('agent routes', () => {
     };
     const resUpdate = await app.inject({
       method: 'PUT',
-      url: `/api/agents/${id}`,
+      url: `/api/portfolio-workflows/${id}`,
       cookies: authCookies(updateUserId),
       payload: updatePayload,
     });
@@ -446,7 +446,7 @@ describe('agent routes', () => {
 
     let res = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(u1Id),
       payload: { ...basePayload, status: 'active' },
     });
@@ -454,7 +454,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(u1Id),
       payload: { ...basePayload, status: 'draft' },
     });
@@ -491,7 +491,7 @@ describe('agent routes', () => {
 
     res = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(u2Id),
       payload: { ...basePayload, userId: u2Id, name: 'Active', status: 'active' },
     });
@@ -500,7 +500,7 @@ describe('agent routes', () => {
 
     const resDraft2 = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(u2Id),
       payload: { ...basePayload, userId: u2Id, name: 'Draft2', status: 'draft' },
     });
@@ -561,7 +561,7 @@ describe('agent routes', () => {
 
     const res1 = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(dupId),
       payload: base,
     });
@@ -569,7 +569,7 @@ describe('agent routes', () => {
 
     const resDup = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(dupId),
       payload: {
         ...base,
@@ -589,7 +589,7 @@ describe('agent routes', () => {
 
     const resOk = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(dupId),
       payload: {
         ...base,
@@ -626,7 +626,7 @@ describe('agent routes', () => {
 
     const res1 = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(draftUserId),
       payload: draftPayload,
     });
@@ -634,7 +634,7 @@ describe('agent routes', () => {
 
     const resDup = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(draftUserId),
       payload: draftPayload,
     });
@@ -644,7 +644,7 @@ describe('agent routes', () => {
 
     const resOk = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(draftUserId),
       payload: { ...draftPayload, name: 'Draft2' },
     });
@@ -673,7 +673,7 @@ describe('agent routes', () => {
 
     const res1 = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(updId),
       payload: base,
     });
@@ -681,7 +681,7 @@ describe('agent routes', () => {
 
     const res2 = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(updId),
       payload: {
         ...base,
@@ -696,7 +696,7 @@ describe('agent routes', () => {
 
     const resUpd = await app.inject({
       method: 'PUT',
-      url: `/api/agents/${draft2}`,
+      url: `/api/portfolio-workflows/${draft2}`,
       cookies: authCookies(updId),
       payload: { ...base },
     });
@@ -725,14 +725,14 @@ describe('agent routes', () => {
     };
     const resCreate = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(nomodelId),
       payload,
     });
     const id = resCreate.json().id as string;
     const resStart = await app.inject({
       method: 'POST',
-      url: `/api/agents/${id}/start`,
+      url: `/api/portfolio-workflows/${id}/start`,
       cookies: authCookies(nomodelId),
     });
     expect(resStart.statusCode).toBe(400);
@@ -758,7 +758,7 @@ describe('agent routes', () => {
     };
     const res = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(allocId),
       payload,
     });
@@ -790,7 +790,7 @@ describe('agent routes', () => {
     };
     const res = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(userId),
       payload,
     });

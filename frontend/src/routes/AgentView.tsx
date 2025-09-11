@@ -30,7 +30,7 @@ export default function AgentView() {
 
   const reviewMut = useMutation({
     mutationFn: async (agentId: string) => {
-      await api.post(`/agents/${agentId}/review`);
+      await api.post(`/portfolio-workflows/${agentId}/review`);
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['agent-log', id] }),
@@ -50,7 +50,7 @@ export default function AgentView() {
   const { data: logData } = useQuery({
     queryKey: ['agent-log', id, logPage, user?.id, onlyRebalance],
     queryFn: async () => {
-      const res = await api.get(`/agents/${id}/exec-log`, {
+      const res = await api.get(`/portfolio-workflows/${id}/exec-log`, {
         params: { page: logPage, pageSize: 10, rebalanceOnly: onlyRebalance },
       });
       return res.data as {

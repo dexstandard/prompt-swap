@@ -116,7 +116,7 @@ function AgentRow({
         <div className="flex items-center gap-2">
           <Link
             className="text-blue-600 underline inline-flex"
-            to={`/agents/${agent.id}`}
+            to={`/portfolio-workflows/${agent.id}`}
             aria-label={t('view_agent')}
           >
             <Eye className="w-4 h-4" />
@@ -217,7 +217,7 @@ function AgentBlock({
         <div className="flex justify-end">
           <Link
             className="text-blue-600 underline inline-flex"
-            to={`/agents/${agent.id}`}
+            to={`/portfolio-workflows/${agent.id}`}
             aria-label={t('view_agent')}
           >
             <Eye className="w-5 h-5" />
@@ -272,7 +272,7 @@ export default function Dashboard() {
   const { data } = useQuery({
     queryKey: ['agents', page, user?.id, onlyActive],
     queryFn: async () => {
-      const res = await api.get('/agents/paginated', {
+      const res = await api.get('/portfolio-workflows/paginated', {
         params: {
           page,
           pageSize: 10,
@@ -302,7 +302,7 @@ export default function Dashboard() {
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
-      await api.delete(`/agents/${deleteId}`);
+      await api.delete(`/portfolio-workflows/${deleteId}`);
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       toast.show(t('agent_deleted'), 'success');
     } catch (err) {

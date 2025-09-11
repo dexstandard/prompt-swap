@@ -11,7 +11,7 @@ export function useAgentActions(id?: string) {
 
   const startMut = useMutation({
     mutationFn: async () => {
-      await api.post(`/agents/${id}/start`);
+      await api.post(`/portfolio-workflows/${id}/start`);
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] }),
@@ -26,7 +26,7 @@ export function useAgentActions(id?: string) {
 
   const stopMut = useMutation({
     mutationFn: async () => {
-      await api.post(`/agents/${id}/stop`);
+      await api.post(`/portfolio-workflows/${id}/stop`);
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['agent', id, user?.id] }),

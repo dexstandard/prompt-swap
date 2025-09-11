@@ -42,7 +42,7 @@ describe('agent start', () => {
     };
     const resCreate = await app.inject({
       method: 'POST',
-      url: '/api/agents',
+      url: '/api/portfolio-workflows',
       cookies: authCookies(userId),
       payload,
     });
@@ -72,7 +72,7 @@ describe('agent start', () => {
 
     const startPromise = app.inject({
       method: 'POST',
-      url: `/api/agents/${id}/start`,
+      url: `/api/portfolio-workflows/${id}/start`,
       cookies: authCookies(userId),
     });
     const res = await Promise.race([

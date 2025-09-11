@@ -26,7 +26,7 @@ const endpoints: Endpoint[] = [
       } as any);
     },
   },
-  { name: 'agents', method: 'GET', url: '/api/agents/paginated', limit: RATE_LIMITS.RELAXED.max },
+  { name: 'portfolio-workflows', method: 'GET', url: '/api/portfolio-workflows/paginated', limit: RATE_LIMITS.RELAXED.max },
   { name: 'api-keys', method: 'GET', url: '/api/users/1/ai-key', limit: RATE_LIMITS.MODERATE.max },
   {
     name: 'binance-balance',

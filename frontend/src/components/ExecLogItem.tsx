@@ -56,7 +56,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
   } = useQuery({
     queryKey: ['exec-orders', agentId, log.id],
     queryFn: async () => {
-      const res = await api.get(`/agents/${agentId}/exec-log/${log.id}/orders`);
+      const res = await api.get(`/portfolio-workflows/${agentId}/exec-log/${log.id}/orders`);
       return res.data.orders as LimitOrder[];
     },
     enabled: showTx || (!!response?.rebalance && manualRebalance),
@@ -74,7 +74,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
   async function handleShowPrompt() {
     if (!showPrompt) {
       try {
-        const res = await api.get(`/agents/${agentId}/exec-log/${log.id}/prompt`);
+        const res = await api.get(`/portfolio-workflows/${agentId}/exec-log/${log.id}/prompt`);
         setPromptText(JSON.stringify(res.data.prompt, null, 2));
       } catch {
         setPromptText(t('failed_load_prompt'));
@@ -93,7 +93,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
   async function handleRebalance() {
     setCreating(true);
     try {
-      const res = await api.get(`/agents/${agentId}/exec-log/${log.id}/rebalance/preview`);
+      const res = await api.get(`/portfolio-workflows/${agentId}/exec-log/${log.id}/rebalance/preview`);
       const ord = res.data.order as { quantity: number; price: number; side: string };
       setOrder(ord);
       setManuallyEdited(false);
@@ -112,7 +112,7 @@ export default function ExecLogItem({ log, agentId, manualRebalance, tokens }: P
   async function confirmRebalance() {
     setCreating(true);
     try {
-      await api.post(`/agents/${agentId}/exec-log/${log.id}/rebalance`, {
+      await api.post(`/portfolio-workflows/${agentId}/exec-log/${log.id}/rebalance`, {
         quantity: Number(quantity),
         price: Number(price),
         ...(manuallyEdited ? { manuallyEdited: true } : {}),

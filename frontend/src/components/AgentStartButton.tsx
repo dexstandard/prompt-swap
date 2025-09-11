@@ -55,12 +55,12 @@ export default function AgentStartButton({
     setIsCreating(true);
     try {
       if (draft) {
-        await api.post(`/agents/${draft.id}/start`);
+        await api.post(`/portfolio-workflows/${draft.id}/start`);
         queryClient.invalidateQueries({ queryKey: ['agents'] });
         toast.show(t('agent_started_success'), 'success');
         navigate('/');
       } else {
-        const res = await api.post('/agents', {
+        const res = await api.post('/portfolio-workflows', {
           userId: user.id,
           model,
           name: agentData.name,
@@ -74,7 +74,7 @@ export default function AgentStartButton({
           manualRebalance: agentData.manualRebalance,
           status: 'active',
         });
-        navigate(`/agents/${res.data.id}`);
+        navigate(`/portfolio-workflows/${res.data.id}`);
       }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data?.error) {

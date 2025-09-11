@@ -19,8 +19,8 @@ export default function App() {
           <Route path="/keys" element={<Keys />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/users" element={<Users />} />
-          <Route path="/agent-preview" element={<AgentPreview />} />
-          <Route path="/agents/:id" element={<AgentView />} />
+          <Route path="/portfolio-workflow-preview" element={<AgentPreview />} />
+          <Route path="/portfolio-workflows/:id" element={<AgentView />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="*" element={<Navigate to="/" replace />} />
