@@ -21,6 +21,7 @@ import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import SelectInput from './SelectInput';
 import Button from '../ui/Button';
+import Toggle from '../ui/Toggle';
 
 interface Props {
   onTokensChange?: (tokens: string[]) => void;
@@ -37,7 +38,6 @@ export default function PortfolioReviewForm({
     handleSubmit,
     watch,
     control,
-    setValue,
     formState: { isSubmitting },
   } = useForm<PortfolioReviewFormValues>({
     resolver: zodResolver(portfolioReviewSchema),
@@ -70,6 +70,10 @@ export default function PortfolioReviewForm({
     .map((b) => b.token);
 
   const [initializedTopTokens, setInitializedTopTokens] = useState(false);
+  const [useEarn, setUseEarn] = useState(true);
+  const colTemplate = useEarn
+    ? 'grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto]'
+    : 'grid-cols-[1.5fr_2fr_2fr_1fr_auto]';
 
   useEffect(() => {
     if (initializedTopTokens) return;
@@ -135,10 +139,10 @@ export default function PortfolioReviewForm({
       >
         <h2 className="text-lg md:text-xl font-bold">Binance Portfolio Workflow</h2>
         <div className="space-y-2">
-          <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
+          <div className={`grid ${colTemplate} gap-2 text-sm font-medium`}>
             <div className="text-left">Token</div>
             <div className="text-left">Spot</div>
-            <div className="text-left">Earn</div>
+            {useEarn && <div className="text-left">Earn</div>}
             <div className="text-left">Total (USD)</div>
             <div className="text-left">Min %</div>
             <div />
@@ -151,7 +155,7 @@ export default function PortfolioReviewForm({
             return (
               <div
                 key={field.id}
-                className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 items-center"
+                className={`grid ${colTemplate} gap-2 items-center`}
               >
                 <Controller
                   name={`tokens.${index}.token`}
@@ -188,18 +192,31 @@ export default function PortfolioReviewForm({
                     ? balanceInfo.walletBalance.toFixed(5)
                     : '0.00000'}
                 </span>
+                {useEarn && (
+                  <span className="text-sm text-left">
+                    {balanceInfo?.isLoading
+                      ? t('loading')
+                      : balanceInfo
+                      ? balanceInfo.earnBalance.toFixed(5)
+                      : '0.00000'}
+                  </span>
+                )}
                 <span className="text-sm text-left">
                   {balanceInfo?.isLoading
                     ? t('loading')
                     : balanceInfo
-                    ? balanceInfo.earnBalance.toFixed(5)
-                    : '0.00000'}
-                </span>
-                <span className="text-sm text-left">
-                  {balanceInfo?.isLoading
-                    ? t('loading')
-                    : balanceInfo
-                    ? balanceInfo.usdValue.toFixed(5)
+                    ? (() => {
+                        const totalBalance =
+                          balanceInfo.walletBalance + balanceInfo.earnBalance;
+                        const price =
+                          totalBalance > 0
+                            ? balanceInfo.usdValue / totalBalance
+                            : 0;
+                        const usd =
+                          (balanceInfo.walletBalance +
+                            (useEarn ? balanceInfo.earnBalance : 0)) * price;
+                        return usd.toFixed(5);
+                      })()
                     : '0.00000'}
                 </span>
                 <Controller
@@ -244,7 +261,7 @@ export default function PortfolioReviewForm({
             </button>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4 items-center">
           <div>
             <label htmlFor="risk" className="block text-sm font-medium">
               {t('risk_tolerance')}
@@ -277,6 +294,13 @@ export default function PortfolioReviewForm({
                   options={reviewIntervalOptions(t)}
                 />
               )}
+            />
+          </div>
+          <div className="flex items-center h-full">
+            <Toggle
+              label={t('use_binance_earn')}
+              checked={useEarn}
+              onChange={setUseEarn}
             />
           </div>
         </div>
