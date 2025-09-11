@@ -28,13 +28,16 @@ function createLogger(): FastifyBaseLogger {
 describe('news analyst step', () => {
   it('fetches news summaries', async () => {
     const mod = await import('../src/agents/news-analyst.js');
-    const summaries = await mod.runNewsAnalyst(
+    const prompt: any = {};
+    await mod.runNewsAnalyst(
       createLogger(),
       'gpt',
       'key',
       'agent1',
+      prompt,
     );
-    expect(summaries.BTC?.comment).toBe('summary for BTC');
+    const report = prompt.reports?.find((r: any) => r.token === 'BTC');
+    expect(report?.news?.comment).toBe('summary for BTC');
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

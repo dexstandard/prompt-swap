@@ -38,14 +38,17 @@ function createLogger(): FastifyBaseLogger {
 describe('technical analyst step', () => {
   it('fetches technical outlook per token', async () => {
     const mod = await import('../src/agents/technical-analyst.js');
-    const outlooks = await mod.runTechnicalAnalyst(
+    const prompt: any = {};
+    await mod.runTechnicalAnalyst(
       createLogger(),
       'gpt',
       'key',
       '1d',
       'agent1',
+      prompt,
     );
-    expect(outlooks.BTC?.comment).toBe('outlook for BTC');
+    const report = prompt.reports?.find((r: any) => r.token === 'BTC');
+    expect(report?.tech?.comment).toBe('outlook for BTC');
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

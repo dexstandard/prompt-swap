@@ -46,14 +46,15 @@ describe('performance analyzer step', () => {
         orderbook: { comment: 'o', score: 3 } as Analysis,
       },
     ];
-    const perf = await mod.runPerformanceAnalyzer(
+    const prompt: any = { reports };
+    await mod.runPerformanceAnalyzer(
       createLogger(),
       'gpt',
       'key',
       'agent1',
-      reports,
+      prompt,
     );
-    expect(perf?.comment).toBe('perf');
+    expect(prompt.performance?.comment).toBe('perf');
     expect(getRecentLimitOrdersMock).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });

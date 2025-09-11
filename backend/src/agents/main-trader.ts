@@ -1,16 +1,14 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { TOKEN_SYMBOLS } from '../util/tokens.js';
 import { runNewsAnalyst } from './news-analyst.js';
 import { runTechnicalAnalyst } from './technical-analyst.js';
 import { runOrderBookAnalyst } from './order-book-analyst.js';
 import { runPerformanceAnalyzer } from './performance-analyst.js';
-import { getRecentLimitOrders } from '../repos/limit-orders.js';
 import {
   callAi,
   developerInstructions,
   rebalanceResponseSchema,
+  type RebalancePrompt,
 } from '../util/ai.js';
-import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 
 interface MainTraderOptions {
   log: FastifyBaseLogger;
@@ -56,44 +54,30 @@ export class MainTraderAgent {
     }
   }
 
-  async run(): Promise<{
+  async run(prompt: RebalancePrompt): Promise<{
     rebalance: boolean;
     newAllocation?: number;
     shortReport: string;
   } | null> {
-    const [news, tech, orderbook, ordersRaw] = await Promise.all([
-      runNewsAnalyst(this.log, this.model, this.apiKey, this.agentId),
+    await Promise.all([
+      runNewsAnalyst(this.log, this.model, this.apiKey, this.agentId, prompt),
       runTechnicalAnalyst(
         this.log,
         this.model,
         this.apiKey,
         this.timeframe,
         this.agentId,
+        prompt,
       ),
-      runOrderBookAnalyst(this.log, this.model, this.apiKey, this.agentId),
-      getRecentLimitOrders(this.agentId, 20),
+      runOrderBookAnalyst(this.log, this.model, this.apiKey, this.agentId, prompt),
     ]);
-
-    const reports = TOKEN_SYMBOLS.map((token) => ({
-      token,
-      news: news[token] ?? null,
-      tech: tech[token] ?? null,
-      orderbook: orderbook[token] ?? null,
-    }));
-
-    let performance = null;
-    if (ordersRaw.length) {
-      performance = await runPerformanceAnalyzer(
-        this.log,
-        this.model,
-        this.apiKey,
-        this.agentId,
-        reports,
-        ordersRaw,
-      );
-    }
-
-    const prompt = { portfolioId: this.portfolioId, reports, performance };
+    await runPerformanceAnalyzer(
+      this.log,
+      this.model,
+      this.apiKey,
+      this.agentId,
+      prompt,
+    );
     const res = await callAi(
       this.model,
       developerInstructions,
@@ -102,7 +86,6 @@ export class MainTraderAgent {
       this.apiKey,
       true,
     );
-    await insertReviewRawLog({ agentId: this.agentId, prompt, response: res });
     const decision = this.extractResult(res);
     if (!decision) {
       this.log.error('main trader returned invalid response');
@@ -119,6 +102,7 @@ export async function runMainTrader(
   timeframe: string,
   agentId: string,
   portfolioId: string,
+  prompt: RebalancePrompt,
 ) {
   const agent = new MainTraderAgent({
     log,
@@ -128,6 +112,6 @@ export async function runMainTrader(
     agentId,
     portfolioId,
   });
-  return agent.run();
+  return agent.run(prompt);
 }
 

@@ -28,13 +28,16 @@ function createLogger(): FastifyBaseLogger {
 describe('order book analyst step', () => {
   it('fetches order book analysis per pair', async () => {
     const mod = await import('../src/agents/order-book-analyst.js');
-    const analyses = await mod.runOrderBookAnalyst(
+    const prompt: any = {};
+    await mod.runOrderBookAnalyst(
       createLogger(),
       'gpt',
       'key',
       'agent1',
+      prompt,
     );
-    expect(analyses.BTC?.comment).toBe('analysis for BTCUSDT');
+    const report = prompt.reports?.find((r: any) => r.token === 'BTC');
+    expect(report?.orderbook?.comment).toBe('analysis for BTCUSDT');
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

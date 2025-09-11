@@ -24,7 +24,7 @@ import {
   parseBinanceError,
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
-import { buildPreviousOrders } from '../agents/performance-analyst.js';
+import { TOKEN_SYMBOLS } from '../util/tokens.js';
 import { type RebalancePrompt, type PreviousResponse } from '../util/ai.js';
 
 /** Workflows currently running. Used to avoid concurrent runs. */
@@ -59,15 +59,12 @@ async function runReviewWorkflows(
   log: FastifyBaseLogger,
   workflowRows: ActivePortfolioWorkflowRow[],
 ) {
-  const prepared = await prepareWorkflows(workflowRows, log);
-  const preparedIds = new Set(prepared.map((p) => p.row.id));
-  for (const row of workflowRows) {
-    if (!preparedIds.has(row.id)) runningWorkflows.delete(row.id);
-  }
-
   await Promise.all(
-    prepared.map(({ row, prompt, key, log: lg }) =>
-      executeWorkflow(row, prompt, key, lg).finally(() => {
+    workflowRows.map((row) =>
+      executeWorkflow(
+        row,
+        log.child({ userId: row.user_id, agentId: row.id }),
+      ).finally(() => {
         runningWorkflows.delete(row.id);
       }),
     ),
@@ -87,80 +84,6 @@ function filterRunningWorkflows(workflowRows: ActivePortfolioWorkflowRow[]) {
   return { toRun, skipped };
 }
 
-export async function prepareWorkflows(
-  rows: ActivePortfolioWorkflowRow[],
-  parentLog: FastifyBaseLogger,
-) {
-  const prepared: {
-    row: ActivePortfolioWorkflowRow;
-    prompt: RebalancePrompt;
-    key: string;
-    log: FastifyBaseLogger;
-  }[] = [];
-
-  for (const row of rows) {
-    const log = parentLog.child({
-      userId: row.user_id,
-      agentId: row.id,
-    });
-
-    await cleanupAgentOpenOrders(row, log);
-
-    const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
-
-    const balances = await fetchBalances(row, log);
-    if (!balances) {
-      continue;
-    }
-
-    try {
-      const token1 = row.tokens[0].token;
-      const token2 = row.tokens[1].token;
-      const [pair, price1Data, price2Data] = await Promise.all([
-        fetchPairData(token1, token2),
-        token1 === 'USDT' || token1 === 'USDC'
-          ? Promise.resolve({ currentPrice: 1 })
-          : fetchPairData(token1, 'USDT'),
-        token2 === 'USDT' || token2 === 'USDC'
-          ? Promise.resolve({ currentPrice: 1 })
-          : fetchPairData(token2, 'USDT'),
-      ]);
-
-      const { floor, positions } = computePortfolioValues(
-        row,
-        balances,
-        price1Data.currentPrice,
-        price2Data.currentPrice,
-      );
-
-      const prevOrders = await buildPreviousOrders(row.id);
-
-      const prompt: RebalancePrompt = {
-        instructions: row.agent_instructions,
-        policy: { floor },
-        portfolio: {
-          ts: new Date().toISOString(),
-          positions,
-        },
-        ...prevOrders,
-        marketData: { currentPrice: pair.currentPrice },
-      };
-
-      const prevRows = await getRecentReviewResults(row.id, 5);
-      prompt.previous_responses = prevRows
-        .map(extractPreviousResponse)
-        .filter(Boolean) as PreviousResponse[];
-
-      prepared.push({ row, prompt, key, log });
-    } catch (err) {
-      const msg = 'failed to fetch market data';
-      await saveFailure(row, msg);
-      log.error({ err }, 'workflow run failed');
-    }
-  }
-
-  return prepared;
-}
 
 function extractPreviousResponse(r: any): PreviousResponse | undefined {
   const res: PreviousResponse = {};
@@ -259,11 +182,59 @@ function computePortfolioValues(
 
 export async function executeWorkflow(
   row: ActivePortfolioWorkflowRow,
-  prompt: RebalancePrompt,
-  key: string,
   log: FastifyBaseLogger,
 ) {
+  let prompt: RebalancePrompt | undefined;
   try {
+    await cleanupAgentOpenOrders(row, log);
+
+    const key = decrypt(row.ai_api_key_enc, env.KEY_PASSWORD);
+
+    const balances = await fetchBalances(row, log);
+    if (!balances) {
+      return;
+    }
+
+    const token1 = row.tokens[0].token;
+    const token2 = row.tokens[1].token;
+    const [pair, price1Data, price2Data] = await Promise.all([
+      fetchPairData(token1, token2),
+      token1 === 'USDT' || token1 === 'USDC'
+        ? Promise.resolve({ currentPrice: 1 })
+        : fetchPairData(token1, 'USDT'),
+      token2 === 'USDT' || token2 === 'USDC'
+        ? Promise.resolve({ currentPrice: 1 })
+        : fetchPairData(token2, 'USDT'),
+    ]);
+
+    const { floor, positions } = computePortfolioValues(
+      row,
+      balances,
+      price1Data.currentPrice,
+      price2Data.currentPrice,
+    );
+
+    prompt = {
+      instructions: row.agent_instructions,
+      policy: { floor },
+      portfolio: {
+        ts: new Date().toISOString(),
+        positions,
+      },
+      marketData: { currentPrice: pair.currentPrice },
+      reports: TOKEN_SYMBOLS.map((token) => ({
+        token,
+        news: null,
+        tech: null,
+        orderbook: null,
+      })),
+    };
+
+    const prevRows = await getRecentReviewResults(row.id, 5);
+    prompt.previous_responses = prevRows
+      .map(extractPreviousResponse)
+      .filter(Boolean) as PreviousResponse[];
+
     const decision = await runMainTrader(
       log,
       row.model,
@@ -271,6 +242,7 @@ export async function executeWorkflow(
       row.review_interval,
       row.id,
       row.portfolio_id,
+      prompt,
     );
     const logId = await insertReviewRawLog({
       agentId: row.id,
