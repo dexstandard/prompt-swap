@@ -48,7 +48,7 @@ const baseSelect = `
                   FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
          a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance,
          COALESCE(ak.id, oak.id) AS ai_api_key_id, ek.id AS exchange_api_key_id
-    FROM agents a
+    FROM portfolio_workflow a
     LEFT JOIN agent_tokens t ON t.agent_id = a.id
     LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
     LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
@@ -74,7 +74,7 @@ export async function getAgentsPaginated(
     if (status === AgentStatus.Retired) return { rows: [], total: 0 };
     const where = 'WHERE a.user_id = $1 AND a.status = $2';
     const totalRes = await db.query(
-      `SELECT COUNT(*) as count FROM agents a ${where}`,
+      `SELECT COUNT(*) as count FROM portfolio_workflow a ${where}`,
       [userId, status],
     );
     const { rows } = await db.query(
@@ -85,7 +85,7 @@ export async function getAgentsPaginated(
   }
   const where = 'WHERE a.user_id = $1 AND a.status != $2';
   const totalRes = await db.query(
-    `SELECT COUNT(*) as count FROM agents a ${where}`,
+    `SELECT COUNT(*) as count FROM portfolio_workflow a ${where}`,
     [userId, AgentStatus.Retired],
   );
   const { rows } = await db.query(
@@ -108,7 +108,7 @@ export async function findIdenticalDraftAgent(
   },
   excludeId?: string,
 ) {
-  const query = `SELECT a.id, a.name FROM agents a
+  const query = `SELECT a.id, a.name FROM portfolio_workflow a
     LEFT JOIN (
       SELECT agent_id,
              json_agg(json_build_object('token', token, 'min_allocation', min_allocation) ORDER BY position) AS tokens
@@ -143,7 +143,7 @@ export async function findActiveTokenConflicts(
   tokens: string[],
   excludeId?: string,
 ) {
-  const query = `SELECT a.id, a.name, t.token FROM agents a
+  const query = `SELECT a.id, a.name, t.token FROM portfolio_workflow a
       JOIN agent_tokens t ON t.agent_id = a.id
      WHERE a.user_id = $1 AND a.status = 'active' AND ($2::bigint IS NULL OR a.id != $2)
        AND t.token = ANY($3::text[])`;
@@ -179,7 +179,7 @@ export async function insertAgent(data: {
   manualRebalance: boolean;
 }): Promise<AgentRow> {
   const { rows } = await db.query(
-    `INSERT INTO agents (user_id, model, status, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance)
+    `INSERT INTO portfolio_workflow (user_id, model, status, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id`,
     [
@@ -224,7 +224,7 @@ export async function updateAgent(data: {
   manualRebalance: boolean;
 }): Promise<void> {
   await db.query(
-    `UPDATE agents SET model = $1, status = $2, name = $3, risk = $4, review_interval = $5, agent_instructions = $6, start_balance = $7, manual_rebalance = $8 WHERE id = $9`,
+    `UPDATE portfolio_workflow SET model = $1, status = $2, name = $3, risk = $4, review_interval = $5, agent_instructions = $6, start_balance = $7, manual_rebalance = $8 WHERE id = $9`,
     [
       data.model,
       data.status,
@@ -255,7 +255,7 @@ export async function updateAgent(data: {
 
 export async function deleteAgent(id: string): Promise<void> {
   await db.query(
-    'UPDATE agents SET status = $1, start_balance = NULL WHERE id = $2',
+    'UPDATE portfolio_workflow SET status = $1, start_balance = NULL WHERE id = $2',
     [AgentStatus.Retired, id],
   );
 }
@@ -265,14 +265,14 @@ export async function startAgent(
   startBalance: number,
 ): Promise<void> {
   await db.query(
-    'UPDATE agents SET status = $1, start_balance = $2 WHERE id = $3',
+    'UPDATE portfolio_workflow SET status = $1, start_balance = $2 WHERE id = $3',
     [AgentStatus.Active, startBalance, id],
   );
 }
 
 export async function stopAgent(id: string): Promise<void> {
   await db.query(
-    'UPDATE agents SET status = $1, start_balance = NULL WHERE id = $2',
+    'UPDATE portfolio_workflow SET status = $1, start_balance = NULL WHERE id = $2',
     [AgentStatus.Inactive, id],
   );
 }
@@ -300,7 +300,7 @@ export async function getActiveAgents(options?: {
                       a.risk, a.review_interval, a.agent_instructions,
                       COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance,
                       a.id AS portfolio_id
-                 FROM agents a
+                 FROM portfolio_workflow a
                  LEFT JOIN agent_tokens t ON t.agent_id = a.id
                  LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
                  LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
@@ -325,7 +325,7 @@ export async function getActiveAgentsByUser(
                       a.risk, a.review_interval, a.agent_instructions,
                       COALESCE(ak.api_key_enc, oak.api_key_enc) AS ai_api_key_enc, a.manual_rebalance,
                       a.id AS portfolio_id
-                 FROM agents a
+                 FROM portfolio_workflow a
                  LEFT JOIN agent_tokens t ON t.agent_id = a.id
                  LEFT JOIN ai_api_keys ak ON ak.user_id = a.user_id AND ak.provider = 'openai'
                  LEFT JOIN ai_api_key_shares s ON s.target_user_id = a.user_id
@@ -340,14 +340,14 @@ export async function deactivateAgentsByUser(
   userId: string,
 ): Promise<void> {
   await db.query(
-    `UPDATE agents SET status = $1, start_balance = NULL WHERE user_id = $2 AND status = $3`,
+    `UPDATE portfolio_workflow SET status = $1, start_balance = NULL WHERE user_id = $2 AND status = $3`,
     [AgentStatus.Inactive, userId, AgentStatus.Active],
   );
 }
 
 export async function draftAgentsByUser(userId: string): Promise<void> {
   await db.query(
-    `UPDATE agents SET status = $1, model = NULL, start_balance = NULL WHERE user_id = $2 AND status = $3`,
+    `UPDATE portfolio_workflow SET status = $1, model = NULL, start_balance = NULL WHERE user_id = $2 AND status = $3`,
     [AgentStatus.Draft, userId, AgentStatus.Active],
   );
 }

@@ -175,7 +175,7 @@ describe('agent routes', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    const deletedRow = await db.query('SELECT status FROM agents WHERE id = $1', [
+    const deletedRow = await db.query('SELECT status FROM portfolio_workflow WHERE id = $1', [
       id,
     ]);
     expect(deletedRow.rows[0].status).toBe('retired');
