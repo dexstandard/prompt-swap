@@ -36,11 +36,11 @@ export function removeWorkflowFromSchedule(id: string) {
 
 export async function reviewPortfolio(
   log: FastifyBaseLogger,
-  agentId: string,
+  workflowId: string,
 ): Promise<void> {
-  const agent = await getActivePortfolioWorkflowById(agentId);
-  if (!agent) return;
-  const { toRun, skipped } = filterRunningWorkflows([agent]);
+  const workflow = await getActivePortfolioWorkflowById(workflowId);
+  if (!workflow) return;
+  const { toRun, skipped } = filterRunningWorkflows([workflow]);
   if (skipped.length) throw new Error('Agent is already reviewing portfolio');
   await runReviewWorkflows(log, toRun);
 }
@@ -49,19 +49,19 @@ export default async function reviewPortfolios(
   log: FastifyBaseLogger,
   interval: string,
 ): Promise<void> {
-  const agents = await getActivePortfolioWorkflowsByInterval(interval);
-  const { toRun } = filterRunningWorkflows(agents);
+  const workflows = await getActivePortfolioWorkflowsByInterval(interval);
+  const { toRun } = filterRunningWorkflows(workflows);
   if (!toRun.length) return;
   await runReviewWorkflows(log, toRun);
 }
 
 async function runReviewWorkflows(
   log: FastifyBaseLogger,
-  agents: ActivePortfolioWorkflowRow[],
+  workflowRows: ActivePortfolioWorkflowRow[],
 ) {
-  const prepared = await prepareAgents(agents, log);
+  const prepared = await prepareWorkflows(workflowRows, log);
   const preparedIds = new Set(prepared.map((p) => p.row.id));
-  for (const row of agents) {
+  for (const row of workflowRows) {
     if (!preparedIds.has(row.id)) runningWorkflows.delete(row.id);
   }
 
@@ -74,10 +74,10 @@ async function runReviewWorkflows(
   );
 }
 
-function filterRunningWorkflows(agents: ActivePortfolioWorkflowRow[]) {
+function filterRunningWorkflows(workflowRows: ActivePortfolioWorkflowRow[]) {
   const toRun: ActivePortfolioWorkflowRow[] = [];
   const skipped: ActivePortfolioWorkflowRow[] = [];
-  for (const row of agents) {
+  for (const row of workflowRows) {
     if (runningWorkflows.has(row.id)) skipped.push(row);
     else {
       runningWorkflows.add(row.id);
@@ -87,7 +87,7 @@ function filterRunningWorkflows(agents: ActivePortfolioWorkflowRow[]) {
   return { toRun, skipped };
 }
 
-export async function prepareAgents(
+export async function prepareWorkflows(
   rows: ActivePortfolioWorkflowRow[],
   parentLog: FastifyBaseLogger,
 ) {
@@ -155,7 +155,7 @@ export async function prepareAgents(
     } catch (err) {
       const msg = 'failed to fetch market data';
       await saveFailure(row, msg);
-      log.error({ err }, 'agent run failed');
+      log.error({ err }, 'workflow run failed');
       continue;
     }
   }
@@ -219,7 +219,7 @@ async function fetchBalances(
   if (token1Balance === undefined || token2Balance === undefined) {
     const msg = 'failed to fetch token balances';
     await saveFailure(row, msg);
-    log.error({ err: msg }, 'agent run failed');
+    log.error({ err: msg }, 'workflow run failed');
     return undefined;
   }
   return { token1Balance, token2Balance };
@@ -314,10 +314,10 @@ export async function executeAgent(
         reviewResultId: resultId,
       });
     }
-    log.info('agent run complete');
+    log.info('workflow run complete');
   } catch (err) {
     await saveFailure(row, String(err), prompt);
-    log.error({ err }, 'agent run failed');
+    log.error({ err }, 'workflow run failed');
   }
 }
 
