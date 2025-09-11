@@ -48,6 +48,8 @@ describe('login route', () => {
     });
     expect(res1.statusCode).toBe(401);
 
+    const now = Date.now();
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
     const otp = authenticator.generate(secret);
     const res2 = await app.inject({
       method: 'POST',
@@ -55,6 +57,7 @@ describe('login route', () => {
       headers: { 'sec-fetch-site': 'same-origin' },
       payload: { token: 't1', otp },
     });
+    nowSpy.mockRestore();
     expect(res2.statusCode).toBe(200);
     await app.close();
   });
