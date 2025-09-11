@@ -11,6 +11,7 @@ import {
 import { isStablecoin } from '../util/tokens.js';
 import { fetchAccount, fetchPairData, fetchPairInfo } from '../services/binance.js';
 import { getRecentReviewResults } from '../repos/agent-review-result.js';
+import { getRecentLimitOrders } from '../repos/limit-orders.js';
 import type { ActivePortfolioWorkflowRow } from '../repos/portfolio-workflow.js';
 import type { RunParams } from './types.js';
 
@@ -110,10 +111,23 @@ export async function collectPromptData(
     portfolio.pnl_usd = totalValue - row.start_balance;
   }
 
-  const prevRows = await getRecentReviewResults(row.id, 5);
+  const [prevRows, prevOrdersRows] = await Promise.all([
+    getRecentReviewResults(row.id, 5),
+    getRecentLimitOrders(row.id, 5),
+  ]);
   const previousResponses = prevRows
     .map(extractPreviousResponse)
     .filter(Boolean) as PreviousResponse[];
+  const prevOrders = prevOrdersRows.map((o) => {
+    const planned = JSON.parse(o.planned_json);
+    return {
+      symbol: planned.symbol,
+      side: planned.side,
+      amount: planned.quantity,
+      datetime: o.created_at.toISOString(),
+      status: o.status,
+    } as const;
+  });
 
   const prompt: RebalancePrompt = {
     instructions: row.agent_instructions,
@@ -127,6 +141,9 @@ export async function collectPromptData(
   };
   if (previousResponses.length) {
     prompt.previous_responses = previousResponses;
+  }
+  if (prevOrders.length) {
+    prompt.prev_orders = prevOrders;
   }
   return prompt;
 }
