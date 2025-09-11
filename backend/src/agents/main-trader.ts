@@ -63,34 +63,34 @@ export async function collectPromptData(
 ): Promise<RebalancePrompt | undefined> {
   const token1 = row.tokens[0].token;
   const token2 = row.tokens[1].token;
-  let token1Balance: number | undefined;
-  let token2Balance: number | undefined;
-  try {
-    const account = await fetchAccount(row.user_id);
-    if (account) {
-      const bal1 = account.balances.find((b) => b.asset === token1);
-      if (bal1) token1Balance = Number(bal1.free) + Number(bal1.locked);
-      const bal2 = account.balances.find((b) => b.asset === token2);
-      if (bal2) token2Balance = Number(bal2.free) + Number(bal2.locked);
-    }
-  } catch (err) {
-    log.error({ err }, 'failed to fetch balance');
-  }
+  const price1Promise =
+    token1 === 'USDT' || token1 === 'USDC'
+      ? Promise.resolve({ currentPrice: 1 })
+      : fetchPairData(token1, 'USDT');
+  const price2Promise =
+    token2 === 'USDT' || token2 === 'USDC'
+      ? Promise.resolve({ currentPrice: 1 })
+      : fetchPairData(token2, 'USDT');
+
+  const [account, pair, price1Data, price2Data, info] = await Promise.all([
+    fetchAccount(row.user_id).catch((err) => {
+      log.error({ err }, 'failed to fetch balance');
+      return null;
+    }),
+    fetchPairData(token1, token2),
+    price1Promise,
+    price2Promise,
+    fetchPairInfo(token1, token2),
+  ]);
+
+  const bal1 = account?.balances.find((b) => b.asset === token1);
+  const token1Balance = bal1 ? Number(bal1.free) + Number(bal1.locked) : undefined;
+  const bal2 = account?.balances.find((b) => b.asset === token2);
+  const token2Balance = bal2 ? Number(bal2.free) + Number(bal2.locked) : undefined;
   if (token1Balance === undefined || token2Balance === undefined) {
     log.error('failed to fetch token balances');
     return undefined;
   }
-
-  const [pair, price1Data, price2Data, info] = await Promise.all([
-    fetchPairData(token1, token2),
-    token1 === 'USDT' || token1 === 'USDC'
-      ? Promise.resolve({ currentPrice: 1 })
-      : fetchPairData(token1, 'USDT'),
-    token2 === 'USDT' || token2 === 'USDC'
-      ? Promise.resolve({ currentPrice: 1 })
-      : fetchPairData(token2, 'USDT'),
-    fetchPairInfo(token1, token2),
-  ]);
 
   const { floor, positions } = computePortfolioValues(
     row,
