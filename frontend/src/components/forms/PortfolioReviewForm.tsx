@@ -49,12 +49,18 @@ export default function PortfolioReviewForm({
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const accountQuery = useBinanceAccount();
+  const tokenSet = new Set(tokens.map((t) => t.value));
   const topTokens = (accountQuery.data?.balances ?? [])
     .map((b) => ({
       token: b.asset.toUpperCase(),
       total: b.free + b.locked,
     }))
-    .filter((b) => b.total > 0 && !stableCoins.includes(b.token))
+    .filter(
+      (b) =>
+        b.total > 0 &&
+        !stableCoins.includes(b.token) &&
+        tokenSet.has(b.token),
+    )
     .sort((a, b) => b.total - a.total)
     .slice(0, 3)
     .map((b) => b.token);
