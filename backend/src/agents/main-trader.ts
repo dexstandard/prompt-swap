@@ -12,27 +12,103 @@ import {
   type RebalancePrompt,
 } from '../util/ai.js';
 import { TOKEN_SYMBOLS } from '../util/tokens.js';
+import { fetchAccount, fetchPairData } from '../services/binance.js';
+import { getRecentReviewResults } from '../repos/agent-review-result.js';
+import type { ActivePortfolioWorkflowRow } from '../repos/portfolio-workflow.js';
 
-export interface PreparePromptParams {
-  instructions: string;
-  floor: Record<string, number>;
-  positions: RebalancePosition[];
-  currentPrice: number;
-  previousResponses?: PreviousResponse[];
+function computePortfolioValues(
+  row: ActivePortfolioWorkflowRow,
+  balances: { token1Balance: number; token2Balance: number },
+  price1: number,
+  price2: number,
+) {
+  const token1 = row.tokens[0].token;
+  const token2 = row.tokens[1].token;
+  const min1 = row.tokens[0].min_allocation;
+  const min2 = row.tokens[1].min_allocation;
+  const value1 = balances.token1Balance * price1;
+  const value2 = balances.token2Balance * price2;
+  const floor: Record<string, number> = {
+    [token1]: min1,
+    [token2]: min2,
+  };
+  const positions: RebalancePosition[] = [
+    {
+      sym: token1,
+      qty: balances.token1Balance,
+      price_usdt: price1,
+      value_usdt: value1,
+    },
+    {
+      sym: token2,
+      qty: balances.token2Balance,
+      price_usdt: price2,
+      value_usdt: value2,
+    },
+  ];
+  return { floor, positions };
 }
 
-export function preparePrompt({
-  instructions,
-  floor,
-  positions,
-  currentPrice,
-  previousResponses,
-}: PreparePromptParams): RebalancePrompt {
+function extractPreviousResponse(r: any): PreviousResponse | undefined {
+  const res: PreviousResponse = {};
+  if (typeof r.rebalance === 'boolean') res.rebalance = r.rebalance;
+  if (typeof r.newAllocation === 'number') res.newAllocation = r.newAllocation;
+  if (typeof r.shortReport === 'string') res.shortReport = r.shortReport;
+  if (r.error !== undefined && r.error !== null) res.error = r.error;
+  return Object.keys(res).length ? res : undefined;
+}
+
+export async function collectPromptData(
+  row: ActivePortfolioWorkflowRow,
+  log: FastifyBaseLogger,
+): Promise<RebalancePrompt | undefined> {
+  const token1 = row.tokens[0].token;
+  const token2 = row.tokens[1].token;
+  let token1Balance: number | undefined;
+  let token2Balance: number | undefined;
+  try {
+    const account = await fetchAccount(row.user_id);
+    if (account) {
+      const bal1 = account.balances.find((b) => b.asset === token1);
+      if (bal1) token1Balance = Number(bal1.free) + Number(bal1.locked);
+      const bal2 = account.balances.find((b) => b.asset === token2);
+      if (bal2) token2Balance = Number(bal2.free) + Number(bal2.locked);
+    }
+  } catch (err) {
+    log.error({ err }, 'failed to fetch balance');
+  }
+  if (token1Balance === undefined || token2Balance === undefined) {
+    log.error('failed to fetch token balances');
+    return undefined;
+  }
+
+  const [pair, price1Data, price2Data] = await Promise.all([
+    fetchPairData(token1, token2),
+    token1 === 'USDT' || token1 === 'USDC'
+      ? Promise.resolve({ currentPrice: 1 })
+      : fetchPairData(token1, 'USDT'),
+    token2 === 'USDT' || token2 === 'USDC'
+      ? Promise.resolve({ currentPrice: 1 })
+      : fetchPairData(token2, 'USDT'),
+  ]);
+
+  const { floor, positions } = computePortfolioValues(
+    row,
+    { token1Balance, token2Balance },
+    price1Data.currentPrice,
+    price2Data.currentPrice,
+  );
+
+  const prevRows = await getRecentReviewResults(row.id, 5);
+  const previousResponses = prevRows
+    .map(extractPreviousResponse)
+    .filter(Boolean) as PreviousResponse[];
+
   const prompt: RebalancePrompt = {
-    instructions,
+    instructions: row.agent_instructions,
     policy: { floor },
     portfolio: { ts: new Date().toISOString(), positions },
-    marketData: { currentPrice },
+    marketData: { currentPrice: pair.currentPrice },
     reports: TOKEN_SYMBOLS.map((token) => ({
       token,
       news: null,
@@ -40,7 +116,7 @@ export function preparePrompt({
       orderbook: null,
     })),
   };
-  if (previousResponses && previousResponses.length) {
+  if (previousResponses.length) {
     prompt.previous_responses = previousResponses;
   }
   return prompt;
