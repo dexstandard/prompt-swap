@@ -7,111 +7,96 @@ import {
   callAi,
   developerInstructions,
   rebalanceResponseSchema,
+  type RebalancePosition,
+  type PreviousResponse,
   type RebalancePrompt,
 } from '../util/ai.js';
+import { TOKEN_SYMBOLS } from '../util/tokens.js';
 
-interface MainTraderOptions {
+export interface PreparePromptParams {
+  instructions: string;
+  floor: Record<string, number>;
+  positions: RebalancePosition[];
+  currentPrice: number;
+  previousResponses?: PreviousResponse[];
+}
+
+export function preparePrompt({
+  instructions,
+  floor,
+  positions,
+  currentPrice,
+  previousResponses,
+}: PreparePromptParams): RebalancePrompt {
+  const prompt: RebalancePrompt = {
+    instructions,
+    policy: { floor },
+    portfolio: { ts: new Date().toISOString(), positions },
+    marketData: { currentPrice },
+    reports: TOKEN_SYMBOLS.map((token) => ({
+      token,
+      news: null,
+      tech: null,
+      orderbook: null,
+    })),
+  };
+  if (previousResponses && previousResponses.length) {
+    prompt.previous_responses = previousResponses;
+  }
+  return prompt;
+}
+
+export interface RunParams {
   log: FastifyBaseLogger;
   model: string;
   apiKey: string;
   timeframe: string;
   agentId: string;
-  portfolioId: string;
 }
 
-export class MainTraderAgent {
-  private log: FastifyBaseLogger;
-  private model: string;
-  private apiKey: string;
-  private timeframe: string;
-  private agentId: string;
-  private portfolioId: string;
+export interface MainTraderDecision {
+  rebalance: boolean;
+  newAllocation?: number;
+  shortReport: string;
+}
 
-  constructor(opts: MainTraderOptions) {
-    this.log = opts.log;
-    this.model = opts.model;
-    this.apiKey = opts.apiKey;
-    this.timeframe = opts.timeframe;
-    this.agentId = opts.agentId;
-    this.portfolioId = opts.portfolioId;
-  }
-
-  private extractResult(res: string): any {
-    try {
-      const json = JSON.parse(res);
-      const outputs = Array.isArray((json as any).output)
-        ? (json as any).output
-        : [];
-      const msg = outputs.find(
-        (o: any) => o.type === 'message' || o.id?.startsWith('msg_'),
-      );
-      const text = msg?.content?.[0]?.text;
-      if (typeof text !== 'string') return null;
-      const parsed = JSON.parse(text);
-      return parsed.result ?? null;
-    } catch {
-      return null;
-    }
-  }
-
-  async run(prompt: RebalancePrompt): Promise<{
-    rebalance: boolean;
-    newAllocation?: number;
-    shortReport: string;
-  } | null> {
-    await Promise.all([
-      runNewsAnalyst(this.log, this.model, this.apiKey, this.agentId, prompt),
-      runTechnicalAnalyst(
-        this.log,
-        this.model,
-        this.apiKey,
-        this.timeframe,
-        this.agentId,
-        prompt,
-      ),
-      runOrderBookAnalyst(this.log, this.model, this.apiKey, this.agentId, prompt),
-    ]);
-    await runPerformanceAnalyzer(
-      this.log,
-      this.model,
-      this.apiKey,
-      this.agentId,
-      prompt,
-    );
-    const res = await callAi(
-      this.model,
-      developerInstructions,
-      rebalanceResponseSchema,
-      prompt,
-      this.apiKey,
-      true,
-    );
-    const decision = this.extractResult(res);
-    if (!decision) {
-      this.log.error('main trader returned invalid response');
-      return null;
-    }
-    return decision;
+function extractResult(res: string): MainTraderDecision | null {
+  try {
+    const json = JSON.parse(res);
+    const outputs = Array.isArray((json as any).output) ? (json as any).output : [];
+    const msg = outputs.find((o: any) => o.type === 'message' || o.id?.startsWith('msg_'));
+    const text = msg?.content?.[0]?.text;
+    if (typeof text !== 'string') return null;
+    const parsed = JSON.parse(text);
+    return parsed.result ?? null;
+  } catch {
+    return null;
   }
 }
 
-export async function runMainTrader(
-  log: FastifyBaseLogger,
-  model: string,
-  apiKey: string,
-  timeframe: string,
-  agentId: string,
-  portfolioId: string,
+export async function run(
+  { log, model, apiKey, timeframe, agentId }: RunParams,
   prompt: RebalancePrompt,
-) {
-  const agent = new MainTraderAgent({
-    log,
+): Promise<MainTraderDecision | null> {
+  await Promise.all([
+    runNewsAnalyst(log, model, apiKey, agentId, prompt),
+    runTechnicalAnalyst(log, model, apiKey, timeframe, agentId, prompt),
+    runOrderBookAnalyst(log, model, apiKey, agentId, prompt),
+  ]);
+  await runPerformanceAnalyzer(log, model, apiKey, agentId, prompt);
+  const res = await callAi(
     model,
+    developerInstructions,
+    rebalanceResponseSchema,
+    prompt,
     apiKey,
-    timeframe,
-    agentId,
-    portfolioId,
-  });
-  return agent.run(prompt);
+    true,
+  );
+  const decision = extractResult(res);
+  if (!decision) {
+    log.error('main trader returned invalid response');
+    return null;
+  }
+  return decision;
 }
 

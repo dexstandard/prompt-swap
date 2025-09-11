@@ -4,7 +4,7 @@ import {
   getActivePortfolioWorkflowsByInterval,
   type ActivePortfolioWorkflowRow,
 } from '../repos/portfolio-workflow.js';
-import { runMainTrader } from '../agents/main-trader.js';
+import { run as runMainTrader, preparePrompt } from '../agents/main-trader.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import {
   getOpenLimitOrdersForAgent,
@@ -24,7 +24,6 @@ import {
   parseBinanceError,
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
-import { TOKEN_SYMBOLS } from '../util/tokens.js';
 import { type RebalancePrompt, type PreviousResponse } from '../util/ai.js';
 
 /** Workflows currently running. Used to avoid concurrent runs. */
@@ -214,34 +213,25 @@ export async function executeWorkflow(
       price2Data.currentPrice,
     );
 
-    prompt = {
-      instructions: row.agent_instructions,
-      policy: { floor },
-      portfolio: {
-        ts: new Date().toISOString(),
-        positions,
-      },
-      marketData: { currentPrice: pair.currentPrice },
-      reports: TOKEN_SYMBOLS.map((token) => ({
-        token,
-        news: null,
-        tech: null,
-        orderbook: null,
-      })),
-    };
-
     const prevRows = await getRecentReviewResults(row.id, 5);
-    prompt.previous_responses = prevRows
-      .map(extractPreviousResponse)
-      .filter(Boolean) as PreviousResponse[];
+    prompt = preparePrompt({
+      instructions: row.agent_instructions,
+      floor,
+      positions,
+      currentPrice: pair.currentPrice,
+      previousResponses: prevRows
+        .map(extractPreviousResponse)
+        .filter(Boolean) as PreviousResponse[],
+    });
 
     const decision = await runMainTrader(
-      log,
-      row.model,
-      key,
-      row.review_interval,
-      row.id,
-      row.portfolio_id,
+      {
+        log,
+        model: row.model,
+        apiKey: key,
+        timeframe: row.review_interval,
+        agentId: row.id,
+      },
       prompt,
     );
     const logId = await insertReviewRawLog({
