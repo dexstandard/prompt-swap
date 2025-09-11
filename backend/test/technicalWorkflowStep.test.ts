@@ -49,7 +49,6 @@ describe('technical analyst step', () => {
         log: createLogger(),
         model: 'gpt',
         apiKey: 'key',
-        timeframe: '1d',
         portfolioId: 'agent1',
       },
       prompt,

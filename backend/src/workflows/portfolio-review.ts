@@ -161,7 +161,7 @@ export async function executeWorkflow(
     const params = { log, model: wf.model, apiKey: key, portfolioId: wf.id };
     await Promise.all([
       runNewsAnalyst(params, prompt),
-      runTechnicalAnalyst({ ...params, timeframe: wf.review_interval }, prompt),
+      runTechnicalAnalyst(params, prompt),
     ]);
 
     const decision = await runMainTrader(params, prompt);
