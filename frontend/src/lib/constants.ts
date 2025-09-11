@@ -79,7 +79,7 @@ export const portfolioReviewSchema = z
   })
   .refine((data) => {
     const total = data.tokens.reduce((sum, t) => sum + t.minAllocation, 0);
-    return total <= 95;
+    return total === 95;
   }, {
     message: 'Min allocations must not exceed 95% total',
     path: ['tokens'],
@@ -89,7 +89,7 @@ export type PortfolioReviewFormValues = z.infer<typeof portfolioReviewSchema>;
 
 export const portfolioReviewDefaults: PortfolioReviewFormValues = {
   tokens: [
-    { token: 'USDT', minAllocation: 0 },
+    { token: 'USDT', minAllocation: 95 },
     { token: 'BTC', minAllocation: 0 },
   ],
   risk: 'low',

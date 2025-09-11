@@ -37,6 +37,7 @@ export default function PortfolioReviewForm({
     handleSubmit,
     watch,
     control,
+    setValue,
     formState: { isSubmitting },
   } = useForm<PortfolioReviewFormValues>({
     resolver: zodResolver(portfolioReviewSchema),
@@ -210,6 +211,7 @@ export default function PortfolioReviewForm({
                       type="number"
                       min={0}
                       max={95}
+                      disabled={index === 0}
                       {...field}
                       onChange={(e) =>
                         field.onChange(
