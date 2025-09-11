@@ -1,11 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 
-vi.mock('../src/util/tokens.js', () => ({
-  TOKEN_SYMBOLS: ['BTC', 'USDC'],
-  isStablecoin: (sym: string) => sym === 'USDC',
-}));
-
 const insertReviewRawLogMock = vi.fn();
 vi.mock('../src/repos/agent-review-raw-log.js', () => ({
   insertReviewRawLog: insertReviewRawLogMock,
@@ -28,8 +23,9 @@ vi.mock('../src/services/derivatives.js', () => ({
   fetchOrderBook: vi.fn().mockResolvedValue({ bid: [0, 0], ask: [0, 0] }),
 }));
 
+const callAiMock = vi.fn().mockResolvedValue('res');
 vi.mock('../src/util/ai.js', () => ({
-  callAi: vi.fn().mockResolvedValue('res'),
+  callAi: callAiMock,
   extractJson: () => ({ comment: 'outlook for BTC', score: 2 }),
 }));
 
@@ -41,7 +37,12 @@ function createLogger(): FastifyBaseLogger {
 describe('technical analyst step', () => {
   it('fetches technical outlook per token', async () => {
     const mod = await import('../src/agents/technical-analyst.js');
-    const prompt: any = {};
+    const prompt: any = {
+      reports: [
+        { token: 'BTC', news: null, tech: null },
+        { token: 'USDC', news: null, tech: null },
+      ],
+    };
     await mod.runTechnicalAnalyst(
       {
         log: createLogger(),
@@ -54,7 +55,8 @@ describe('technical analyst step', () => {
     );
     const report = prompt.reports?.find((r: any) => r.token === 'BTC');
     expect(report?.tech?.comment).toBe('outlook for BTC');
-    expect(prompt.reports?.find((r: any) => r.token === 'USDC')).toBeUndefined();
+    expect(prompt.reports?.find((r: any) => r.token === 'USDC')?.tech).toBeNull();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
+    expect(callAiMock).toHaveBeenCalledTimes(1);
   });
 });

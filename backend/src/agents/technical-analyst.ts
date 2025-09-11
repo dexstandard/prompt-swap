@@ -3,8 +3,27 @@ import { fetchTokenIndicators } from '../services/indicators.js';
 import { fetchOrderBook } from '../services/derivatives.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import { callAi, extractJson, type RebalancePrompt } from '../util/ai.js';
-import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';
+import { isStablecoin } from '../util/tokens.js';
 import { type AnalysisLog, type Analysis, analysisSchema, type RunParams } from './types.js';
+
+const CACHE_MS = 3 * 60 * 1000;
+const cache = new Map<string, { promise: Promise<AnalysisLog>; expires: number }>();
+
+export function getTechnicalOutlookCached(
+  token: string,
+  model: string,
+  apiKey: string,
+  timeframe: string,
+  log: FastifyBaseLogger,
+): Promise<AnalysisLog> {
+  const now = Date.now();
+  const cached = cache.get(token);
+  if (cached && cached.expires > now) return cached.promise;
+  const promise = getTechnicalOutlook(token, model, apiKey, timeframe, log);
+  cache.set(token, { promise, expires: now + CACHE_MS });
+  promise.catch(() => cache.delete(token));
+  return promise;
+}
 
 export async function getTechnicalOutlook(
   token: string,
@@ -36,10 +55,11 @@ export async function runTechnicalAnalyst(
   { log, model, apiKey, timeframe, portfolioId }: RunParams,
   prompt: RebalancePrompt,
 ): Promise<void> {
-  if (!prompt.reports) prompt.reports = [];
-  for (const token of TOKEN_SYMBOLS) {
+  if (!prompt.reports) return;
+  for (const report of prompt.reports) {
+    const { token } = report;
     if (isStablecoin(token)) continue;
-    const { analysis, prompt: p, response } = await getTechnicalOutlook(
+    const { analysis, prompt: p, response } = await getTechnicalOutlookCached(
       token,
       model,
       apiKey,
@@ -48,11 +68,6 @@ export async function runTechnicalAnalyst(
     );
     if (p && response)
       await insertReviewRawLog({ portfolioId, prompt: p, response });
-    let report = prompt.reports.find((r) => r.token === token);
-    if (!report) {
-      report = { token, news: null, tech: null };
-      prompt.reports.push(report);
-    }
     report.tech = analysis;
   }
 }
