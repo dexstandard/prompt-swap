@@ -5,6 +5,7 @@ export const developerInstructions = [
   '- You lead a crypto analyst team (news, technical). Reports from each member are attached.',
   '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
   '- Decide whether to rebalance based on portfolio, market data, and analyst reports.',
+  '- Verify limit orders meet minNotional to avoid cancellations, especially for small amounts.',
   '- If rebalancing, return {rebalance:true,newAllocation:0-100 for first token,shortReport}.',
   '- If not, return {rebalance:false,shortReport}.',
   '- shortReport ≤255 chars.',
@@ -72,6 +73,7 @@ export interface RebalancePrompt {
   }[];
   marketData: {
     currentPrice: number;
+    minNotional: number;
     indicators?: Record<string, TokenMetrics>;
     market_timeseries?: Record<string, MarketTimeseries>;
     fearGreedIndex?: { value: number; classification: string };
@@ -80,12 +82,12 @@ export interface RebalancePrompt {
     /**
      * News analyst report for each token.
      */
-    newsReports?: Record<string, string>;
+    newsReports?: Record<string, Analysis>;
   };
   previous_responses?: PreviousResponse[];
   reports?: {
     token: string;
-    news: string | null;
+    news: Analysis | null;
     tech: Analysis | null;
   }[];
 }

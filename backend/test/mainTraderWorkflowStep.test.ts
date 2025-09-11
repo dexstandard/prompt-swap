@@ -42,7 +42,7 @@ describe('main trader step', () => {
       instructions: '',
       policy: { floor: {} },
       portfolio: { ts: new Date().toISOString(), positions: [] },
-      marketData: { currentPrice: 0 },
+      marketData: { currentPrice: 0, minNotional: 10 },
       reports: [{ token: 'BTC', news: null, tech: null }],
     };
     const decision = await run(
