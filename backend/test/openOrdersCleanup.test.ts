@@ -86,4 +86,47 @@ describe('cleanup open orders', () => {
     const { rows } = await db.query("SELECT status FROM limit_order WHERE order_id = '123'");
     expect(rows[0].status).toBe('canceled');
   });
+
+  it('cancels multiple open orders in parallel', async () => {
+    cancelOrder.mockReset();
+    const resolves: (() => void)[] = [];
+    cancelOrder.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolves.push(resolve);
+        }),
+    );
+
+    await db.query('INSERT INTO users (id) VALUES ($1)', ['1']);
+    await db.query("INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)", ['1', 'enc']);
+    await db.query(
+      "INSERT INTO portfolio_workflow (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'A', 'low', '1h', 'inst', false)",
+      ['1', '1'],
+    );
+    await db.query(
+      "INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
+      ['1'],
+    );
+    const rr = await db.query(
+      "INSERT INTO agent_review_result (agent_id, log, rebalance, new_allocation, short_report) VALUES ($1, $2, true, 50, 's') RETURNING id",
+      ['1', 'log'],
+    );
+    await db.query(
+      "INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, 'open', $3, $4), ($1, $2, 'open', $3, $5)",
+      ['1', JSON.stringify({ symbol: 'BTCETH', side: 'BUY', quantity: 1, price: 1 }), rr.rows[0].id, '123', '456'],
+    );
+
+    const log = { child: () => log, info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
+    const runPromise = reviewAgentPortfolio(log, '1');
+    await vi.waitUntil(() => cancelOrder.mock.calls.length === 2);
+    resolves.forEach((r) => r());
+    await runPromise;
+    const { rows } = await db.query(
+      "SELECT order_id, status FROM limit_order ORDER BY order_id",
+    );
+    expect(rows).toEqual([
+      { order_id: '123', status: 'canceled' },
+      { order_id: '456', status: 'canceled' },
+    ]);
+  });
 });

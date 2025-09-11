@@ -30,6 +30,7 @@ import {
 } from '../services/binance.js';
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import { type RebalancePrompt } from '../util/ai.js';
+import pLimit from 'p-limit';
 
 /** Workflows currently running. Used to avoid concurrent runs. */
 const runningWorkflows = new Set<string>();
@@ -94,24 +95,29 @@ async function cleanupOpenOrders(
   log: FastifyBaseLogger,
 ) {
   const orders = await getOpenLimitOrdersForAgent(wf.id);
-  for (const o of orders) {
-    const planned = JSON.parse(o.planned_json);
-    try {
-      await cancelOrder(o.user_id, {
-        symbol: planned.symbol,
-        orderId: Number(o.order_id),
-      });
-      await updateLimitOrderStatus(o.user_id, o.order_id, 'canceled');
-      log.info({ orderId: o.order_id }, 'canceled stale order');
-    } catch (err) {
-      const msg = parseBinanceError(err);
-      if (msg && /UNKNOWN_ORDER/i.test(msg)) {
-        await updateLimitOrderStatus(o.user_id, o.order_id, 'filled');
-      } else {
-        log.error({ err }, 'failed to cancel order');
-      }
-    }
-  }
+  const limit = pLimit(5);
+  await Promise.all(
+    orders.map((o) =>
+      limit(async () => {
+        const planned = JSON.parse(o.planned_json);
+        try {
+          await cancelOrder(o.user_id, {
+            symbol: planned.symbol,
+            orderId: Number(o.order_id),
+          });
+          await updateLimitOrderStatus(o.user_id, o.order_id, 'canceled');
+          log.info({ orderId: o.order_id }, 'canceled stale order');
+        } catch (err) {
+          const msg = parseBinanceError(err);
+          if (msg && /UNKNOWN_ORDER/i.test(msg)) {
+            await updateLimitOrderStatus(o.user_id, o.order_id, 'filled');
+          } else {
+            log.error({ err }, 'failed to cancel order');
+          }
+        }
+      }),
+    ),
+  );
 }
 
 function buildReviewResultEntry({
