@@ -98,6 +98,18 @@ export async function collectPromptData(
     price2Data.currentPrice,
   );
 
+  const portfolio: RebalancePrompt['portfolio'] = {
+    ts: new Date().toISOString(),
+    positions,
+  };
+
+  const totalValue = positions.reduce((sum, p) => sum + p.value_usdt, 0);
+  if (row.start_balance !== null) {
+    portfolio.start_balance_usd = row.start_balance;
+    portfolio.start_balance_ts = row.created_at;
+    portfolio.pnl_usd = totalValue - row.start_balance;
+  }
+
   const prevRows = await getRecentReviewResults(row.id, 5);
   const previousResponses = prevRows
     .map(extractPreviousResponse)
@@ -106,7 +118,7 @@ export async function collectPromptData(
   const prompt: RebalancePrompt = {
     instructions: row.agent_instructions,
     policy: { floor },
-    portfolio: { ts: new Date().toISOString(), positions },
+    portfolio,
     marketData: { currentPrice: pair.currentPrice, minNotional: info.minNotional },
     reports: row.tokens
       .map((t) => t.token)

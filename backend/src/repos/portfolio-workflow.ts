@@ -287,6 +287,8 @@ export interface ActivePortfolioWorkflowRow {
   agent_instructions: string;
   ai_api_key_enc: string;
   manual_rebalance: boolean;
+  start_balance: number | null;
+  created_at: string;
   portfolio_id: string;
 }
 
@@ -307,6 +309,8 @@ export async function getActivePortfolioWorkflowById(
                         )
                       ) AS ai_api_key_enc,
                       a.manual_rebalance,
+                      a.start_balance,
+                      a.created_at,
                       a.id AS portfolio_id
                  FROM portfolio_workflow a
                  LEFT JOIN LATERAL (
@@ -336,6 +340,8 @@ export async function getActivePortfolioWorkflowsByInterval(
                         )
                       ) AS ai_api_key_enc,
                       a.manual_rebalance,
+                      a.start_balance,
+                      a.created_at,
                       a.id AS portfolio_id
                  FROM portfolio_workflow a
                  LEFT JOIN LATERAL (
@@ -365,6 +371,8 @@ export async function getActivePortfolioWorkflowsByUser(
                         )
                       ) AS ai_api_key_enc,
                       a.manual_rebalance,
+                      a.start_balance,
+                      a.created_at,
                       a.id AS portfolio_id
                  FROM portfolio_workflow a
                  LEFT JOIN LATERAL (
