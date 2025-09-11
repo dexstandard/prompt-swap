@@ -11,6 +11,25 @@ vi.mock('../src/repos/agent-review-raw-log.js', () => ({
   insertReviewRawLog: insertReviewRawLogMock,
 }));
 
+vi.mock('../src/services/indicators.js', () => ({
+  fetchTokenIndicators: vi.fn().mockResolvedValue({
+    ret: {},
+    sma_dist: {},
+    macd_hist: 0,
+    vol: {},
+    range: {},
+    volume: {},
+    corr: {},
+    regime: {},
+    osc: {},
+  }),
+}));
+
+vi.mock('../src/util/ai.js', () => ({
+  callAi: vi.fn().mockResolvedValue('res'),
+  extractJson: () => ({ comment: 'outlook for BTC', score: 2 }),
+}));
+
 function createLogger(): FastifyBaseLogger {
   const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
   return log;
@@ -19,11 +38,6 @@ function createLogger(): FastifyBaseLogger {
 describe('technical analyst step', () => {
   it('fetches technical outlook per token', async () => {
     const mod = await import('../src/agents/technical-analyst.js');
-    vi.spyOn(mod, 'getTechnicalOutlook').mockResolvedValue({
-      analysis: { comment: 'outlook for BTC', score: 2 },
-      prompt: { instructions: '', input: {} },
-      response: 'res',
-    });
     const outlooks = await mod.runTechnicalAnalyst(
       createLogger(),
       'gpt',
@@ -32,7 +46,6 @@ describe('technical analyst step', () => {
       'agent1',
     );
     expect(outlooks.BTC?.comment).toBe('outlook for BTC');
-    expect(mod.getTechnicalOutlook).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

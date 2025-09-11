@@ -11,6 +11,15 @@ vi.mock('../src/repos/agent-review-raw-log.js', () => ({
   insertReviewRawLog: insertReviewRawLogMock,
 }));
 
+vi.mock('../src/services/derivatives.js', () => ({
+  fetchOrderBook: vi.fn().mockResolvedValue({ bids: [], asks: [] }),
+}));
+
+vi.mock('../src/util/ai.js', () => ({
+  callAi: vi.fn().mockResolvedValue('res'),
+  extractJson: () => ({ comment: 'analysis for BTCUSDT', score: 3 }),
+}));
+
 function createLogger(): FastifyBaseLogger {
   const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
   return log;
@@ -19,14 +28,13 @@ function createLogger(): FastifyBaseLogger {
 describe('order book analyst step', () => {
   it('fetches order book analysis per pair', async () => {
     const mod = await import('../src/agents/order-book-analyst.js');
-    vi.spyOn(mod, 'getOrderBookAnalysis').mockResolvedValue({
-      analysis: { comment: 'analysis for BTCUSDT', score: 3 },
-      prompt: { instructions: '', input: {} },
-      response: 'res',
-    });
-    const analyses = await mod.runOrderBookAnalyst(createLogger(), 'gpt', 'key', 'agent1');
+    const analyses = await mod.runOrderBookAnalyst(
+      createLogger(),
+      'gpt',
+      'key',
+      'agent1',
+    );
     expect(analyses.BTC?.comment).toBe('analysis for BTCUSDT');
-    expect(mod.getOrderBookAnalysis).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });
