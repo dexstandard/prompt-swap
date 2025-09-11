@@ -67,7 +67,7 @@ async function runReviewWorkflows(
 
   await Promise.all(
     prepared.map(({ row, prompt, key, log: lg }) =>
-      executeAgent(row, prompt, key, lg).finally(() => {
+      executeWorkflow(row, prompt, key, lg).finally(() => {
         runningWorkflows.delete(row.id);
       }),
     ),
@@ -156,7 +156,6 @@ export async function prepareWorkflows(
       const msg = 'failed to fetch market data';
       await saveFailure(row, msg);
       log.error({ err }, 'workflow run failed');
-      continue;
     }
   }
 
@@ -258,7 +257,7 @@ function computePortfolioValues(
   return { floor, positions };
 }
 
-export async function executeAgent(
+export async function executeWorkflow(
   row: ActivePortfolioWorkflowRow,
   prompt: RebalancePrompt,
   key: string,
