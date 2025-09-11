@@ -59,6 +59,9 @@ export interface RebalancePrompt {
   portfolio: {
     ts: string;
     positions: RebalancePosition[];
+    start_balance_usd?: number;
+    start_balance_ts?: string;
+    pnl_usd?: number;
   };
   /**
    * Summary of recent limit orders placed by the agent. Only essential
