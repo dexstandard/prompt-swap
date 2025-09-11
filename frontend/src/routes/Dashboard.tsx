@@ -10,7 +10,7 @@ import TokenDisplay from '../components/TokenDisplay';
 import { useAgentBalanceUsd } from '../lib/useAgentBalanceUsd';
 import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
-import CreateAgentForm from '../components/forms/CreateAgentForm';
+import PortfolioReviewForm from '../components/forms/PortfolioReviewForm';
 import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
 import WalletBalances from '../components/WalletBalances';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -259,7 +259,7 @@ function AgentBlock({
 export default function Dashboard() {
   const { user } = useUser();
   const [page, setPage] = useState(1);
-  const [tokens, setTokens] = useState(['USDT', 'SOL']);
+  const [tokens, setTokens] = useState(['USDT']);
   const [onlyActive, setOnlyActive] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -267,9 +267,12 @@ export default function Dashboard() {
   const { hasBinanceKey, balances } = usePrerequisites(tokens);
 
   const handleTokensChange = useCallback((newTokens: string[]) => {
-    setTokens((prev) =>
-      prev[0] === newTokens[0] && prev[1] === newTokens[1] ? prev : newTokens
-    );
+    setTokens((prev) => {
+      if (prev.length === newTokens.length && prev.every((t, i) => t === newTokens[i])) {
+        return prev;
+      }
+      return newTokens;
+    });
   }, []);
 
   const { data } = useQuery({
@@ -351,21 +354,27 @@ export default function Dashboard() {
   return (
     <>
       <div className="flex flex-col gap-3 w-full">
-        <div className="flex flex-col md:flex-row gap-3 items-stretch">
-          <div className="hidden md:flex flex-1 flex-col gap-4">
-            {!hasBinanceKey && (
-              <ExchangeApiKeySection
-                exchange="binance"
-                label={t('connect_binance_api')}
-              />
-            )}
-            <WalletBalances
-              balances={balances}
-              hasBinanceKey={hasBinanceKey}
+      <div className="flex flex-col md:flex-row gap-3 items-stretch">
+        <div className="flex-1 flex flex-col gap-4">
+          {!hasBinanceKey ? (
+            <ExchangeApiKeySection
+              exchange="binance"
+              label={t('connect_binance_api')}
             />
-          </div>
-          <CreateAgentForm onTokensChange={handleTokensChange} />
+          ) : (
+            <PortfolioReviewForm
+              balances={balances}
+              onTokensChange={handleTokensChange}
+            />
+          )}
         </div>
+        <div className="hidden md:flex flex-1 flex-col gap-4">
+          <WalletBalances
+            balances={balances}
+            hasBinanceKey={hasBinanceKey}
+          />
+        </div>
+      </div>
         <ErrorBoundary>
           <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
             <div className="flex items-center justify-between mb-4">
