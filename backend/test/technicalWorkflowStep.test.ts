@@ -24,6 +24,9 @@ vi.mock('../src/services/indicators.js', () => ({
     osc: {},
   }),
 }));
+vi.mock('../src/services/derivatives.js', () => ({
+  fetchOrderBook: vi.fn().mockResolvedValue({ bid: [0, 0], ask: [0, 0] }),
+}));
 
 vi.mock('../src/util/ai.js', () => ({
   callAi: vi.fn().mockResolvedValue('res'),

@@ -111,7 +111,6 @@ export async function collectPromptData(
       token,
       news: null,
       tech: null,
-      orderbook: null,
     })),
   };
   if (previousResponses.length) {

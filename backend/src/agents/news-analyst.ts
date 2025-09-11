@@ -56,7 +56,7 @@ export async function runNewsAnalyst(
       await insertReviewRawLog({ portfolioId, prompt: p, response });
     let report = prompt.reports.find((r) => r.token === token);
     if (!report) {
-      report = { token, news: null, tech: null, orderbook: null };
+      report = { token, news: null, tech: null };
       prompt.reports.push(report);
     }
     report.news = analysis;

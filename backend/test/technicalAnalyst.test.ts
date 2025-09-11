@@ -23,9 +23,12 @@ const responseJson = JSON.stringify({
 });
 
 describe('technical analyst', () => {
-  vi.mock('../src/services/indicators.js', () => ({
-    fetchTokenIndicators: vi.fn().mockResolvedValue({ rsi: 50 }),
-  }));
+vi.mock('../src/services/indicators.js', () => ({
+  fetchTokenIndicators: vi.fn().mockResolvedValue({ rsi: 50 }),
+}));
+vi.mock('../src/services/derivatives.js', () => ({
+  fetchOrderBook: vi.fn().mockResolvedValue({ bid: [0, 0], ask: [0, 0] }),
+}));
 
   it('returns outlook', async () => {
     const fetchMock = vi

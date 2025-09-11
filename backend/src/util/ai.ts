@@ -2,7 +2,7 @@ import type { Analysis } from '../agents/types.js';
 import {MainTraderDecision} from "../agents/main-trader.js";
 
 export const developerInstructions = [
-  '- You lead a crypto analyst team (news, technical, order-book). Reports from each member are attached.',
+  '- You lead a crypto analyst team (news, technical). Reports from each member are attached.',
   '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
   '- Decide whether to rebalance based on portfolio, market data, and analyst reports.',
   '- If rebalancing, return {rebalance:true,newAllocation:0-100 for first token,shortReport}.',
@@ -77,7 +77,6 @@ export interface RebalancePrompt {
     fearGreedIndex?: { value: number; classification: string };
     openInterest?: number;
     fundingRate?: number;
-    orderBook?: { bid: [number, number]; ask: [number, number] };
     /**
      * News analyst report for each token.
      */
@@ -88,9 +87,7 @@ export interface RebalancePrompt {
     token: string;
     news: Analysis | null;
     tech: Analysis | null;
-    orderbook: Analysis | null;
   }[];
-  performance?: Analysis | null;
 }
 
 export const rebalanceResponseSchema = {
