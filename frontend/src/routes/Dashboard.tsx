@@ -362,11 +362,11 @@ export default function Dashboard() {
               label={
                 <span className="flex items-center">
                   {t('connect_binance_api')}
-                  <InfoTooltip>
+                  <InfoTooltip contentClassName="p-0 bg-transparent w-80">
                     <img
                       src="/tips/binance-api-tip.png"
                       alt="Binance API tip"
-                      className="w-full"
+                      className="block w-full"
                     />
                   </InfoTooltip>
                 </span>
