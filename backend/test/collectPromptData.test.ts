@@ -17,6 +17,16 @@ vi.mock('../src/repos/agent-review-result.js', () => ({
   getRecentReviewResults: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('../src/repos/limit-orders.js', () => ({
+  getRecentLimitOrders: vi.fn().mockResolvedValue(
+    Array.from({ length: 5 }, (_, i) => ({
+      planned_json: JSON.stringify({ symbol: 'BTCUSDT', side: 'BUY', quantity: i + 1 }),
+      status: 'filled',
+      created_at: new Date(`2025-01-0${i + 1}T00:00:00.000Z`),
+    })),
+  ),
+}));
+
 function createLogger(): FastifyBaseLogger {
   return { info: () => {}, error: () => {} } as unknown as FastifyBaseLogger;
 }
@@ -46,6 +56,37 @@ describe('collectPromptData', () => {
     expect(prompt?.portfolio.start_balance_usd).toBe(20000);
     expect(prompt?.portfolio.start_balance_ts).toBe('2025-01-01T00:00:00.000Z');
     expect(prompt?.portfolio.pnl_usd).toBeCloseTo(1000);
+  });
+
+  it('includes recent limit orders in prompt', async () => {
+    const { collectPromptData } = await import('../src/agents/main-trader.js');
+    const row: ActivePortfolioWorkflowRow = {
+      id: '1',
+      user_id: 'u1',
+      model: 'm',
+      tokens: [
+        { token: 'BTC', min_allocation: 50 },
+        { token: 'USDT', min_allocation: 50 },
+      ],
+      risk: 'low',
+      review_interval: '1h',
+      agent_instructions: 'inst',
+      ai_api_key_enc: '',
+      manual_rebalance: false,
+      start_balance: null,
+      created_at: '2025-01-01T00:00:00.000Z',
+      portfolio_id: '1',
+    };
+
+    const prompt = await collectPromptData(row, createLogger());
+    expect(prompt?.prev_orders).toHaveLength(5);
+    expect(prompt?.prev_orders?.[0]).toMatchObject({
+      symbol: 'BTCUSDT',
+      side: 'BUY',
+      amount: 1,
+      datetime: '2025-01-01T00:00:00.000Z',
+      status: 'filled',
+    });
   });
 });
 
