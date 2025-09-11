@@ -8,6 +8,7 @@ export interface BalanceInfo {
   isLoading: boolean;
   walletBalance: number;
   earnBalance: number;
+  usdValue: number;
 }
 
 export function usePrerequisites(tokens: string[]) {
@@ -99,16 +100,39 @@ export function usePrerequisites(tokens: string[]) {
     })),
   });
 
-  const balances: BalanceInfo[] = tokens.map((token, idx) => ({
-    token,
-    isLoading:
-      (balanceQueries[idx]?.isLoading ?? false) ||
-      (earnBalanceQueries[idx]?.isLoading ?? false),
-    walletBalance:
+  const priceQueries = useQueries({
+    queries: tokens.map((token) => ({
+      queryKey: ['binance-price', token.toUpperCase()],
+      enabled: !!user && hasBinanceKey,
+      queryFn: async () => {
+        if (['USDT', 'USDC'].includes(token.toUpperCase())) return 1;
+        const res = await fetch(
+          `https://api.binance.com/api/v3/ticker/price?symbol=${token.toUpperCase()}USDT`,
+        );
+        if (!res.ok) return 0;
+        const data = (await res.json()) as { price: string };
+        return Number(data.price);
+      },
+    })),
+  });
+
+  const balances: BalanceInfo[] = tokens.map((token, idx) => {
+    const wallet =
       (balanceQueries[idx]?.data?.free ?? 0) +
-      (balanceQueries[idx]?.data?.locked ?? 0),
-    earnBalance: earnBalanceQueries[idx]?.data?.total ?? 0,
-  }));
+      (balanceQueries[idx]?.data?.locked ?? 0);
+    const earn = earnBalanceQueries[idx]?.data?.total ?? 0;
+    const price = priceQueries[idx]?.data ?? 0;
+    return {
+      token,
+      isLoading:
+        (balanceQueries[idx]?.isLoading ?? false) ||
+        (earnBalanceQueries[idx]?.isLoading ?? false) ||
+        (priceQueries[idx]?.isLoading ?? false),
+      walletBalance: wallet,
+      earnBalance: earn,
+      usdValue: (wallet + earn) * price,
+    };
+  });
 
   return {
     hasOpenAIKey,
