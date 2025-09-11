@@ -1,6 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { callAi, extractJson, type RebalancePrompt } from '../util/ai.js';
-import { type AnalysisLog, type Analysis, analysisSchema } from './types.js';
+import { type AnalysisLog, type Analysis, analysisSchema, type RunParams } from './types.js';
 import { getRecentLimitOrders } from '../repos/limit-orders.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 
@@ -35,14 +35,11 @@ export async function getPerformanceAnalysis(
 }
 
 export async function runPerformanceAnalyzer(
-  log: FastifyBaseLogger,
-  model: string,
-  apiKey: string,
-  agentId: string,
+  { log, model, apiKey, portfolioId }: RunParams,
   prompt: RebalancePrompt,
 ): Promise<void> {
   try {
-    const fetched = await getRecentLimitOrders(agentId, 20);
+    const fetched = await getRecentLimitOrders(portfolioId, 20);
     const orders = fetched
       .filter((o) => o.status === 'canceled' || o.status === 'filled')
       .map((o) => ({
@@ -60,7 +57,8 @@ export async function runPerformanceAnalyzer(
       apiKey,
       log,
     );
-    if (p && response) await insertReviewRawLog({ agentId, prompt: p, response });
+    if (p && response)
+      await insertReviewRawLog({ portfolioId, prompt: p, response });
     prompt.performance = analysis ?? null;
     prompt.prev_orders = orders.map((o) => ({
       symbol: o.planned.symbol,

@@ -3,24 +3,24 @@ import { insertReviewRawLog as insertReviewRawLogProd } from '../../src/repos/ag
 
 export function insertReviewRawLog(entry: any) {
   return insertReviewRawLogProd({
-    agentId: entry.agentId,
+    portfolioId: entry.portfolioId,
     prompt: entry.prompt,
     response: entry.response,
   });
 }
 
-export async function getAgentReviewRawResponses(agentId: string) {
+export async function getPortfolioReviewRawResponses(portfolioId: string) {
   const { rows } = await db.query(
     'SELECT response FROM agent_review_raw_log WHERE agent_id = $1',
-    [agentId],
+    [portfolioId],
   );
   return rows as { response: string | null }[];
 }
 
-export async function getAgentReviewRawPromptsResponses(agentId: string) {
+export async function getPortfolioReviewRawPromptsResponses(portfolioId: string) {
   const { rows } = await db.query(
     'SELECT prompt, response FROM agent_review_raw_log WHERE agent_id = $1',
-    [agentId],
+    [portfolioId],
   );
   return rows as { prompt: string | null; response: string | null }[];
 }

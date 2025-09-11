@@ -48,10 +48,7 @@ describe('performance analyzer step', () => {
     ];
     const prompt: any = { reports };
     await mod.runPerformanceAnalyzer(
-      createLogger(),
-      'gpt',
-      'key',
-      'agent1',
+      { log: createLogger(), model: 'gpt', apiKey: 'key', portfolioId: 'agent1' },
       prompt,
     );
     expect(prompt.performance?.comment).toBe('perf');

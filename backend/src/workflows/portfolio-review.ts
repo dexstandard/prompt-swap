@@ -5,6 +5,10 @@ import {
   type ActivePortfolioWorkflowRow,
 } from '../repos/portfolio-workflow.js';
 import { run as runMainTrader, collectPromptData } from '../agents/main-trader.js';
+import { runNewsAnalyst } from '../agents/news-analyst.js';
+import { runTechnicalAnalyst } from '../agents/technical-analyst.js';
+import { runOrderBookAnalyst } from '../agents/order-book-analyst.js';
+import { runPerformanceAnalyzer } from '../agents/performance-analyst.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import {
   getOpenLimitOrdersForAgent,
@@ -57,7 +61,7 @@ async function runReviewWorkflows(
     workflowRows.map((wf) =>
       executeWorkflow(
         wf,
-        log.child({ userId: wf.user_id, agentId: wf.id }),
+        log.child({ userId: wf.user_id, portfolioId: wf.id }),
       ).finally(() => {
         runningWorkflows.delete(wf.id);
       }),
@@ -120,18 +124,17 @@ export async function executeWorkflow(
       return;
     }
 
-    const decision = await runMainTrader(
-      {
-        log,
-        model: wf.model,
-        apiKey: key,
-        timeframe: wf.review_interval,
-        agentId: wf.id,
-      },
-      prompt,
-    );
+    const params = { log, model: wf.model, apiKey: key, portfolioId: wf.id };
+    await Promise.all([
+      runNewsAnalyst(params, prompt),
+      runTechnicalAnalyst({ ...params, timeframe: wf.review_interval }, prompt),
+      runOrderBookAnalyst(params, prompt),
+      runPerformanceAnalyzer(params, prompt),
+    ]);
+
+    const decision = await runMainTrader(params, prompt);
     const logId = await insertReviewRawLog({
-      agentId: wf.id,
+      portfolioId: wf.id,
       prompt,
       response: decision,
     });
@@ -141,7 +144,7 @@ export async function executeWorkflow(
     );
     if (validationError) log.error({ err: validationError }, 'validation failed');
     const resultId = await insertReviewResult({
-      agentId: wf.id,
+      portfolioId: wf.id,
       log: decision ? JSON.stringify(decision) : '',
       rawLogId: logId,
       ...(decision && !validationError
@@ -186,14 +189,14 @@ async function saveFailure(
   let rawId: string | undefined;
   if (prompt) {
     rawId = await insertReviewRawLog({
-      agentId: row.id,
+      portfolioId: row.id,
       prompt,
       response: { error: message },
     });
   }
   const parsed = parseExecLog({ error: message });
   await insertReviewResult({
-    agentId: row.id,
+    portfolioId: row.id,
     log: parsed.text,
     ...(rawId ? { rawLogId: rawId } : {}),
     ...(parsed.response

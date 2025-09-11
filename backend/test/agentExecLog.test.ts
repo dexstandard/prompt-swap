@@ -31,7 +31,7 @@ describe('agent exec log routes', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await db.query(
       'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
       [
@@ -88,7 +88,7 @@ describe('agent exec log routes', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    const reviewResultId = await insertReviewResult({ agentId: agent.id, log: '' });
+    const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await db.query(
       'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
       [
@@ -144,12 +144,12 @@ describe('agent exec log routes', () => {
       manualRebalance: false,
     });
     const rawId = await insertReviewRawLog({
-      agentId: agent.id,
+      portfolioId: agent.id,
       prompt: { a: 1 },
       response: 'resp',
     });
     const reviewResultId = await insertReviewResult({
-      agentId: agent.id,
+      portfolioId: agent.id,
       log: 'log',
       rawLogId: rawId,
     });
@@ -191,10 +191,10 @@ describe('agent exec log routes', () => {
     const agentId = agent.id;
 
     for (let i = 0; i < 3; i++) {
-      await insertReviewRawLog({ agentId, prompt: `prompt-${i}`, response: `log-${i}` });
+      await insertReviewRawLog({ portfolioId: agentId, prompt: `prompt-${i}`, response: `log-${i}` });
       const parsed = parseExecLog(`log-${i}`);
       await insertReviewResult({
-        agentId,
+        portfolioId: agentId,
         log: parsed.text,
         ...(parsed.response
           ? {
@@ -252,10 +252,10 @@ describe('agent exec log routes', () => {
       'utf8',
     );
 
-      await insertReviewRawLog({ agentId, prompt: 'p', response: aiLog });
+      await insertReviewRawLog({ portfolioId: agentId, prompt: 'p', response: aiLog });
     const parsedAi = parseExecLog(aiLog);
     await insertReviewResult({
-      agentId,
+      portfolioId: agentId,
       log: parsedAi.text,
       ...(parsedAi.response
         ? {
@@ -310,10 +310,10 @@ describe('agent exec log routes', () => {
     });
     const agentId = agent.id;
     const entry = JSON.stringify({ prompt: { instructions: 'inst' }, response: 'ok' });
-    await insertReviewRawLog({ agentId, prompt: 'p', response: entry });
+    await insertReviewRawLog({ portfolioId: agentId, prompt: 'p', response: entry });
     const parsedP = parseExecLog(entry);
     await insertReviewResult({
-      agentId,
+      portfolioId: agentId,
       log: parsedP.text,
       ...(parsedP.response
         ? {
@@ -354,7 +354,7 @@ describe('agent exec log routes', () => {
       manualRebalance: true,
     });
     const reviewResultId = await insertReviewResult({
-      agentId: agent.id,
+      portfolioId: agent.id,
       log: '',
       rebalance: true,
       newAllocation: 60,
@@ -418,7 +418,7 @@ describe('agent exec log routes', () => {
       manualRebalance: true,
     });
     const reviewResultId = await insertReviewResult({
-      agentId: agent.id,
+      portfolioId: agent.id,
       log: '',
       rebalance: true,
       newAllocation: 50,
@@ -478,7 +478,7 @@ describe('agent exec log routes', () => {
       manualRebalance: true,
     });
     const reviewResultId = await insertReviewResult({
-      agentId: agent.id,
+      portfolioId: agent.id,
       log: '',
       rebalance: true,
       newAllocation: 50,
@@ -536,7 +536,7 @@ describe('agent exec log routes', () => {
       manualRebalance: true,
     });
     const reviewResultId = await insertReviewResult({
-      agentId: agent.id,
+      portfolioId: agent.id,
       log: '',
       rebalance: true,
       newAllocation: 60,
@@ -593,7 +593,7 @@ describe('agent exec log routes', () => {
       manualRebalance: true,
     });
     const reviewResultId = await insertReviewResult({
-      agentId: agent.id,
+      portfolioId: agent.id,
       log: '',
       rebalance: true,
       newAllocation: 60,
@@ -651,8 +651,8 @@ describe('agent exec log routes', () => {
       agentInstructions: 'inst',
       manualRebalance: false,
     });
-    await insertReviewResult({ agentId: agent.id, log: 'no', rebalance: false });
-    await insertReviewResult({ agentId: agent.id, log: 'yes', rebalance: true });
+    await insertReviewResult({ portfolioId: agent.id, log: 'no', rebalance: false });
+    await insertReviewResult({ portfolioId: agent.id, log: 'yes', rebalance: true });
     const res = await app.inject({
       method: 'GET',
       url: `/api/agents/${agent.id}/exec-log?rebalanceOnly=true`,
