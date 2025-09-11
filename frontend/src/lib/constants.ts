@@ -40,7 +40,7 @@ export const reviewIntervalOptions = (t: (key: string) => string) => [
 ];
 
 export const DEFAULT_AGENT_INSTRUCTIONS =
-    'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy. Ensure each trade is at least $0.02 in notional value; if that is not possible, ask the user to top up their balance.';
+    'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
 
 export const createAgentSchema = z
     .object({
