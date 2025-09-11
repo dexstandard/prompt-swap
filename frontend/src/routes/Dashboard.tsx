@@ -11,11 +11,13 @@ import { useAgentBalanceUsd } from '../lib/useAgentBalanceUsd';
 import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import CreateAgentForm from '../components/forms/CreateAgentForm';
-import PriceChart from '../components/forms/PriceChart';
+import ExchangeApiKeySection from '../components/forms/ExchangeApiKeySection';
+import WalletBalances from '../components/WalletBalances';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useToast } from '../lib/useToast';
 import Toggle from '../components/ui/Toggle';
 import { useTranslation } from '../lib/i18n';
+import { usePrerequisites } from '../lib/usePrerequisites';
 
 interface Agent {
   id: string;
@@ -262,6 +264,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const t = useTranslation();
+  const { hasBinanceKey, balances } = usePrerequisites(tokens);
 
   const handleTokensChange = useCallback((newTokens: string[]) => {
     setTokens((prev) =>
@@ -316,99 +319,133 @@ export default function Dashboard() {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="flex flex-col gap-3 w-full">
+        <ErrorBoundary>
+          <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">{t('my_agents')}</h2>
+            </div>
+            <table className="w-full mb-4 hidden md:table">
+              <thead>
+                <tr>
+                  <th className="text-left">{t('tokens')}</th>
+                  <th className="text-left">{t('balance_usd')}</th>
+                  <th className="text-left">{t('pnl_usd')}</th>
+                  <th className="text-left">{t('model')}</th>
+                  <th className="text-left">{t('interval')}</th>
+                  <th className="text-left">{t('status')}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div className="md:hidden flex flex-col gap-2 mb-4" />
+          </div>
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col gap-3 w-full">
-      <div className="flex flex-col md:flex-row gap-3 items-stretch">
-        <div className="hidden md:flex flex-1">
-          <ErrorBoundary>
-            <PriceChart tokens={tokens} />
-          </ErrorBoundary>
-        </div>
-        <CreateAgentForm onTokensChange={handleTokensChange} />
-      </div>
-      <ErrorBoundary>
-        <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">{t('my_agents')}</h2>
-            <Toggle
-              label={t('only_active')}
-              checked={onlyActive}
-              onChange={setOnlyActive}
+        <div className="flex flex-col md:flex-row gap-3 items-stretch">
+          <div className="hidden md:flex flex-1 flex-col gap-4">
+            {!hasBinanceKey && (
+              <ExchangeApiKeySection
+                exchange="binance"
+                label={t('connect_binance_api')}
+              />
+            )}
+            <WalletBalances
+              balances={balances}
+              hasBinanceKey={hasBinanceKey}
             />
           </div>
-          {!user ? (
-            <p>{t('please_log_in_agents')}</p>
-          ) : items.length === 0 ? (
-            <p>{t('no_agents_yet')}</p>
-          ) : (
-            <>
-              <table className="w-full mb-4 hidden md:table">
-                <thead>
-                  <tr>
-                    <th className="text-left">{t('tokens')}</th>
-                    <th className="text-left">{t('balance_usd')}</th>
-                    <th className="text-left">{t('pnl_usd')}</th>
-                    <th className="text-left">{t('model')}</th>
-                    <th className="text-left">{t('interval')}</th>
-                    <th className="text-left">{t('status')}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
+          <CreateAgentForm onTokensChange={handleTokensChange} />
+        </div>
+        <ErrorBoundary>
+          <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">{t('my_agents')}</h2>
+              <Toggle
+                label={t('only_active')}
+                checked={onlyActive}
+                onChange={setOnlyActive}
+              />
+            </div>
+            {items.length === 0 ? (
+              <p>{t('no_agents_yet')}</p>
+            ) : (
+              <>
+                <table className="w-full mb-4 hidden md:table">
+                  <thead>
+                    <tr>
+                      <th className="text-left">{t('tokens')}</th>
+                      <th className="text-left">{t('balance_usd')}</th>
+                      <th className="text-left">{t('pnl_usd')}</th>
+                      <th className="text-left">{t('model')}</th>
+                      <th className="text-left">{t('interval')}</th>
+                      <th className="text-left">{t('status')}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((agent) => (
+                      <AgentRow
+                        key={agent.id}
+                        agent={agent}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+                <div className="md:hidden flex flex-col gap-2 mb-4">
                   {items.map((agent) => (
-                    <AgentRow
+                    <AgentBlock
                       key={agent.id}
                       agent={agent}
                       onDelete={handleDelete}
                     />
                   ))}
-                </tbody>
-              </table>
-              <div className="md:hidden flex flex-col gap-2 mb-4">
-                {items.map((agent) => (
-                  <AgentBlock
-                    key={agent.id}
-                    agent={agent}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-              {totalPages > 0 && (
-                <div className="flex gap-2 items-center">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    {t('prev')}
-                  </Button>
-                  <span>
-                    {page} / {totalPages}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    {t('next')}
-                  </Button>
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      </ErrorBoundary>
-    </div>
-    <ConfirmDialog
-      open={deleteId !== null}
-      message={t('delete_agent_prompt')}
-      confirmVariant="danger"
-      onConfirm={confirmDelete}
-      onCancel={() => setDeleteId(null)}
-    />
+                {totalPages > 0 && (
+                  <div className="flex gap-2 items-center">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      {t('prev')}
+                    </Button>
+                    <span>
+                      {page} / {totalPages}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      {t('next')}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </ErrorBoundary>
+      </div>
+      <ConfirmDialog
+        open={deleteId !== null}
+        message={t('delete_agent_prompt')}
+        confirmVariant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
     </>
   );
 }
