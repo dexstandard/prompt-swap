@@ -95,7 +95,7 @@ vi.mock('../src/services/rebalance.js', () => ({
 
 const runNewsAnalyst = vi.fn((_params: any, prompt: any) => {
   const report = prompt.reports?.find((r: any) => r.token === 'BTC');
-  if (report) report.news = { comment: 'news', score: 1 };
+  if (report) report.news = 'news';
   return Promise.resolve();
 });
 vi.mock('../src/agents/news-analyst.js', () => ({ runNewsAnalyst }));

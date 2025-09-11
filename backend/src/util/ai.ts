@@ -85,7 +85,7 @@ export interface RebalancePrompt {
   previous_responses?: PreviousResponse[];
   reports?: {
     token: string;
-    news: Analysis | null;
+    news: string | null;
     tech: Analysis | null;
   }[];
 }
