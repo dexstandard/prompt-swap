@@ -16,6 +16,7 @@ import WalletBalances from '../components/WalletBalances';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useToast } from '../lib/useToast';
 import Toggle from '../components/ui/Toggle';
+import InfoTooltip from '../components/ui/InfoTooltip';
 import { useTranslation } from '../lib/i18n';
 import { usePrerequisites } from '../lib/usePrerequisites';
 
@@ -359,7 +360,18 @@ export default function Dashboard() {
           {!hasBinanceKey ? (
             <ExchangeApiKeySection
               exchange="binance"
-              label={t('connect_binance_api')}
+              label={
+                <span className="flex items-center">
+                  {t('connect_binance_api')}
+                  <InfoTooltip>
+                    <img
+                      src="/tips/binance-api-tip.png"
+                      alt="Binance API tip"
+                      className="w-full"
+                    />
+                  </InfoTooltip>
+                </span>
+              }
             />
           ) : (
             <PortfolioReviewForm
