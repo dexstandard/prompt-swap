@@ -94,13 +94,13 @@ export default function PortfolioReviewForm({
       )}
       <form
         onSubmit={onSubmit}
-        className={`bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[30rem] ${
+        className={`bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[40rem] ${
           mobileOpen ? '' : 'hidden'
         } md:block`}
       >
         <h2 className="text-lg md:text-xl font-bold">Binance Portfolio Workflow</h2>
         <div className="space-y-2">
-          <div className="grid grid-cols-5 gap-2 text-sm font-medium">
+          <div className="grid grid-cols-[1.5fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
             <span>Token</span>
             <span>Spot</span>
             <span>Earn</span>
@@ -115,7 +115,7 @@ export default function PortfolioReviewForm({
             return (
               <div
                 key={field.id}
-                className="grid grid-cols-5 gap-2 items-center"
+                className="grid grid-cols-[1.5fr_2fr_2fr_1fr_auto] gap-2 items-center"
               >
                 <Controller
                   name={`tokens.${index}.token`}
