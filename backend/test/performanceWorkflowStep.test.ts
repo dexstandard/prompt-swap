@@ -20,6 +20,11 @@ vi.mock('../src/repos/limit-orders.js', () => ({
   getRecentLimitOrders: getRecentLimitOrdersMock,
 }));
 
+vi.mock('../src/util/ai.js', () => ({
+  callAi: vi.fn().mockResolvedValue('res'),
+  extractJson: () => ({ comment: 'perf', score: 4 }),
+}));
+
 function createLogger(): FastifyBaseLogger {
   const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
   return log;
@@ -33,11 +38,6 @@ describe('performance analyzer step', () => {
 
   it('fetches performance analysis', async () => {
     const mod = await import('../src/agents/performance-analyst.js');
-    vi.spyOn(mod, 'getPerformanceAnalysis').mockResolvedValue({
-      analysis: { comment: 'perf', score: 4 },
-      prompt: { instructions: '', input: {} },
-      response: 'res',
-    });
     const reports = [
       {
         token: 'BTC',
@@ -55,7 +55,6 @@ describe('performance analyzer step', () => {
     );
     expect(perf?.comment).toBe('perf');
     expect(getRecentLimitOrdersMock).toHaveBeenCalled();
-    expect(mod.getPerformanceAnalysis).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

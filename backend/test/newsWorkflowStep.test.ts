@@ -11,6 +11,15 @@ vi.mock('../src/repos/agent-review-raw-log.js', () => ({
   insertReviewRawLog: insertReviewRawLogMock,
 }));
 
+vi.mock('../src/repos/news.js', () => ({
+  getNewsByToken: vi.fn().mockResolvedValue([{ title: 't', link: 'l' }]),
+}));
+
+vi.mock('../src/util/ai.js', () => ({
+  callAi: vi.fn().mockResolvedValue('res'),
+  extractJson: () => ({ comment: 'summary for BTC', score: 1 }),
+}));
+
 function createLogger(): FastifyBaseLogger {
   const log = { info: () => {}, error: () => {}, child: () => log } as unknown as FastifyBaseLogger;
   return log;
@@ -19,15 +28,13 @@ function createLogger(): FastifyBaseLogger {
 describe('news analyst step', () => {
   it('fetches news summaries', async () => {
     const mod = await import('../src/agents/news-analyst.js');
-    vi.spyOn(mod, 'getTokenNewsSummary').mockResolvedValue({
-      analysis: { comment: 'summary for BTC', score: 1 },
-      prompt: { instructions: '', input: {} },
-      response: 'res',
-    });
-
-    const summaries = await mod.runNewsAnalyst(createLogger(), 'gpt', 'key', 'agent1');
+    const summaries = await mod.runNewsAnalyst(
+      createLogger(),
+      'gpt',
+      'key',
+      'agent1',
+    );
     expect(summaries.BTC?.comment).toBe('summary for BTC');
-    expect(mod.getTokenNewsSummary).toHaveBeenCalled();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

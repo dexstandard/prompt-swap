@@ -391,7 +391,7 @@ describe('key deletion effects on agents', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('inactive');
@@ -430,7 +430,7 @@ describe('key deletion effects on agents', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('draft');
@@ -479,7 +479,7 @@ describe('key deletion effects on agents', () => {
       payload: { email: 'user@example.com' },
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('draft');
@@ -527,7 +527,7 @@ describe('key deletion effects on agents', () => {
       cookies: authCookies(adminId),
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('draft');
@@ -585,7 +585,7 @@ describe('key deletion effects on agents', () => {
       payload: { email: 'user@example.com' },
     });
     expect(res.statusCode).toBe(200);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('active');
@@ -637,7 +637,7 @@ describe('key deletion effects on agents', () => {
       payload: { email: 'user@example.com' },
     });
     expect(res.statusCode).toBe(404);
-    const row = await db.query('SELECT status, model FROM agents WHERE id = $1', [
+    const row = await db.query('SELECT status, model FROM portfolio_workflow WHERE id = $1', [
       agent.id,
     ]);
     expect(row.rows[0].status).toBe('active');
