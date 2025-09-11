@@ -115,6 +115,28 @@ export async function fetchAccount(id: string) {
   };
 }
 
+export async function fetchEarnFlexibleBalance(id: string, asset: string) {
+  const creds = await getUserCreds(id);
+  if (!creds) return null;
+  const timestamp = Date.now();
+  const params = new URLSearchParams({
+    asset: asset.toUpperCase(),
+    timestamp: String(timestamp),
+  });
+  const signature = createHmac('sha256', creds.secret)
+    .update(params.toString())
+    .digest('hex');
+  const res = await fetch(
+    `https://api.binance.com/sapi/v1/simple-earn/flexible/position?${params.toString()}&signature=${signature}`,
+    { headers: { 'X-MBX-APIKEY': creds.key } }
+  );
+  if (!res.ok) throw new Error('failed to fetch earn balance');
+  const json = (await res.json()) as {
+    rows?: { totalAmount: string }[];
+  };
+  return json.rows?.reduce((sum, r) => sum + Number(r.totalAmount), 0) ?? 0;
+}
+
 export async function fetchTotalBalanceUsd(id: string) {
   const account = await fetchAccount(id);
   if (!account) return null;

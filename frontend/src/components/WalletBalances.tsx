@@ -24,7 +24,9 @@ export default function WalletBalances({ balances, hasBinanceKey }: Props) {
           <TokenDisplay token={b.token} className="font-bold shrink-0" />
           <span className="shrink-0">:</span>
           <span className="break-all">
-            {b.isLoading ? t('loading') : b.balance}
+            {b.isLoading
+              ? t('loading')
+              : `${b.walletBalance} (${t('earn')}: ${b.earnBalance})`}
           </span>
         </p>
       ))}
