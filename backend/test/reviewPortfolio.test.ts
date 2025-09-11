@@ -107,21 +107,6 @@ const runTechnicalAnalyst = vi.fn((_params: any, prompt: any) => {
 });
 vi.mock('../src/agents/technical-analyst.js', () => ({ runTechnicalAnalyst }));
 
-const runOrderBookAnalyst = vi.fn((_params: any, prompt: any) => {
-  const report = prompt.reports?.find((r: any) => r.token === 'BTC');
-  if (report) report.orderbook = { comment: 'order', score: 3 };
-  return Promise.resolve();
-});
-vi.mock('../src/agents/order-book-analyst.js', () => ({ runOrderBookAnalyst }));
-
-const runPerformanceAnalyzer = vi.fn((_params: any, prompt: any) => {
-  (prompt as any).performance = { comment: 'perf', score: 4 };
-  return Promise.resolve();
-});
-vi.mock('../src/agents/performance-analyst.js', () => ({
-  runPerformanceAnalyzer,
-}));
-
 
 let reviewAgentPortfolio: (log: FastifyBaseLogger, agentId: string) => Promise<void>;
 let removeWorkflowFromSchedule: (id: string) => void;
@@ -168,8 +153,6 @@ describe('reviewPortfolio', () => {
     expect(runMainTrader).toHaveBeenCalledTimes(1);
     expect(runNewsAnalyst).toHaveBeenCalled();
     expect(runTechnicalAnalyst).toHaveBeenCalled();
-    expect(runOrderBookAnalyst).toHaveBeenCalled();
-    expect(runPerformanceAnalyzer).toHaveBeenCalled();
     const { rows } = await db.query(
       'SELECT prompt, response FROM agent_review_raw_log WHERE agent_id=$1',
       ['1'],

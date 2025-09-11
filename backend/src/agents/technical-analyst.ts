@@ -1,5 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { fetchTokenIndicators } from '../services/indicators.js';
+import { fetchOrderBook } from '../services/derivatives.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
 import { callAi, extractJson, type RebalancePrompt } from '../util/ai.js';
 import { TOKEN_SYMBOLS, isStablecoin } from '../util/tokens.js';
@@ -13,8 +14,9 @@ export async function getTechnicalOutlook(
   log: FastifyBaseLogger,
 ): Promise<AnalysisLog> {
   const indicators = await fetchTokenIndicators(token);
-  const prompt = { token, timeframe, indicators };
-  const instructions = `You are a crypto technical analyst. Using indicators in input, write a short outlook for a crypto trader about ${token} on timeframe ${timeframe}. Include a bullishness score from 0-10 and key signals. - shortReport ≤255 chars.`;
+  const orderBook = await fetchOrderBook(`${token}USDT`);
+  const prompt = { indicators, orderBook };
+  const instructions = `You are a crypto technical analyst. Given the indicators and order book snapshot, write a short outlook for ${token} on timeframe ${timeframe}. Include a bullishness score from 0-10 and key signals. - shortReport ≤255 chars.`;
   const fallback: Analysis = { comment: 'Analysis unavailable', score: 0 };
   try {
     const res = await callAi(model, instructions, analysisSchema, prompt, apiKey);
@@ -48,7 +50,7 @@ export async function runTechnicalAnalyst(
       await insertReviewRawLog({ portfolioId, prompt: p, response });
     let report = prompt.reports.find((r) => r.token === token);
     if (!report) {
-      report = { token, news: null, tech: null, orderbook: null };
+      report = { token, news: null, tech: null };
       prompt.reports.push(report);
     }
     report.tech = analysis;

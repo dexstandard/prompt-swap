@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 
 vi.mock('../src/util/tokens.js', () => ({
-  TOKEN_SYMBOLS: ['BTC'],
-  isStablecoin: () => false,
+  TOKEN_SYMBOLS: ['BTC', 'USDC'],
+  isStablecoin: (sym: string) => sym === 'USDC',
 }));
 
 const insertReviewRawLogMock = vi.fn();
@@ -23,6 +23,9 @@ vi.mock('../src/services/indicators.js', () => ({
     regime: {},
     osc: {},
   }),
+}));
+vi.mock('../src/services/derivatives.js', () => ({
+  fetchOrderBook: vi.fn().mockResolvedValue({ bid: [0, 0], ask: [0, 0] }),
 }));
 
 vi.mock('../src/util/ai.js', () => ({
@@ -51,6 +54,7 @@ describe('technical analyst step', () => {
     );
     const report = prompt.reports?.find((r: any) => r.token === 'BTC');
     expect(report?.tech?.comment).toBe('outlook for BTC');
+    expect(prompt.reports?.find((r: any) => r.token === 'USDC')).toBeUndefined();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });
