@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import type { FastifyBaseLogger } from 'fastify';
 
 vi.mock('../src/util/tokens.js', () => ({
-  TOKEN_SYMBOLS: ['BTC', 'USDC'],
   isStablecoin: (sym: string) => sym === 'USDC',
 }));
 
@@ -28,14 +27,20 @@ function createLogger(): FastifyBaseLogger {
 describe('news analyst step', () => {
   it('fetches news summaries', async () => {
     const mod = await import('../src/agents/news-analyst.js');
-    const prompt: any = {};
+    const prompt: any = {
+      reports: [
+        { token: 'BTC', news: null, tech: null },
+        { token: 'USDC', news: null, tech: null },
+      ],
+    };
     await mod.runNewsAnalyst(
       { log: createLogger(), model: 'gpt', apiKey: 'key', portfolioId: 'agent1' },
       prompt,
     );
     const report = prompt.reports?.find((r: any) => r.token === 'BTC');
     expect(report?.news?.comment).toBe('summary for BTC');
-    expect(prompt.reports?.find((r: any) => r.token === 'USDC')).toBeUndefined();
+    const stable = prompt.reports?.find((r: any) => r.token === 'USDC');
+    expect(stable?.news).toBeNull();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
   });
 });

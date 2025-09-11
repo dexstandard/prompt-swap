@@ -81,5 +81,25 @@ describe('news analyst', () => {
     expect(res.analysis?.score).toBe(0);
     (globalThis as any).fetch = orig;
   });
+
+  it('caches token reviews and dedupes concurrent calls', async () => {
+    await db.query(
+      "INSERT INTO news (title, link, pub_date, tokens) VALUES ('t4', 'l4', NOW(), ARRAY['BTC'])",
+    );
+    const orig = globalThis.fetch;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => responseJson });
+    (globalThis as any).fetch = fetchMock;
+    const { getTokenNewsSummaryCached } = await import(
+      '../src/agents/news-analyst.js'
+    );
+    const p1 = getTokenNewsSummaryCached('BTC', 'gpt', 'key', createLogger());
+    const p2 = getTokenNewsSummaryCached('BTC', 'gpt', 'key', createLogger());
+    await Promise.all([p1, p2]);
+    await getTokenNewsSummaryCached('BTC', 'gpt', 'key', createLogger());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    (globalThis as any).fetch = orig;
+  });
 });
 
