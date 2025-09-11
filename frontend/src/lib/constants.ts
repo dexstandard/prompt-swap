@@ -40,7 +40,7 @@ export const reviewIntervalOptions = (t: (key: string) => string) => [
 ];
 
 export const DEFAULT_AGENT_INSTRUCTIONS =
-    'Manage this index based on the configured parameters, actively monitoring real-time market data and relevant news to dynamically adjust positions, aiming to capture local highs for exits and local lows for entries to maximize performance within the defined allocation strategy.';
+    'Day trade this pair and determine the target allocation yourself. Monitor real-time market data and news, trimming positions after rallies and adding to them after dips to stay within policy floors while exploiting intraday swings.';
 
 export const createAgentSchema = z
     .object({

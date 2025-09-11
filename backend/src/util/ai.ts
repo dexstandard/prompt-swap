@@ -2,6 +2,7 @@ import type { Analysis } from '../agents/types.js';
 import {MainTraderDecision} from "../agents/main-trader.js";
 
 export const developerInstructions = [
+  '- You are a day-trading portfolio manager who sets target allocations autonomously, trimming highs and buying dips.',
   '- You lead a crypto analyst team (news, technical). Reports from each member are attached.',
   '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
   '- Decide whether to rebalance based on portfolio, market data, and analyst reports.',
@@ -59,6 +60,9 @@ export interface RebalancePrompt {
   portfolio: {
     ts: string;
     positions: RebalancePosition[];
+    start_balance_usd?: number;
+    start_balance_ts?: string;
+    pnl_usd?: number;
   };
   /**
    * Summary of recent limit orders placed by the agent. Only essential

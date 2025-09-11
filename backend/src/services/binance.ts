@@ -115,6 +115,96 @@ export async function fetchAccount(id: string) {
   };
 }
 
+export async function fetchEarnFlexibleBalance(id: string, asset: string) {
+  const creds = await getUserCreds(id);
+  if (!creds) return null;
+  const timestamp = Date.now();
+  const params = new URLSearchParams({
+    asset: asset.toUpperCase(),
+    timestamp: String(timestamp),
+  });
+  const signature = createHmac('sha256', creds.secret)
+    .update(params.toString())
+    .digest('hex');
+  const res = await fetch(
+    `https://api.binance.com/sapi/v1/simple-earn/flexible/position?${params.toString()}&signature=${signature}`,
+    { headers: { 'X-MBX-APIKEY': creds.key } }
+  );
+  if (!res.ok) throw new Error('failed to fetch earn balance');
+  const json = (await res.json()) as {
+    rows?: { totalAmount: string }[];
+  };
+  return json.rows?.reduce((sum, r) => sum + Number(r.totalAmount), 0) ?? 0;
+}
+
+export async function subscribeEarnFlexible(
+  id: string,
+  opts: { productId: string; amount: number },
+) {
+  const creds = await getUserCreds(id);
+  if (!creds) return null;
+  const timestamp = Date.now();
+  const params = new URLSearchParams({
+    productId: opts.productId,
+    amount: String(opts.amount),
+    timestamp: String(timestamp),
+  });
+  const signature = createHmac('sha256', creds.secret)
+    .update(params.toString())
+    .digest('hex');
+  params.append('signature', signature);
+  const res = await fetch(
+    'https://api.binance.com/sapi/v1/simple-earn/flexible/subscribe',
+    {
+      method: 'POST',
+      headers: {
+        'X-MBX-APIKEY': creds.key,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`failed to subscribe earn: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
+export async function redeemEarnFlexible(
+  id: string,
+  opts: { productId: string; amount: number },
+) {
+  const creds = await getUserCreds(id);
+  if (!creds) return null;
+  const timestamp = Date.now();
+  const params = new URLSearchParams({
+    productId: opts.productId,
+    amount: String(opts.amount),
+    timestamp: String(timestamp),
+  });
+  const signature = createHmac('sha256', creds.secret)
+    .update(params.toString())
+    .digest('hex');
+  params.append('signature', signature);
+  const res = await fetch(
+    'https://api.binance.com/sapi/v1/simple-earn/flexible/redeem',
+    {
+      method: 'POST',
+      headers: {
+        'X-MBX-APIKEY': creds.key,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`failed to redeem earn: ${res.status} ${body}`);
+  }
+  return res.json();
+}
+
 export async function fetchTotalBalanceUsd(id: string) {
   const account = await fetchAccount(id);
   if (!account) return null;

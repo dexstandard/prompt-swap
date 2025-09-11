@@ -6,7 +6,8 @@ import { useUser } from './useUser';
 export interface BalanceInfo {
   token: string;
   isLoading: boolean;
-  balance: number;
+  walletBalance: number;
+  earnBalance: number;
 }
 
 export function usePrerequisites(tokens: string[]) {
@@ -79,12 +80,34 @@ export function usePrerequisites(tokens: string[]) {
     })),
   });
 
+  const earnBalanceQueries = useQueries({
+    queries: tokens.map((token) => ({
+      queryKey: ['binance-earn-balance', user?.id, token.toUpperCase()],
+      enabled: !!user && hasBinanceKey,
+      queryFn: async () => {
+        try {
+          const res = await api.get(
+            `/users/${user!.id}/binance-earn-balance/${token.toUpperCase()}`,
+          );
+          return res.data as { asset: string; total: number };
+        } catch (err) {
+          if (axios.isAxiosError(err) && err.response?.status === 404)
+            return { asset: token.toUpperCase(), total: 0 };
+          throw err;
+        }
+      },
+    })),
+  });
+
   const balances: BalanceInfo[] = tokens.map((token, idx) => ({
     token,
-    isLoading: balanceQueries[idx]?.isLoading ?? false,
-    balance:
+    isLoading:
+      (balanceQueries[idx]?.isLoading ?? false) ||
+      (earnBalanceQueries[idx]?.isLoading ?? false),
+    walletBalance:
       (balanceQueries[idx]?.data?.free ?? 0) +
       (balanceQueries[idx]?.data?.locked ?? 0),
+    earnBalance: earnBalanceQueries[idx]?.data?.total ?? 0,
   }));
 
   return {

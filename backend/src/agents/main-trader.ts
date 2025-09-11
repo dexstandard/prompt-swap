@@ -11,6 +11,7 @@ import {
 import { isStablecoin } from '../util/tokens.js';
 import { fetchAccount, fetchPairData, fetchPairInfo } from '../services/binance.js';
 import { getRecentReviewResults } from '../repos/agent-review-result.js';
+import { getRecentLimitOrders } from '../repos/limit-orders.js';
 import type { ActivePortfolioWorkflowRow } from '../repos/portfolio-workflow.js';
 import type { RunParams } from './types.js';
 
@@ -98,15 +99,40 @@ export async function collectPromptData(
     price2Data.currentPrice,
   );
 
-  const prevRows = await getRecentReviewResults(row.id, 5);
+  const portfolio: RebalancePrompt['portfolio'] = {
+    ts: new Date().toISOString(),
+    positions,
+  };
+
+  const totalValue = positions.reduce((sum, p) => sum + p.value_usdt, 0);
+  if (row.start_balance !== null) {
+    portfolio.start_balance_usd = row.start_balance;
+    portfolio.start_balance_ts = row.created_at;
+    portfolio.pnl_usd = totalValue - row.start_balance;
+  }
+
+  const [prevRows, prevOrdersRows] = await Promise.all([
+    getRecentReviewResults(row.id, 5),
+    getRecentLimitOrders(row.id, 5),
+  ]);
   const previousResponses = prevRows
     .map(extractPreviousResponse)
     .filter(Boolean) as PreviousResponse[];
+  const prevOrders = prevOrdersRows.map((o) => {
+    const planned = JSON.parse(o.planned_json);
+    return {
+      symbol: planned.symbol,
+      side: planned.side,
+      amount: planned.quantity,
+      datetime: o.created_at.toISOString(),
+      status: o.status,
+    } as const;
+  });
 
   const prompt: RebalancePrompt = {
     instructions: row.agent_instructions,
     policy: { floor },
-    portfolio: { ts: new Date().toISOString(), positions },
+    portfolio,
     marketData: { currentPrice: pair.currentPrice, minNotional: info.minNotional },
     reports: row.tokens
       .map((t) => t.token)
@@ -115,6 +141,9 @@ export async function collectPromptData(
   };
   if (previousResponses.length) {
     prompt.previous_responses = previousResponses;
+  }
+  if (prevOrders.length) {
+    prompt.prev_orders = prevOrders;
   }
   return prompt;
 }
