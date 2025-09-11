@@ -228,7 +228,6 @@ export default function PortfolioReviewForm({
                       type="number"
                       min={0}
                       max={95}
-                      disabled={index === 0}
                       {...field}
                       onChange={(e) =>
                         field.onChange(
@@ -296,11 +295,12 @@ export default function PortfolioReviewForm({
               )}
             />
           </div>
-          <div className="flex items-center h-full">
+          <div className="flex justify-center h-full">
             <Toggle
               label={t('use_binance_earn')}
               checked={useEarn}
               onChange={setUseEarn}
+              labelPosition="top"
             />
           </div>
         </div>
