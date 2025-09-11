@@ -4,7 +4,11 @@ import {
   getActivePortfolioWorkflowsByInterval,
   type ActivePortfolioWorkflowRow,
 } from '../repos/portfolio-workflow.js';
-import { run as runMainTrader, collectPromptData } from '../agents/main-trader.js';
+import {
+  run as runMainTrader,
+  collectPromptData,
+  type MainTraderDecision,
+} from '../agents/main-trader.js';
 import { runNewsAnalyst } from '../agents/news-analyst.js';
 import { runTechnicalAnalyst } from '../agents/technical-analyst.js';
 import { insertReviewRawLog } from '../repos/agent-review-raw-log.js';
@@ -14,7 +18,11 @@ import {
 } from '../repos/limit-orders.js';
 import { env } from '../util/env.js';
 import { decrypt } from '../util/crypto.js';
-import { insertReviewResult } from '../repos/agent-review-result.js';
+import {
+  insertReviewResult,
+  type ReviewResultInsert,
+  type ReviewResultError,
+} from '../repos/agent-review-result.js';
 import { parseExecLog, validateExecResponse } from '../util/parse-exec-log.js';
 import {
   cancelOrder,
@@ -106,6 +114,34 @@ async function cleanupOpenOrders(
   }
 }
 
+function buildReviewResultEntry({
+  workflowId,
+  decision,
+  logId,
+  validationError,
+}: {
+  workflowId: string;
+  decision: MainTraderDecision | null;
+  logId: string;
+  validationError?: string;
+}): ReviewResultInsert {
+  const entry: ReviewResultInsert = {
+    portfolioId: workflowId,
+    log: decision ? JSON.stringify(decision) : '',
+    rawLogId: logId,
+  };
+
+  if (decision && !validationError) {
+    entry.rebalance = decision.rebalance;
+    entry.newAllocation = decision.newAllocation;
+    entry.shortReport = decision.shortReport;
+  } else {
+    entry.error = { message: validationError ?? 'decision unavailable' };
+  }
+
+  return entry;
+}
+
 export async function executeWorkflow(
   wf: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
@@ -139,21 +175,13 @@ export async function executeWorkflow(
       prompt.policy,
     );
     if (validationError) log.error({ err: validationError }, 'validation failed');
-    const resultId = await insertReviewResult({
-      portfolioId: wf.id,
-      log: decision ? JSON.stringify(decision) : '',
-      rawLogId: logId,
-      ...(decision && !validationError
-        ? {
-            rebalance: decision.rebalance,
-            newAllocation: decision.newAllocation,
-            shortReport: decision.shortReport,
-          }
-        : {}),
-      ...((!decision || validationError)
-        ? { error: { message: validationError ?? 'decision unavailable' } }
-        : {}),
+    const resultEntry = buildReviewResultEntry({
+      workflowId: wf.id,
+      decision,
+      logId,
+      validationError,
     });
+    const resultId = await insertReviewResult(resultEntry);
     if (
       decision &&
       !validationError &&
@@ -191,19 +219,25 @@ async function saveFailure(
     });
   }
   const parsed = parseExecLog({ error: message });
-  await insertReviewResult({
+  const entry: ReviewResultInsert = {
     portfolioId: row.id,
     log: parsed.text,
-    ...(rawId ? { rawLogId: rawId } : {}),
-    ...(parsed.response
-      ? {
-          rebalance: parsed.response.rebalance,
-          newAllocation: parsed.response.newAllocation,
-          shortReport: parsed.response.shortReport,
-        }
-      : {}),
-    ...(parsed.error ? { error: parsed.error } : {}),
-  });
+  };
+  if (rawId) entry.rawLogId = rawId;
+  if (parsed.response) {
+    entry.rebalance = parsed.response.rebalance;
+    entry.newAllocation = parsed.response.newAllocation;
+    entry.shortReport = parsed.response.shortReport;
+  }
+  if (
+    parsed.error &&
+    typeof (parsed.error as any).message === 'string'
+  ) {
+    entry.error = {
+      message: String((parsed.error as any).message),
+    } as ReviewResultError;
+  }
+  await insertReviewResult(entry);
 }
 
 export { reviewPortfolio as reviewAgentPortfolio };
