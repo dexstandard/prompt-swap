@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import api from './axios';
 import { useUser } from './useUser';
+import { useBinanceAccount } from './useBinanceAccount';
 
 export interface BalanceInfo {
   token: string;
@@ -11,12 +12,16 @@ export interface BalanceInfo {
   usdValue: number;
 }
 
-export function usePrerequisites(tokens: string[]) {
+export function usePrerequisites(
+  tokens: string[],
+  options?: { includeAiKey?: boolean },
+) {
+  const { includeAiKey = true } = options ?? {};
   const { user } = useUser();
 
   const aiKeyQuery = useQuery<string | null>({
     queryKey: ['ai-key', user?.id],
-    enabled: !!user,
+    enabled: !!user && includeAiKey,
     queryFn: async () => {
       try {
         const res = await api.get(`/users/${user!.id}/ai-key`);
@@ -30,7 +35,7 @@ export function usePrerequisites(tokens: string[]) {
 
   const sharedAiKeyQuery = useQuery<string | null>({
     queryKey: ['ai-key-shared', user?.id],
-    enabled: !!user,
+    enabled: !!user && includeAiKey,
     queryFn: async () => {
       try {
         const res = await api.get(`/users/${user!.id}/ai-key/shared`);
@@ -56,30 +61,22 @@ export function usePrerequisites(tokens: string[]) {
     },
   });
 
-  const hasOpenAIKey = !!aiKeyQuery.data || !!sharedAiKeyQuery.data;
+  const hasOpenAIKey = includeAiKey
+    ? !!aiKeyQuery.data || !!sharedAiKeyQuery.data
+    : false;
   const hasBinanceKey = !!binanceKeyQuery.data;
 
   const modelsQuery = useQuery<string[]>({
     queryKey: ['openai-models', user?.id],
-    enabled: !!user && hasOpenAIKey,
+    enabled: !!user && includeAiKey && hasOpenAIKey,
     queryFn: async () => {
       const res = await api.get(`/users/${user!.id}/models`);
       return res.data.models as string[];
     },
   });
 
-  const balanceQueries = useQueries({
-    queries: tokens.map((token) => ({
-      queryKey: ['binance-balance', user?.id, token.toUpperCase()],
-      enabled: !!user && hasBinanceKey,
-      queryFn: async () => {
-        const res = await api.get(
-          `/users/${user!.id}/binance-balance/${token.toUpperCase()}`,
-        );
-        return res.data as { asset: string; free: number; locked: number };
-      },
-    })),
-  });
+  const accountQuery = useBinanceAccount();
+  const accountBalances = accountQuery.data?.balances ?? [];
 
   const earnBalanceQueries = useQueries({
     queries: tokens.map((token) => ({
@@ -117,15 +114,18 @@ export function usePrerequisites(tokens: string[]) {
   });
 
   const balances: BalanceInfo[] = tokens.map((token, idx) => {
+    const walletInfo = accountBalances.find(
+      (b) => b.asset.toUpperCase() === token.toUpperCase(),
+    );
     const wallet =
-      (balanceQueries[idx]?.data?.free ?? 0) +
-      (balanceQueries[idx]?.data?.locked ?? 0);
+      (walletInfo?.free ?? 0) +
+      (walletInfo?.locked ?? 0);
     const earn = earnBalanceQueries[idx]?.data?.total ?? 0;
     const price = priceQueries[idx]?.data ?? 0;
     return {
       token,
       isLoading:
-        (balanceQueries[idx]?.isLoading ?? false) ||
+        accountQuery.isLoading ||
         (earnBalanceQueries[idx]?.isLoading ?? false) ||
         (priceQueries[idx]?.isLoading ?? false),
       walletBalance: wallet,
@@ -137,8 +137,9 @@ export function usePrerequisites(tokens: string[]) {
   return {
     hasOpenAIKey,
     hasBinanceKey,
-    models: modelsQuery.data ?? [],
+    models: includeAiKey ? modelsQuery.data ?? [] : [],
     balances,
+    accountBalances,
   } as const;
 }
 

@@ -263,7 +263,9 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const t = useTranslation();
-  const { hasBinanceKey, balances } = usePrerequisites(tokens);
+  const { hasBinanceKey, balances, accountBalances } = usePrerequisites(tokens, {
+    includeAiKey: false,
+  });
 
   const handleTokensChange = useCallback((newTokens: string[]) => {
     setTokens((prev) => {
@@ -363,6 +365,7 @@ export default function Dashboard() {
           ) : (
             <PortfolioReviewForm
               balances={balances}
+              accountBalances={accountBalances}
               onTokensChange={handleTokensChange}
             />
           )}

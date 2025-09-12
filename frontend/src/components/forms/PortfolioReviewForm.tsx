@@ -4,6 +4,7 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash } from 'lucide-react';
 import type { BalanceInfo } from '../../lib/usePrerequisites';
+import type { BinanceAccount } from '../../lib/useBinanceAccount';
 import { useUser } from '../../lib/useUser';
 import { useTranslation } from '../../lib/i18n';
 import {
@@ -16,7 +17,6 @@ import {
   tokens,
   stableCoins,
 } from '../../lib/constants';
-import { useBinanceAccount } from '../../lib/useBinanceAccount';
 import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import SelectInput from './SelectInput';
@@ -26,11 +26,13 @@ import Toggle from '../ui/Toggle';
 interface Props {
   onTokensChange?: (tokens: string[]) => void;
   balances: BalanceInfo[];
+  accountBalances: BinanceAccount['balances'];
 }
 
 export default function PortfolioReviewForm({
   onTokensChange,
   balances,
+  accountBalances,
 }: Props) {
   const { user } = useUser();
   const t = useTranslation();
@@ -52,9 +54,8 @@ export default function PortfolioReviewForm({
 
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const accountQuery = useBinanceAccount();
   const tokenSet = new Set(tokens.map((t) => t.value));
-  const topTokens = (accountQuery.data?.balances ?? [])
+  const topTokens = accountBalances
     .map((b) => ({
       token: b.asset.toUpperCase(),
       total: b.free + b.locked,
@@ -80,7 +81,12 @@ export default function PortfolioReviewForm({
     if (topTokens.length > 0) {
       const stable = tokensWatch[0]?.token;
       const newTokens = [stable, ...topTokens].slice(0, 5);
-      replace(newTokens.map((t) => ({ token: t, minAllocation: 0 })));
+      replace(
+        newTokens.map((t) => ({
+          token: t,
+          minAllocation: 0,
+        })),
+      );
       onTokensChange?.(newTokens);
       setInitializedTopTokens(true);
     }
