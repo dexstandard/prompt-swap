@@ -786,6 +786,7 @@ describe('agent routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'prompt',
       manualRebalance: false,
+      useEarn: true,
       status: 'draft',
     };
     const res = await app.inject({

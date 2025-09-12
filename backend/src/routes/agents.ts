@@ -121,6 +121,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           reviewInterval: validated.reviewInterval,
           agentInstructions: validated.agentInstructions,
           manualRebalance: validated.manualRebalance,
+          useEarn: validated.useEarn,
         });
         if (status === AgentStatus.Active)
           reviewAgentPortfolio(req.log, row.id).catch((err) =>
@@ -515,6 +516,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           agentInstructions: validated.agentInstructions,
           startBalance,
           manualRebalance: validated.manualRebalance,
+          useEarn: validated.useEarn,
         });
         const row = (await getAgent(id))!;
         if (status === AgentStatus.Active)

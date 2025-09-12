@@ -383,6 +383,7 @@ describe('key deletion effects on agents', () => {
       reviewInterval: '1h',
       agentInstructions: 'prompt',
       manualRebalance: false,
+      useEarn: true,
     });
 
     const res = await app.inject({
@@ -422,6 +423,7 @@ describe('key deletion effects on agents', () => {
       reviewInterval: '1h',
       agentInstructions: 'prompt',
       manualRebalance: false,
+      useEarn: true,
     });
 
     const res = await app.inject({
@@ -470,6 +472,7 @@ describe('key deletion effects on agents', () => {
       reviewInterval: '1h',
       agentInstructions: 'prompt',
       manualRebalance: false,
+      useEarn: true,
     });
 
     const res = await app.inject({
@@ -519,6 +522,7 @@ describe('key deletion effects on agents', () => {
       reviewInterval: '1h',
       agentInstructions: 'prompt',
       manualRebalance: false,
+      useEarn: true,
     });
 
     const res = await app.inject({
@@ -576,6 +580,7 @@ describe('key deletion effects on agents', () => {
       reviewInterval: '1h',
       agentInstructions: 'prompt',
       manualRebalance: false,
+      useEarn: true,
     });
 
     const res = await app.inject({
@@ -628,6 +633,7 @@ describe('key deletion effects on agents', () => {
       reviewInterval: '1h',
       agentInstructions: 'prompt',
       manualRebalance: false,
+      useEarn: true,
     });
 
     const res = await app.inject({

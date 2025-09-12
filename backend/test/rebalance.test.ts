@@ -43,6 +43,7 @@ describe('createRebalanceLimitOrder', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await createRebalanceLimitOrder({
@@ -95,6 +96,7 @@ describe('createRebalanceLimitOrder', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await createRebalanceLimitOrder({
@@ -141,6 +143,7 @@ describe('createRebalanceLimitOrder', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await createRebalanceLimitOrder({
@@ -184,6 +187,7 @@ describe('createRebalanceLimitOrder', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     vi.mocked(createLimitOrder).mockClear();
@@ -220,6 +224,7 @@ describe('createRebalanceLimitOrder', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     vi.mocked(fetchPairData).mockResolvedValueOnce({ currentPrice: 1 });
@@ -265,6 +270,7 @@ describe('createRebalanceLimitOrder', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     vi.mocked(fetchPairInfo).mockResolvedValueOnce({

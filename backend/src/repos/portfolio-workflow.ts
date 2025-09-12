@@ -16,6 +16,7 @@ export interface PortfolioWorkflowRow {
   review_interval: string;
   agent_instructions: string;
   manual_rebalance: boolean;
+  use_earn: boolean;
   ai_api_key_id: string | null;
   exchange_api_key_id: string | null;
 }
@@ -37,6 +38,7 @@ export function toApi(row: PortfolioWorkflowRow) {
     reviewInterval: row.review_interval,
     agentInstructions: row.agent_instructions,
     manualRebalance: row.manual_rebalance,
+    useEarn: row.use_earn,
     aiApiKeyId: row.ai_api_key_id ?? null,
     exchangeApiKeyId: row.exchange_api_key_id ?? null,
   };
@@ -46,7 +48,7 @@ const baseSelect = `
   SELECT a.id, a.user_id, a.model, a.status, a.created_at, a.start_balance, a.name,
          COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
                   FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
-         a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance,
+         a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance, a.use_earn,
          COALESCE(ak.id, oak.id) AS ai_api_key_id, ek.id AS exchange_api_key_id
     FROM portfolio_workflow a
     LEFT JOIN portfolio_workflow_tokens t ON t.portfolio_workflow_id = a.id
@@ -105,6 +107,7 @@ export async function findIdenticalDraftAgent(
     reviewInterval: string;
     agentInstructions: string;
     manualRebalance: boolean;
+    useEarn: boolean;
   },
   excludeId?: string,
 ) {
@@ -116,8 +119,8 @@ export async function findIdenticalDraftAgent(
     ) t ON t.portfolio_workflow_id = a.id
     WHERE a.user_id = $1 AND a.status = 'draft' AND ($2::bigint IS NULL OR a.id != $2)
       AND a.model = $3 AND a.name = $4
-      AND a.risk = $5 AND a.review_interval = $6 AND a.agent_instructions = $7 AND a.manual_rebalance = $8
-      AND COALESCE(t.tokens::jsonb, '[]'::jsonb) = $9::jsonb`;
+      AND a.risk = $5 AND a.review_interval = $6 AND a.agent_instructions = $7 AND a.manual_rebalance = $8 AND a.use_earn = $9
+      AND COALESCE(t.tokens::jsonb, '[]'::jsonb) = $10::jsonb`;
   const params: unknown[] = [
     data.userId,
     excludeId ?? null,
@@ -127,6 +130,7 @@ export async function findIdenticalDraftAgent(
     data.reviewInterval,
     data.agentInstructions,
     data.manualRebalance,
+    data.useEarn,
     JSON.stringify(
       data.tokens.map((t) => ({
         token: t.token,
@@ -177,10 +181,11 @@ export async function insertAgent(data: {
   reviewInterval: string;
   agentInstructions: string;
   manualRebalance: boolean;
+  useEarn: boolean;
 }): Promise<PortfolioWorkflowRow> {
   const { rows } = await db.query(
-    `INSERT INTO portfolio_workflow (user_id, model, status, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO portfolio_workflow (user_id, model, status, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance, use_earn)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id`,
     [
       data.userId,
@@ -192,6 +197,7 @@ export async function insertAgent(data: {
       data.reviewInterval,
       data.agentInstructions,
       data.manualRebalance,
+      data.useEarn,
     ],
   );
   const id = rows[0].id as string;
@@ -222,9 +228,10 @@ export async function updateAgent(data: {
   agentInstructions: string;
   startBalance: number | null;
   manualRebalance: boolean;
+  useEarn: boolean;
 }): Promise<void> {
   await db.query(
-    `UPDATE portfolio_workflow SET model = $1, status = $2, name = $3, risk = $4, review_interval = $5, agent_instructions = $6, start_balance = $7, manual_rebalance = $8 WHERE id = $9`,
+    `UPDATE portfolio_workflow SET model = $1, status = $2, name = $3, risk = $4, review_interval = $5, agent_instructions = $6, start_balance = $7, manual_rebalance = $8, use_earn = $9 WHERE id = $10`,
     [
       data.model,
       data.status,
@@ -234,6 +241,7 @@ export async function updateAgent(data: {
       data.agentInstructions,
       data.startBalance,
       data.manualRebalance,
+      data.useEarn,
       data.id,
     ],
   );
@@ -287,6 +295,7 @@ export interface ActivePortfolioWorkflowRow {
   agent_instructions: string;
   ai_api_key_enc: string;
   manual_rebalance: boolean;
+  use_earn: boolean;
   start_balance: number | null;
   created_at: string;
   portfolio_id: string;
@@ -309,6 +318,7 @@ export async function getActivePortfolioWorkflowById(
                         )
                       ) AS ai_api_key_enc,
                       a.manual_rebalance,
+                      a.use_earn,
                       a.start_balance,
                       a.created_at,
                       a.id AS portfolio_id
@@ -340,6 +350,7 @@ export async function getActivePortfolioWorkflowsByInterval(
                         )
                       ) AS ai_api_key_enc,
                       a.manual_rebalance,
+                      a.use_earn,
                       a.start_balance,
                       a.created_at,
                       a.id AS portfolio_id
@@ -371,6 +382,7 @@ export async function getActivePortfolioWorkflowsByUser(
                         )
                       ) AS ai_api_key_enc,
                       a.manual_rebalance,
+                      a.use_earn,
                       a.start_balance,
                       a.created_at,
                       a.id AS portfolio_id

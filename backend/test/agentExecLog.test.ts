@@ -30,6 +30,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await db.query(
@@ -87,6 +88,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({ portfolioId: agent.id, log: '' });
     await db.query(
@@ -142,6 +144,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const rawId = await insertReviewRawLog({
       portfolioId: agent.id,
@@ -187,6 +190,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const agentId = agent.id;
 
@@ -244,6 +248,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const agentId = agent.id;
 
@@ -307,6 +312,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const agentId = agent.id;
     const entry = JSON.stringify({ prompt: { instructions: 'inst' }, response: 'ok' });
@@ -352,6 +358,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: true,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({
       portfolioId: agent.id,
@@ -416,6 +423,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: true,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({
       portfolioId: agent.id,
@@ -476,6 +484,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: true,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({
       portfolioId: agent.id,
@@ -534,6 +543,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: true,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({
       portfolioId: agent.id,
@@ -591,6 +601,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: true,
+      useEarn: true,
     });
     const reviewResultId = await insertReviewResult({
       portfolioId: agent.id,
@@ -650,6 +661,7 @@ describe('agent exec log routes', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     await insertReviewResult({ portfolioId: agent.id, log: 'no', rebalance: false });
     await insertReviewResult({ portfolioId: agent.id, log: 'yes', rebalance: true });
