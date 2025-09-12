@@ -21,8 +21,8 @@ import PortfolioWorkflowFields from '../components/forms/PortfolioWorkflowFields
 interface WorkflowDraftDetails {
   name: string;
   tokens: { token: string; minAllocation: number }[];
-  risk: string;
-  reviewInterval: string;
+  risk: PortfolioReviewFormValues['risk'];
+  reviewInterval: PortfolioReviewFormValues['reviewInterval'];
   agentInstructions: string;
   manualRebalance: boolean;
   useEarn: boolean;
@@ -97,7 +97,7 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
         />
       </h1>
       <FormProvider {...methods}>
-        <div className="max-w-2xl">
+        <div className="max-w-xl">
           <PortfolioWorkflowFields
             onTokensChange={setTokenSymbols}
             balances={balances}
@@ -109,7 +109,7 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
       </FormProvider>
       <AgentInstructions value={agentInstructions} onChange={setAgentInstructions} />
       {user && (
-        <div className="mt-4 max-w-2xl">
+        <div className="mt-4 max-w-xl">
           <div className="grid grid-cols-2 gap-2 max-w-md">
             <ApiKeyProviderSelector
               type="ai"
@@ -141,7 +141,7 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
         </div>
       )}
 
-      <div className="mt-4 max-w-2xl">
+      <div className="mt-4 max-w-xl">
         <WarningSign>
           {t('trading_agent_warning').replace(
             '{tokens}',

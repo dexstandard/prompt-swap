@@ -28,10 +28,15 @@ export default function PortfolioWorkflowFields({
   onUseEarnChange,
 }: Props) {
   const { control, watch } = useFormContext<PortfolioReviewFormValues>();
-  const { fields, append, remove, replace } = useFieldArray({ control, name: 'tokens' });
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: 'tokens',
+  });
   const tokensWatch = watch('tokens');
   const t = useTranslation();
-  const [initializedTopTokens, setInitializedTopTokens] = useState(!autoPopulateTopTokens);
+  const [initializedTopTokens, setInitializedTopTokens] = useState(
+    !autoPopulateTopTokens,
+  );
 
   const tokenSet = new Set(tokens.map((t) => t.value));
   const topTokens = accountBalances
@@ -66,9 +71,18 @@ export default function PortfolioWorkflowFields({
     onTokensChange?.(tokensWatch.map((t) => t.token));
   }, [tokensWatch, onTokensChange]);
 
-  const colTemplate = useEarn
-    ? 'grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto]'
-    : 'grid-cols-[1.5fr_2fr_2fr_1fr_auto]';
+  const colTemplate = 'grid-cols-[1.5fr_2fr_1fr_auto]';
+
+  const totalUsd = tokensWatch.reduce((sum, t) => {
+    const balanceInfo = balances.find((b) => b.token === t.token);
+    if (!balanceInfo) return sum;
+    const totalBalance = balanceInfo.walletBalance + balanceInfo.earnBalance;
+    const price = totalBalance > 0 ? balanceInfo.usdValue / totalBalance : 0;
+    const usd =
+      (balanceInfo.walletBalance + (useEarn ? balanceInfo.earnBalance : 0)) *
+      price;
+    return sum + usd;
+  }, 0);
 
   const handleAddToken = () => {
     const available = tokens.filter(
@@ -91,9 +105,19 @@ export default function PortfolioWorkflowFields({
   return (
     <>
       <div className="space-y-2">
+        <div
+          className={`grid ${colTemplate} gap-2 text-sm font-medium`}
+        >
+          <div className="text-left">Token</div>
+          <div className="text-left">
+            {useEarn ? 'Spot + Earn' : 'Spot'}
+          </div>
+          <div className="text-left">Min %</div>
+          <div />
+        </div>
         {fields.map((field, index) => {
           const token = watch(`tokens.${index}.token`);
-          const balanceInfo = balances.find((b) => b.asset === token);
+          const balanceInfo = balances.find((b) => b.token === token);
           return (
             <div
               key={field.id}
@@ -118,27 +142,11 @@ export default function PortfolioWorkflowFields({
                 )}
               />
               <span className="text-sm text-left">
-                {balanceInfo?.walletBalance.toFixed(5) ?? '0.00000'}
-              </span>
-              {useEarn && (
-                <span className="text-sm text-left">
-                  {balanceInfo?.earnBalance.toFixed(5) ?? '0.00000'}
-                </span>
-              )}
-              <span className="text-sm text-left">
                 {balanceInfo
-                  ? (() => {
-                      const totalBalance =
-                        balanceInfo.walletBalance + balanceInfo.earnBalance;
-                      const price =
-                        totalBalance > 0
-                          ? balanceInfo.usdValue / totalBalance
-                          : 0;
-                      const usd =
-                        (balanceInfo.walletBalance +
-                          (useEarn ? balanceInfo.earnBalance : 0)) * price;
-                      return usd.toFixed(5);
-                    })()
+                  ? (
+                      balanceInfo.walletBalance +
+                      (useEarn ? balanceInfo.earnBalance : 0)
+                    ).toFixed(5)
                   : '0.00000'}
               </span>
               <Controller
@@ -181,6 +189,9 @@ export default function PortfolioWorkflowFields({
             <Plus className="w-4 h-4" />
           </button>
         )}
+      </div>
+      <div className="text-sm font-medium text-right mt-2">
+        Total (USD): {totalUsd.toFixed(5)}
       </div>
       <div className="grid grid-cols-3 gap-4 items-center mt-4">
         <div>

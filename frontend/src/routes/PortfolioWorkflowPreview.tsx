@@ -11,7 +11,11 @@ import ApiKeyProviderSelector from '../components/forms/ApiKeyProviderSelector';
 import TokenSelect from '../components/forms/TokenSelect';
 import TextInput from '../components/forms/TextInput';
 import { Plus, Trash } from 'lucide-react';
-import { tokens as tokenOptions, stableCoins } from '../lib/constants';
+import {
+  tokens as tokenOptions,
+  stableCoins,
+  type PortfolioReviewFormValues,
+} from '../lib/constants';
 import { useToast } from '../lib/useToast';
 import Button from '../components/ui/Button';
 import { usePrerequisites } from '../lib/usePrerequisites';
@@ -21,10 +25,11 @@ import SelectInput from '../components/forms/SelectInput';
 interface WorkflowPreviewDetails {
   name: string;
   tokens: { token: string; minAllocation: number }[];
-  risk: string;
-  reviewInterval: string;
+  risk: PortfolioReviewFormValues['risk'];
+  reviewInterval: PortfolioReviewFormValues['reviewInterval'];
   agentInstructions: string;
   manualRebalance: boolean;
+  useEarn: boolean;
 }
 
 interface WorkflowDraft extends WorkflowPreviewDetails {
@@ -118,14 +123,14 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
           className="text-2xl font-bold"
         />
       </h1>
-      <div className="max-w-2xl">
+      <div className="max-w-xl">
         <h2 className="text-md font-bold mb-2">{t('tokens')}</h2>
         <div className="space-y-2">
-          <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
+          <div className="grid grid-cols-[1.5fr_2fr_1fr_auto] gap-2 text-sm font-medium">
             <div className="text-left">Token</div>
-            <div className="text-left">Spot</div>
-            <div className="text-left">Earn</div>
-            <div className="text-left">Total (USD)</div>
+            <div className="text-left">
+              {workflowData.useEarn ? 'Spot + Earn' : 'Spot'}
+            </div>
             <div className="text-left">Min %</div>
             <div />
           </div>
@@ -136,7 +141,7 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
             return (
               <div
                 key={`${tkn.token}-${index}`}
-                className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 items-center"
+                className="grid grid-cols-[1.5fr_2fr_1fr_auto] gap-2 items-center"
               >
                 <TokenSelect
                   id={`token-${index}`}
@@ -171,28 +176,10 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
                   {balanceInfo?.isLoading
                     ? t('loading')
                     : balanceInfo
-                    ? balanceInfo.walletBalance.toFixed(5)
-                    : '0.00000'}
-                </span>
-                <span className="text-sm text-left">
-                  {balanceInfo?.isLoading
-                    ? t('loading')
-                    : balanceInfo
-                    ? balanceInfo.earnBalance.toFixed(5)
-                    : '0.00000'}
-                </span>
-                <span className="text-sm text-left">
-                  {balanceInfo?.isLoading
-                    ? t('loading')
-                    : balanceInfo
-                    ? (() => {
-                        const total =
-                          balanceInfo.walletBalance + balanceInfo.earnBalance;
-                        const price = total > 0 ? balanceInfo.usdValue / total : 0;
-                        const usd =
-                          balanceInfo.walletBalance + balanceInfo.earnBalance;
-                        return (usd * price).toFixed(5);
-                      })()
+                    ? (
+                        balanceInfo.walletBalance +
+                        (workflowData.useEarn ? balanceInfo.earnBalance : 0)
+                      ).toFixed(5)
                     : '0.00000'}
                 </span>
                 <TextInput
@@ -243,6 +230,27 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
             </button>
           )}
         </div>
+        <div className="text-sm font-medium text-right mt-2">
+          Total (USD):{' '}
+          {(() => {
+            return workflowData.tokens
+              .reduce((sum, tkn) => {
+                const balanceInfo = balances.find(
+                  (b) => b.token.toUpperCase() === tkn.token.toUpperCase(),
+                );
+                if (!balanceInfo) return sum;
+                const total =
+                  balanceInfo.walletBalance + balanceInfo.earnBalance;
+                const price = total > 0 ? balanceInfo.usdValue / total : 0;
+                const usd =
+                  (balanceInfo.walletBalance +
+                    (workflowData.useEarn ? balanceInfo.earnBalance : 0)) *
+                  price;
+                return sum + usd;
+              }, 0)
+              .toFixed(5);
+          })()}
+        </div>
         <div className="mt-4 space-y-1">
           <p>
             <strong>{t('risk_tolerance')}:</strong> {workflowData.risk}
@@ -259,7 +267,7 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
         }
       />
       {user && (
-        <div className="mt-4 max-w-2xl">
+        <div className="mt-4 max-w-xl">
           <div>
             <ApiKeyProviderSelector
               type="ai"
@@ -286,7 +294,7 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
         </div>
       )}
 
-      <div className="mt-4 max-w-2xl">
+      <div className="mt-4 max-w-xl">
         <WarningSign>
           {t('trading_agent_warning').replace(
             '{tokens}',

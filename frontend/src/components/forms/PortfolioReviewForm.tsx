@@ -56,7 +56,7 @@ export default function PortfolioReviewForm({
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-xl">
         <PortfolioWorkflowFields
           onTokensChange={onTokensChange}
           balances={balances}
