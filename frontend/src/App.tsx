@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
 import Dashboard from './routes/Dashboard';
 import Keys from './routes/Keys';
-import AgentPreview from './routes/AgentPreview';
+import PortfolioWorkflowPreview from './routes/PortfolioWorkflowPreview';
 import AgentView from './routes/AgentView';
 import Settings from './routes/Settings';
 import Terms from './routes/Terms';
@@ -19,7 +19,7 @@ export default function App() {
           <Route path="/keys" element={<Keys />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/users" element={<Users />} />
-          <Route path="/portfolio-workflow-preview" element={<AgentPreview />} />
+          <Route path="/portfolio-workflow-preview" element={<PortfolioWorkflowPreview />} />
           <Route path="/portfolio-workflows/:id" element={<AgentView />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />

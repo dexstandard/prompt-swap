@@ -8,7 +8,7 @@ import { useAgentActions } from '../lib/useAgentActions';
 import api from '../lib/axios';
 import Button from '../components/ui/Button';
 import { useToast } from '../lib/useToast';
-import AgentPreview from './AgentPreview';
+import PortfolioWorkflowPreview from './PortfolioWorkflowPreview';
 import ExecLogItem, { type ExecLog } from '../components/ExecLogItem';
 import FormattedDate from '../components/ui/FormattedDate';
 import AgentUpdateModal from '../components/AgentUpdateModal';
@@ -64,7 +64,7 @@ export default function AgentView() {
   });
 
   if (!data) return <div className="p-4">{t('loading')}</div>;
-  if (data.status === 'draft') return <AgentPreview draft={data} />;
+  if (data.status === 'draft') return <PortfolioWorkflowPreview draft={data} />;
 
     const isActive = data.status === 'active';
     return (
