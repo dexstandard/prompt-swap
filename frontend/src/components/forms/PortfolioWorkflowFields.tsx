@@ -80,7 +80,7 @@ export default function PortfolioWorkflowFields({
     onTokensChange?.(tokensWatch.map((t) => t.token));
   }, [tokensWatch, onTokensChange]);
 
-  const colTemplate = 'grid-cols-[1.5fr_1.5fr_1fr_auto]';
+  const colTemplate = 'grid-cols-[7rem_6rem_4rem_auto]';
 
   const totalUsd = tokensWatch.reduce((sum, t) => {
     const balanceInfo = balances.find((b) => b.token === t.token);
@@ -113,7 +113,7 @@ export default function PortfolioWorkflowFields({
 
   return (
     <>
-      <div className="space-y-2">
+      <div className="space-y-2 w-fit">
         <div
           className={`grid ${colTemplate} gap-2 text-sm font-medium`}
         >

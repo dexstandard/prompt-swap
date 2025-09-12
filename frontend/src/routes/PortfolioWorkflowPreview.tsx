@@ -125,8 +125,8 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
       </h1>
       <div className="max-w-xl">
         <h2 className="text-md font-bold mb-2">{t('tokens')}</h2>
-        <div className="space-y-2">
-          <div className="grid grid-cols-[1.5fr_2fr_1fr_auto] gap-2 text-sm font-medium">
+        <div className="space-y-2 w-fit">
+          <div className="grid grid-cols-[7rem_6rem_4rem_auto] gap-2 text-sm font-medium">
             <div className="text-left">Token</div>
             <div className="text-left">
               {workflowData.useEarn ? 'Spot + Earn' : 'Spot'}
@@ -141,7 +141,7 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
             return (
               <div
                 key={`${tkn.token}-${index}`}
-                className="grid grid-cols-[1.5fr_2fr_1fr_auto] gap-2 items-center"
+                className="grid grid-cols-[7rem_6rem_4rem_auto] gap-2 items-center"
               >
                 <TokenSelect
                   id={`token-${index}`}
