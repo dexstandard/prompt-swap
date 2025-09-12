@@ -8,14 +8,16 @@ import { useToast } from '../lib/useToast';
 import { useTranslation } from '../lib/i18n';
 import Button from './ui/Button';
 import ConfirmDialog from './ui/ConfirmDialog';
+import type { PortfolioReviewFormValues } from '../lib/constants';
 
 interface AgentPreviewDetails {
   name: string;
   tokens: { token: string; minAllocation: number }[];
-  risk: string;
-  reviewInterval: string;
+  risk: PortfolioReviewFormValues['risk'];
+  reviewInterval: PortfolioReviewFormValues['reviewInterval'];
   agentInstructions: string;
   manualRebalance: boolean;
+  useEarn: boolean;
 }
 
 interface AgentDraft extends AgentPreviewDetails {
@@ -72,6 +74,7 @@ export default function AgentStartButton({
           reviewInterval: agentData.reviewInterval,
           agentInstructions: agentData.agentInstructions,
           manualRebalance: agentData.manualRebalance,
+          useEarn: agentData.useEarn,
           status: 'active',
         });
         navigate(`/portfolio-workflows/${res.data.id}`);

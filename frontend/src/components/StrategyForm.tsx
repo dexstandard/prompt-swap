@@ -2,13 +2,13 @@ import TokenSelect from './forms/TokenSelect';
 import TextInput from './forms/TextInput';
 import SelectInput from './forms/SelectInput';
 import FormField from './forms/FormField';
-import { tokens, riskOptions, reviewIntervalOptions, stableCoins } from '../lib/constants';
+import { tokens, riskOptions, reviewIntervalOptions, stableCoins, type PortfolioReviewFormValues } from '../lib/constants';
 import { useTranslation } from '../lib/i18n';
 
 interface StrategyData {
   tokens: { token: string; minAllocation: number }[];
-  risk: string;
-  reviewInterval: string;
+  risk: PortfolioReviewFormValues['risk'];
+  reviewInterval: PortfolioReviewFormValues['reviewInterval'];
 }
 
 interface Props {
@@ -113,7 +113,7 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
           <SelectInput
             id="risk"
             value={risk}
-            onChange={(v) => onChange('risk', v)}
+            onChange={(v) => onChange('risk', v as PortfolioReviewFormValues['risk'])}
             options={riskOptions}
             disabled={disabled}
           />
@@ -126,7 +126,12 @@ export default function StrategyForm({ data, onChange, disabled = false }: Props
           <SelectInput
             id="reviewInterval"
             value={reviewInterval}
-            onChange={(v) => onChange('reviewInterval', v)}
+            onChange={(v) =>
+              onChange(
+                'reviewInterval',
+                v as PortfolioReviewFormValues['reviewInterval'],
+              )
+            }
             options={reviewIntervalOptions(t)}
             disabled={disabled}
           />

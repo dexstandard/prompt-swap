@@ -17,6 +17,7 @@ import { useToast } from '../lib/useToast';
 import Toggle from '../components/ui/Toggle';
 import { useTranslation } from '../lib/i18n';
 import { usePrerequisites } from '../lib/usePrerequisites';
+import type { PortfolioReviewFormValues } from '../lib/constants';
 
 interface Agent {
   id: string;
@@ -25,7 +26,7 @@ interface Agent {
   status: 'active' | 'inactive' | 'draft';
   tokens?: { token: string }[];
   startBalanceUsd?: number | null;
-  reviewInterval: string;
+  reviewInterval: PortfolioReviewFormValues['reviewInterval'];
 }
 
 function AgentRow({

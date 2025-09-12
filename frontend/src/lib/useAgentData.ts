@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import api from './axios';
 import { useUser } from './useUser';
+import type { PortfolioReviewFormValues } from './constants';
 
 export interface Agent {
   id: string;
@@ -10,11 +11,12 @@ export interface Agent {
   createdAt: number;
   name: string;
   tokens: { token: string; minAllocation: number }[];
-  risk: string;
-  reviewInterval: string;
+  risk: PortfolioReviewFormValues['risk'];
+  reviewInterval: PortfolioReviewFormValues['reviewInterval'];
   agentInstructions: string;
   startBalanceUsd: number | null;
   manualRebalance: boolean;
+  useEarn: boolean;
   aiApiKeyId: string | null;
   exchangeApiKeyId: string | null;
 }
