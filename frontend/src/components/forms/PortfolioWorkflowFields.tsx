@@ -37,11 +37,11 @@ export default function PortfolioWorkflowFields({
     control,
     name: 'tokens',
   });
-  const tokensWatch = useWatch<PortfolioReviewFormValues['tokens']>({
+  const tokensWatch = useWatch({
     control,
     name: 'tokens',
     defaultValue: [],
-  });
+  }) as PortfolioReviewFormValues['tokens'];
   const t = useTranslation();
   const [initializedTopTokens, setInitializedTopTokens] = useState(
     !autoPopulateTopTokens,
@@ -64,7 +64,9 @@ export default function PortfolioWorkflowFields({
     if (!autoPopulateTopTokens || initializedTopTokens) return;
     if (topTokens.length > 0) {
       const stable = tokensWatch[0]?.token;
-      const newTokens = [stable, ...topTokens].slice(0, 5);
+      const newTokens = [stable, ...topTokens]
+        .filter((t): t is string => Boolean(t))
+        .slice(0, 5);
       replace(
         newTokens.map((t) => ({
           token: t,
@@ -74,10 +76,21 @@ export default function PortfolioWorkflowFields({
       onTokensChange?.(newTokens);
       setInitializedTopTokens(true);
     }
-  }, [autoPopulateTopTokens, topTokens, initializedTopTokens, replace, onTokensChange, tokensWatch]);
+  }, [
+    autoPopulateTopTokens,
+    topTokens,
+    initializedTopTokens,
+    replace,
+    onTokensChange,
+    tokensWatch,
+  ]);
 
   useEffect(() => {
-    onTokensChange?.(tokensWatch.map((t) => t.token));
+    onTokensChange?.(
+      tokensWatch
+        .map((t) => t.token)
+        .filter((t): t is string => Boolean(t)),
+    );
   }, [tokensWatch, onTokensChange]);
 
   const colTemplate = 'grid-cols-[7rem_6rem_4rem_auto]';
@@ -99,14 +112,20 @@ export default function PortfolioWorkflowFields({
     );
     const newToken = available[0]?.value || tokens[0].value;
     append({ token: newToken, minAllocation: 0 });
-    onTokensChange?.([...tokensWatch.map((t) => t.token), newToken]);
+    onTokensChange?.([
+      ...tokensWatch
+        .map((t) => t.token)
+        .filter((t): t is string => Boolean(t)),
+      newToken,
+    ]);
   };
 
   const handleRemoveToken = (index: number) => {
     if (index === 0 || fields.length <= 2) return;
     const newTokens = tokensWatch
       .filter((_, i) => i !== index)
-      .map((t) => t.token);
+      .map((t) => t.token)
+      .filter((t): t is string => Boolean(t));
     remove(index);
     onTokensChange?.(newTokens);
   };
