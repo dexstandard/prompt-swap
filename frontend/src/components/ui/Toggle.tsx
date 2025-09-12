@@ -18,7 +18,7 @@ export default function Toggle({
   const marginClass = labelPosition === 'top' ? 'mt-2' : 'ml-2';
 
   return (
-    <label className={`${flexClass} text-sm cursor-pointer`}>
+    <label className={`${flexClass} text-sm font-medium cursor-pointer`}>
       <span>{label}</span>
       <input
         type="checkbox"

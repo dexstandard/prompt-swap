@@ -63,9 +63,9 @@ async function validateAgentInput(
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
   }
-  if (body.tokens.length !== 2) {
+  if (body.tokens.length < 2 || body.tokens.length > 5) {
     log.error('invalid tokens');
-    return { code: 400, body: errorResponse('exactly two tokens required') };
+    return { code: 400, body: errorResponse('invalid tokens') };
   }
   if (body.status === AgentStatus.Retired) {
     log.error('invalid status');

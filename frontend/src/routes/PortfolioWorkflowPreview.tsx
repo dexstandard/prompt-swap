@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from '../lib/i18n';
 import AgentName from '../components/AgentName';
-import StrategyForm from '../components/StrategyForm';
 import AgentInstructions from '../components/AgentInstructions';
-import { normalizeAllocations } from '../lib/allocations';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import api from '../lib/axios';
@@ -17,7 +15,7 @@ import { usePrerequisites } from '../lib/usePrerequisites';
 import AgentStartButton from '../components/AgentStartButton';
 import SelectInput from '../components/forms/SelectInput';
 
-interface AgentPreviewDetails {
+interface WorkflowPreviewDetails {
   name: string;
   tokens: { token: string; minAllocation: number }[];
   risk: string;
@@ -26,29 +24,30 @@ interface AgentPreviewDetails {
   manualRebalance: boolean;
 }
 
-interface AgentDraft extends AgentPreviewDetails {
+interface WorkflowDraft extends WorkflowPreviewDetails {
   id: string;
   userId: string;
   model: string | null;
 }
 
 interface Props {
-  draft?: AgentDraft;
+  draft?: WorkflowDraft;
 }
 
-export default function AgentPreview({ draft }: Props) {
+export default function PortfolioWorkflowPreview({ draft }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
-  const locationData = location.state as AgentPreviewDetails | undefined;
+  const locationData = location.state as WorkflowPreviewDetails | undefined;
   const { user } = useUser();
   const toast = useToast();
   const t = useTranslation();
   const data = draft ?? locationData;
-  const [agentData, setAgentData] = useState<AgentPreviewDetails | undefined>(data);
+  const [workflowData, setWorkflowData] =
+    useState<WorkflowPreviewDetails | undefined>(data);
   useEffect(() => {
-    if (data) setAgentData(data);
+    if (data) setWorkflowData(data);
   }, [data]);
-  const tokens = agentData ? agentData.tokens.map((t) => t.token) : [];
+  const tokens = workflowData ? workflowData.tokens.map((t) => t.token) : [];
   const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
   const [model, setModel] = useState(draft?.model || '');
   const [aiProvider, setAiProvider] = useState('openai');
@@ -75,41 +74,43 @@ export default function AgentPreview({ draft }: Props) {
 
   const isDraft = !!draft;
 
-  if (!agentData) return <div className="p-4">{t('no_preview_data')}</div>;
+  if (!workflowData) return <div className="p-4">{t('no_preview_data')}</div>;
 
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
         <span>{isDraft ? t('agent_draft') : t('agent_preview')}:</span>
         <AgentName
-          name={agentData.name}
-          onChange={(name) => setAgentData((d) => (d ? { ...d, name } : d))}
+          name={workflowData.name}
+          onChange={(name) =>
+            setWorkflowData((d) => (d ? { ...d, name } : d))
+          }
           className="text-2xl font-bold"
         />
       </h1>
       <div className="max-w-2xl">
-        <StrategyForm
-          data={agentData}
-          onChange={(key, value) =>
-            setAgentData((d) => {
-              if (!d) return d;
-              const updated = { ...d, [key]: value } as AgentPreviewDetails;
-              const norm = normalizeAllocations(
-                updated.tokens[0].minAllocation,
-                updated.tokens[1].minAllocation,
-              );
-              const tokens = [
-                { ...updated.tokens[0], minAllocation: norm.minTokenAAllocation },
-                { ...updated.tokens[1], minAllocation: norm.minTokenBAllocation },
-              ];
-              return { ...updated, tokens };
-            })
-          }
-        />
+        <h2 className="text-md font-bold mb-2">{t('tokens')}</h2>
+        <ul className="list-disc pl-4">
+          {workflowData.tokens.map((tkn) => (
+            <li key={tkn.token}>
+              {tkn.token.toUpperCase()} — {tkn.minAllocation}%
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 space-y-1">
+          <p>
+            <strong>{t('risk_tolerance')}:</strong> {workflowData.risk}
+          </p>
+          <p>
+            <strong>{t('review_interval')}:</strong> {workflowData.reviewInterval}
+          </p>
+        </div>
       </div>
       <AgentInstructions
-        value={agentData.agentInstructions}
-        onChange={(v) => setAgentData((d) => (d ? { ...d, agentInstructions: v } : d))}
+        value={workflowData.agentInstructions}
+        onChange={(v) =>
+          setWorkflowData((d) => (d ? { ...d, agentInstructions: v } : d))
+        }
       />
       {user && (
         <div className="mt-4 max-w-2xl">
@@ -156,7 +157,7 @@ export default function AgentPreview({ draft }: Props) {
         <WarningSign>
           {t('trading_agent_warning').replace(
             '{tokens}',
-            agentData.tokens
+            workflowData.tokens
               .map((t) => t.token.toUpperCase())
               .join(` ${t('and')} `),
           )}
@@ -166,9 +167,9 @@ export default function AgentPreview({ draft }: Props) {
         <label className="mt-4 flex items-center gap-2">
           <input
             type="checkbox"
-            checked={agentData.manualRebalance}
+            checked={workflowData.manualRebalance}
             onChange={(e) =>
-              setAgentData((d) =>
+              setWorkflowData((d) =>
                 d ? { ...d, manualRebalance: e.target.checked } : d,
               )
             }
@@ -190,30 +191,30 @@ export default function AgentPreview({ draft }: Props) {
                   await api.put(`/portfolio-workflows/${draft!.id}`, {
                     userId: draft!.userId,
                     model,
-                    name: agentData.name,
-                    tokens: agentData.tokens.map((t) => ({
+                    name: workflowData.name,
+                    tokens: workflowData.tokens.map((t) => ({
                       token: t.token.toUpperCase(),
                       minAllocation: t.minAllocation,
                     })),
-                    risk: agentData.risk,
-                    reviewInterval: agentData.reviewInterval,
-                    agentInstructions: agentData.agentInstructions,
-                    manualRebalance: agentData.manualRebalance,
+                    risk: workflowData.risk,
+                    reviewInterval: workflowData.reviewInterval,
+                    agentInstructions: workflowData.agentInstructions,
+                    manualRebalance: workflowData.manualRebalance,
                     status: 'draft',
                   });
                 } else {
                   await api.post('/portfolio-workflows', {
                     userId: user.id,
                     model,
-                    name: agentData.name,
-                    tokens: agentData.tokens.map((t) => ({
+                    name: workflowData.name,
+                    tokens: workflowData.tokens.map((t) => ({
                       token: t.token.toUpperCase(),
                       minAllocation: t.minAllocation,
                     })),
-                    risk: agentData.risk,
-                    reviewInterval: agentData.reviewInterval,
-                    agentInstructions: agentData.agentInstructions,
-                    manualRebalance: agentData.manualRebalance,
+                    risk: workflowData.risk,
+                    reviewInterval: workflowData.reviewInterval,
+                    agentInstructions: workflowData.agentInstructions,
+                    manualRebalance: workflowData.manualRebalance,
                     status: 'draft',
                   });
                 }
@@ -234,7 +235,7 @@ export default function AgentPreview({ draft }: Props) {
           </Button>
           <AgentStartButton
             draft={draft}
-            agentData={agentData}
+            agentData={workflowData}
             model={model}
             disabled={!user || !hasOpenAIKey || !hasBinanceKey || !model}
           />

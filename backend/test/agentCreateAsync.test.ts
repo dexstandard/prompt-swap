@@ -12,6 +12,7 @@ vi.mock('../src/workflows/portfolio-review.js', () => ({
 import buildServer from '../src/server.js';
 import { encrypt } from '../src/util/crypto.js';
 import { authCookies } from './helpers.js';
+import { db } from '../src/db/index.js';
 
 async function addUser(id: string) {
   const ai = encrypt('aikey', process.env.KEY_PASSWORD!);
@@ -82,6 +83,45 @@ describe('agent creation', () => {
     expect(reviewAgentPortfolioMock.mock.calls[0][1]).toBe(id);
 
     (globalThis as any).fetch = originalFetch;
+    await app.close();
+  });
+
+  it('saves multiple tokens', async () => {
+    const app = await buildServer();
+    const userId = await addUser('2');
+
+    const payload = {
+      userId,
+      model: 'm',
+      name: 'Multi',
+      tokens: [
+        { token: 'BTC', minAllocation: 30 },
+        { token: 'ETH', minAllocation: 30 },
+        { token: 'BNB', minAllocation: 35 },
+      ],
+      risk: 'low',
+      reviewInterval: '1h',
+      agentInstructions: 'prompt',
+      status: 'draft',
+    };
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/portfolio-workflows',
+      cookies: authCookies(userId),
+      payload,
+    });
+    expect(res.statusCode).toBe(200);
+    const id = res.json().id as string;
+    const { rows } = await db.query(
+      'SELECT token, min_allocation FROM portfolio_workflow_tokens WHERE portfolio_workflow_id = $1 ORDER BY position',
+      [id],
+    );
+    expect(rows).toEqual([
+      { token: 'BTC', min_allocation: 30 },
+      { token: 'ETH', min_allocation: 30 },
+      { token: 'BNB', min_allocation: 35 },
+    ]);
     await app.close();
   });
 });
