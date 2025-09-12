@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useFormContext, Controller, useFieldArray } from 'react-hook-form';
+import {
+  useFormContext,
+  Controller,
+  useFieldArray,
+  useWatch,
+} from 'react-hook-form';
 import { Plus, Trash } from 'lucide-react';
 import type { BalanceInfo } from '../../lib/usePrerequisites';
 import type { BinanceAccount } from '../../lib/useBinanceAccount';
@@ -32,7 +37,11 @@ export default function PortfolioWorkflowFields({
     control,
     name: 'tokens',
   });
-  const tokensWatch = watch('tokens');
+  const tokensWatch = useWatch<PortfolioReviewFormValues['tokens']>({
+    control,
+    name: 'tokens',
+    defaultValue: [],
+  });
   const t = useTranslation();
   const [initializedTopTokens, setInitializedTopTokens] = useState(
     !autoPopulateTopTokens,
