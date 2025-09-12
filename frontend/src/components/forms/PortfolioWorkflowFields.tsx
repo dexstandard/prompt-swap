@@ -71,7 +71,7 @@ export default function PortfolioWorkflowFields({
     onTokensChange?.(tokensWatch.map((t) => t.token));
   }, [tokensWatch, onTokensChange]);
 
-  const colTemplate = 'grid-cols-[1.5fr_2fr_1fr_auto]';
+  const colTemplate = 'grid-cols-[1.5fr_1.5fr_1fr_auto]';
 
   const totalUsd = tokensWatch.reduce((sum, t) => {
     const balanceInfo = balances.find((b) => b.token === t.token);
@@ -190,7 +190,7 @@ export default function PortfolioWorkflowFields({
           </button>
         )}
       </div>
-      <div className="text-sm font-medium text-right mt-2">
+      <div className="text-sm font-medium text-left mt-2">
         Total (USD): {totalUsd.toFixed(5)}
       </div>
       <div className="grid grid-cols-3 gap-4 items-center mt-4">
