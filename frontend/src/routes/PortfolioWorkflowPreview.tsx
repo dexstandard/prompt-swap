@@ -231,7 +231,7 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
           )}
         </div>
         <div className="text-sm font-medium text-right mt-2">
-          Total (USD):{' '}
+          Total $:{' '}
           {(() => {
             return workflowData.tokens
               .reduce((sum, tkn) => {
