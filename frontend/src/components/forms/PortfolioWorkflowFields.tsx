@@ -218,10 +218,16 @@ export default function PortfolioWorkflowFields({
           </button>
         )}
       </div>
-      <div className="text-sm font-medium text-left mt-2">
-        Total $: {totalUsd.toFixed(2)}
+      <div className="flex items-center justify-between text-sm font-medium mt-2">
+        <span>Total $: {totalUsd.toFixed(2)}</span>
+        <Toggle
+          label={t('use_binance_earn')}
+          checked={useEarn}
+          onChange={onUseEarnChange}
+          size="sm"
+        />
       </div>
-      <div className="grid grid-cols-3 gap-4 items-center mt-4">
+      <div className="grid grid-cols-2 gap-4 items-center mt-4">
         <div>
           <label htmlFor="risk" className="block text-sm font-medium">
             {t('risk_tolerance')}
@@ -257,14 +263,6 @@ export default function PortfolioWorkflowFields({
                 options={reviewIntervalOptions(t)}
               />
             )}
-          />
-        </div>
-        <div className="flex justify-center h-full">
-          <Toggle
-            label={t('use_binance_earn')}
-            checked={useEarn}
-            onChange={onUseEarnChange}
-            labelPosition="top"
           />
         </div>
       </div>
