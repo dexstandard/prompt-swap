@@ -219,7 +219,7 @@ export default function PortfolioWorkflowFields({
         )}
       </div>
       <div className="text-sm font-medium text-left mt-2">
-        Total $: {totalUsd.toFixed(5)}
+        Total $: {totalUsd.toFixed(2)}
       </div>
       <div className="grid grid-cols-3 gap-4 items-center mt-4">
         <div>
