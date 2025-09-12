@@ -4,7 +4,6 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash } from 'lucide-react';
 import type { BalanceInfo } from '../../lib/usePrerequisites';
-import { useUser } from '../../lib/useUser';
 import { useTranslation } from '../../lib/i18n';
 import {
   DEFAULT_AGENT_INSTRUCTIONS,
@@ -32,7 +31,6 @@ export default function PortfolioReviewForm({
   onTokensChange,
   balances,
 }: Props) {
-  const { user } = useUser();
   const t = useTranslation();
   const {
     handleSubmit,
@@ -86,8 +84,7 @@ export default function PortfolioReviewForm({
     }
   }, [topTokens, initializedTopTokens, replace, onTokensChange, tokensWatch]);
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!user) return;
+  const onSubmit = (values: PortfolioReviewFormValues) => {
     const previewData = {
       name: values.tokens.map((t) => t.token.toUpperCase()).join(' / '),
       tokens: values.tokens.map((t) => ({
@@ -100,7 +97,7 @@ export default function PortfolioReviewForm({
       manualRebalance: false,
     };
     navigate('/portfolio-workflow-preview', { state: previewData });
-  });
+  };
 
   const handleAddToken = () => {
     const available = tokens.filter(
@@ -132,7 +129,7 @@ export default function PortfolioReviewForm({
         </Button>
       )}
       <form
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         className={`bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[40rem] ${
           mobileOpen ? '' : 'hidden'
         } md:block`}
@@ -304,15 +301,9 @@ export default function PortfolioReviewForm({
             />
           </div>
         </div>
-        {!user && (
-          <p className="text-sm text-gray-600 mb-2">
-            {t('log_in_to_continue')}
-          </p>
-        )}
         <Button
           type="submit"
           className="w-full"
-          disabled={!user}
           loading={isSubmitting}
         >
           {t('preview')}
