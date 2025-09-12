@@ -3,6 +3,9 @@
 When a task touches only the backend or the frontend, scan only the
 relevant directory to save time.
 
+### General
+- Pin all `package.json` dependencies to exact versions. Do not use `^` or `~` ranges.
+
 ## Backend
 
 ### Folder overview
