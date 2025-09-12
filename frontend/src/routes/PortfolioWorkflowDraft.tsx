@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from '../lib/i18n';
 import AgentName from '../components/AgentName';
@@ -75,6 +75,18 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
   );
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const values = methods.watch();
+
+  useEffect(() => {
+    setModel(draft?.model || '');
+  }, [draft?.model]);
+
+  useEffect(() => {
+    if (!hasOpenAIKey) {
+      setModel('');
+    } else if (!model) {
+      setModel(draft?.model || models[0] || '');
+    }
+  }, [hasOpenAIKey, models, draft?.model, model]);
 
   if (!data) return <div className="p-4">{t('no_preview_data')}</div>;
 
