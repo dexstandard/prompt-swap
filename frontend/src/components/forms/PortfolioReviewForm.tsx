@@ -56,27 +56,30 @@ export default function PortfolioReviewForm({
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-xl">
-        <PortfolioWorkflowFields
-          onTokensChange={onTokensChange}
-          balances={balances}
-          accountBalances={accountBalances}
-          autoPopulateTopTokens
-          useEarn={useEarn}
-          onUseEarnChange={setUseEarn}
-        />
-        {!user && (
-          <p className="text-sm text-gray-600 mb-2">{t('log_in_to_continue')}</p>
-        )}
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={!user}
-          loading={isSubmitting}
-        >
-          {t('preview')}
-        </Button>
-      </form>
+      <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full">
+        <h2 className="text-xl font-bold mb-4">{t('agent')}</h2>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-xl">
+          <PortfolioWorkflowFields
+            onTokensChange={onTokensChange}
+            balances={balances}
+            accountBalances={accountBalances}
+            autoPopulateTopTokens
+            useEarn={useEarn}
+            onUseEarnChange={setUseEarn}
+          />
+          {!user && (
+            <p className="text-sm text-gray-600 mb-2">{t('log_in_to_continue')}</p>
+          )}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={!user}
+            loading={isSubmitting}
+          >
+            {t('preview')}
+          </Button>
+        </form>
+      </div>
     </FormProvider>
   );
 }
