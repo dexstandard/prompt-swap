@@ -11,7 +11,11 @@ import ApiKeyProviderSelector from '../components/forms/ApiKeyProviderSelector';
 import TokenSelect from '../components/forms/TokenSelect';
 import TextInput from '../components/forms/TextInput';
 import { Plus, Trash } from 'lucide-react';
-import { tokens as tokenOptions, stableCoins } from '../lib/constants';
+import {
+  tokens as tokenOptions,
+  stableCoins,
+  type PortfolioReviewFormValues,
+} from '../lib/constants';
 import { useToast } from '../lib/useToast';
 import Button from '../components/ui/Button';
 import { usePrerequisites } from '../lib/usePrerequisites';
@@ -21,8 +25,8 @@ import SelectInput from '../components/forms/SelectInput';
 interface WorkflowPreviewDetails {
   name: string;
   tokens: { token: string; minAllocation: number }[];
-  risk: string;
-  reviewInterval: string;
+  risk: PortfolioReviewFormValues['risk'];
+  reviewInterval: PortfolioReviewFormValues['reviewInterval'];
   agentInstructions: string;
   manualRebalance: boolean;
   useEarn: boolean;

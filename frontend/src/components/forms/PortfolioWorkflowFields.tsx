@@ -74,7 +74,7 @@ export default function PortfolioWorkflowFields({
   const colTemplate = 'grid-cols-[1.5fr_2fr_1fr_auto]';
 
   const totalUsd = tokensWatch.reduce((sum, t) => {
-    const balanceInfo = balances.find((b) => b.asset === t.token);
+    const balanceInfo = balances.find((b) => b.token === t.token);
     if (!balanceInfo) return sum;
     const totalBalance = balanceInfo.walletBalance + balanceInfo.earnBalance;
     const price = totalBalance > 0 ? balanceInfo.usdValue / totalBalance : 0;
@@ -117,7 +117,7 @@ export default function PortfolioWorkflowFields({
         </div>
         {fields.map((field, index) => {
           const token = watch(`tokens.${index}.token`);
-          const balanceInfo = balances.find((b) => b.asset === token);
+          const balanceInfo = balances.find((b) => b.token === token);
           return (
             <div
               key={field.id}

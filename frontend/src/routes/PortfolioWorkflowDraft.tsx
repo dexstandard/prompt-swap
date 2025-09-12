@@ -21,8 +21,8 @@ import PortfolioWorkflowFields from '../components/forms/PortfolioWorkflowFields
 interface WorkflowDraftDetails {
   name: string;
   tokens: { token: string; minAllocation: number }[];
-  risk: string;
-  reviewInterval: string;
+  risk: PortfolioReviewFormValues['risk'];
+  reviewInterval: PortfolioReviewFormValues['reviewInterval'];
   agentInstructions: string;
   manualRebalance: boolean;
   useEarn: boolean;
