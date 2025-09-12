@@ -56,7 +56,7 @@ export default function PortfolioReviewForm({
 
   return (
     <FormProvider {...methods}>
-      <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-full max-w-xl self-start">
+      <div className="bg-white shadow-md border border-gray-200 rounded p-6 w-fit max-w-lg self-start">
         <h2 className="text-xl font-bold mb-4">{t('agent')}</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
           <PortfolioWorkflowFields
