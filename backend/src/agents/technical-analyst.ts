@@ -55,37 +55,21 @@ export async function runTechnicalAnalyst(
   prompt: RebalancePrompt,
 ): Promise<void> {
   if (!prompt.reports) return;
-  const cache = new Map<
-    string,
-    Promise<{ analysis: Analysis | null; indicators: TokenIndicators }>
-  >();
-  await Promise.all(
-    prompt.reports.map(async (report) => {
-      const { token } = report;
-      if (isStablecoin(token)) return;
-      if (!cache.has(token)) {
-        cache.set(
-          token,
-          (async () => {
-            const indicators = await fetchTokenIndicators(token);
-            const { analysis, prompt: p, response } =
-              await getTechnicalOutlookCached(
-                token,
-                indicators,
-                model,
-                apiKey,
-                log,
-              );
-            if (p && response)
-              await insertReviewRawLog({ portfolioId, prompt: p, response });
-            return { analysis, indicators };
-          })(),
-        );
-      }
-      const { analysis, indicators } = await cache.get(token)!;
-      report.tech = analysis;
-      if (!prompt.marketData.indicators) prompt.marketData.indicators = {};
-      (prompt.marketData.indicators as Record<string, any>)[token] = indicators;
-    }),
-  );
+  for (const report of prompt.reports) {
+    const { token } = report;
+    if (isStablecoin(token)) continue;
+    const indicators = await fetchTokenIndicators(token);
+    const { analysis, prompt: p, response } = await getTechnicalOutlookCached(
+      token,
+      indicators,
+      model,
+      apiKey,
+      log,
+    );
+    if (p && response)
+      await insertReviewRawLog({ portfolioId, prompt: p, response });
+    report.tech = analysis;
+    if (!prompt.marketData.indicators) prompt.marketData.indicators = {};
+    (prompt.marketData.indicators as Record<string, any>)[token] = indicators;
+  }
 }
