@@ -121,7 +121,7 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
               <div>
                 <label
                   htmlFor="model"
-                  className="block text-sm font-medium"
+                  className="block text-md font-bold"
                 >
                   {t('model')}
                 </label>
@@ -136,10 +136,10 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
                   }
                 />
               </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       <div className="mt-4 max-w-xl">
         <WarningSign>
