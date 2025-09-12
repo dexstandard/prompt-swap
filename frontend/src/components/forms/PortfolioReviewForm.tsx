@@ -86,7 +86,7 @@ export default function PortfolioReviewForm({
     }
   }, [topTokens, initializedTopTokens, replace, onTokensChange, tokensWatch]);
 
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = async (values: PortfolioReviewFormValues) => {
     if (!user) return;
     const previewData = {
       name: values.tokens.map((t) => t.token.toUpperCase()).join(' / '),
@@ -100,7 +100,7 @@ export default function PortfolioReviewForm({
       manualRebalance: false,
     };
     navigate('/portfolio-workflow-preview', { state: previewData });
-  });
+  };
 
   const handleAddToken = () => {
     const available = tokens.filter(
@@ -132,7 +132,7 @@ export default function PortfolioReviewForm({
         </Button>
       )}
       <form
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         className={`bg-white shadow-md border border-gray-200 rounded p-6 space-y-4 w-full max-w-[40rem] ${
           mobileOpen ? '' : 'hidden'
         } md:block`}
