@@ -74,6 +74,7 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
         reviewInterval: data.reviewInterval,
         agentInstructions: data.agentInstructions,
         manualRebalance: agent.manualRebalance,
+        useEarn: agent.useEarn,
       });
     },
     onSuccess: () => {

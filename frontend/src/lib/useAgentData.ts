@@ -15,6 +15,7 @@ export interface Agent {
   agentInstructions: string;
   startBalanceUsd: number | null;
   manualRebalance: boolean;
+  useEarn: boolean;
   aiApiKeyId: string | null;
   exchangeApiKeyId: string | null;
 }

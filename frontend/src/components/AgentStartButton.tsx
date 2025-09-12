@@ -16,6 +16,7 @@ interface AgentPreviewDetails {
   reviewInterval: string;
   agentInstructions: string;
   manualRebalance: boolean;
+  useEarn: boolean;
 }
 
 interface AgentDraft extends AgentPreviewDetails {
@@ -72,6 +73,7 @@ export default function AgentStartButton({
           reviewInterval: agentData.reviewInterval,
           agentInstructions: agentData.agentInstructions,
           manualRebalance: agentData.manualRebalance,
+          useEarn: agentData.useEarn,
           status: 'active',
         });
         navigate(`/portfolio-workflows/${res.data.id}`);

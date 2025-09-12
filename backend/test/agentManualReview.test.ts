@@ -30,6 +30,7 @@ describe('manual review endpoint', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const agentId = agent.id;
 
@@ -62,6 +63,7 @@ describe('manual review endpoint', () => {
       reviewInterval: '1h',
       agentInstructions: 'inst',
       manualRebalance: false,
+      useEarn: true,
     });
     const agentId = agent.id;
     reviewAgentPortfolioMock.mockRejectedValueOnce(

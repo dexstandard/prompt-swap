@@ -30,6 +30,7 @@ export interface AgentInput {
   reviewInterval: string;
   agentInstructions: string;
   manualRebalance: boolean;
+  useEarn: boolean;
   status: AgentStatus;
 }
 
@@ -97,6 +98,7 @@ async function validateAgentInput(
         reviewInterval: body.reviewInterval,
         agentInstructions: body.agentInstructions,
         manualRebalance: body.manualRebalance,
+        useEarn: body.useEarn,
       },
       id,
     );
@@ -163,6 +165,7 @@ export async function prepareAgentForUpsert(
 ): Promise<{ body: AgentInput; startBalance: number | null } | ValidationErr> {
   try {
     body.manualRebalance = !!body.manualRebalance;
+    body.useEarn = body.useEarn !== false;
     body.tokens = validateAllocations(body.tokens);
   } catch {
     log.error('invalid allocations');
