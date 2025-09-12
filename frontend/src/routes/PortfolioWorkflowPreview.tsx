@@ -8,7 +8,10 @@ import axios from 'axios';
 import api from '../lib/axios';
 import { useUser } from '../lib/useUser';
 import ApiKeyProviderSelector from '../components/forms/ApiKeyProviderSelector';
-import WalletBalances from '../components/WalletBalances';
+import TokenSelect from '../components/forms/TokenSelect';
+import TextInput from '../components/forms/TextInput';
+import { Plus, Trash } from 'lucide-react';
+import { tokens as tokenOptions, stableCoins } from '../lib/constants';
 import { useToast } from '../lib/useToast';
 import Button from '../components/ui/Button';
 import { usePrerequisites } from '../lib/usePrerequisites';
@@ -47,11 +50,13 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
   useEffect(() => {
     if (data) setWorkflowData(data);
   }, [data]);
-  const tokens = workflowData ? workflowData.tokens.map((t) => t.token) : [];
-  const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
+  const tokenSymbols = workflowData
+    ? workflowData.tokens.map((t) => t.token)
+    : [];
+  const { hasOpenAIKey, hasBinanceKey, models, balances } =
+    usePrerequisites(tokenSymbols);
   const [model, setModel] = useState(draft?.model || '');
   const [aiProvider, setAiProvider] = useState('openai');
-  const [exchangeProvider, setExchangeProvider] = useState('binance');
   useEffect(() => {
     setModel(draft?.model || '');
   }, [draft?.model]);
@@ -63,6 +68,31 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
     }
   }, [hasOpenAIKey, models, draft?.model, model]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+
+  const handleAddToken = () => {
+    setWorkflowData((d) => {
+      if (!d) return d;
+      const available = tokenOptions.filter(
+        (t) => !d.tokens.some((tw) => tw.token === t.value),
+      );
+      const newToken = available[0]?.value || tokenOptions[0].value;
+      return {
+        ...d,
+        tokens: [...d.tokens, { token: newToken, minAllocation: 0 }],
+      };
+    });
+  };
+
+  const handleRemoveToken = (index: number) => {
+    setWorkflowData((d) => {
+      if (!d) return d;
+      if (index === 0 || d.tokens.length <= 2) return d;
+      return {
+        ...d,
+        tokens: d.tokens.filter((_, i) => i !== index),
+      };
+    });
+  };
 
   function WarningSign({ children }: { children: ReactNode }) {
     return (
@@ -90,13 +120,129 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
       </h1>
       <div className="max-w-2xl">
         <h2 className="text-md font-bold mb-2">{t('tokens')}</h2>
-        <ul className="list-disc pl-4">
-          {workflowData.tokens.map((tkn) => (
-            <li key={tkn.token}>
-              {tkn.token.toUpperCase()} — {tkn.minAllocation}%
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-2">
+          <div className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 text-sm font-medium">
+            <div className="text-left">Token</div>
+            <div className="text-left">Spot</div>
+            <div className="text-left">Earn</div>
+            <div className="text-left">Total (USD)</div>
+            <div className="text-left">Min %</div>
+            <div />
+          </div>
+          {workflowData.tokens.map((tkn, index) => {
+            const balanceInfo = balances.find(
+              (b) => b.token.toUpperCase() === tkn.token.toUpperCase(),
+            );
+            return (
+              <div
+                key={`${tkn.token}-${index}`}
+                className="grid grid-cols-[1.5fr_2fr_2fr_2fr_1fr_auto] gap-2 items-center"
+              >
+                <TokenSelect
+                  id={`token-${index}`}
+                  value={tkn.token}
+                  onChange={(val) =>
+                    setWorkflowData((d) =>
+                      d
+                        ? {
+                            ...d,
+                            tokens: d.tokens.map((t, i) =>
+                              i === index ? { ...t, token: val } : t,
+                            ),
+                          }
+                        : d,
+                    )
+                  }
+                  options={
+                    index === 0
+                      ? tokenOptions.filter((t) =>
+                          stableCoins.includes(t.value),
+                        )
+                      : tokenOptions.filter(
+                          (t) =>
+                            t.value === tkn.token ||
+                            !workflowData.tokens.some(
+                              (tw, i) => tw.token === t.value && i !== index,
+                            ),
+                        )
+                  }
+                />
+                <span className="text-sm text-left">
+                  {balanceInfo?.isLoading
+                    ? t('loading')
+                    : balanceInfo
+                    ? balanceInfo.walletBalance.toFixed(5)
+                    : '0.00000'}
+                </span>
+                <span className="text-sm text-left">
+                  {balanceInfo?.isLoading
+                    ? t('loading')
+                    : balanceInfo
+                    ? balanceInfo.earnBalance.toFixed(5)
+                    : '0.00000'}
+                </span>
+                <span className="text-sm text-left">
+                  {balanceInfo?.isLoading
+                    ? t('loading')
+                    : balanceInfo
+                    ? (() => {
+                        const total =
+                          balanceInfo.walletBalance + balanceInfo.earnBalance;
+                        const price = total > 0 ? balanceInfo.usdValue / total : 0;
+                        const usd =
+                          balanceInfo.walletBalance + balanceInfo.earnBalance;
+                        return (usd * price).toFixed(5);
+                      })()
+                    : '0.00000'}
+                </span>
+                <TextInput
+                  id={`minAllocation-${index}`}
+                  type="number"
+                  min={0}
+                  max={95}
+                  value={tkn.minAllocation}
+                  onChange={(e) =>
+                    setWorkflowData((d) =>
+                      d
+                        ? {
+                            ...d,
+                            tokens: d.tokens.map((t, i) =>
+                              i === index
+                                ? {
+                                    ...t,
+                                    minAllocation:
+                                      e.target.value === ''
+                                        ? 0
+                                        : Number(e.target.value),
+                                  }
+                                : t,
+                            ),
+                          }
+                        : d,
+                    )
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveToken(index)}
+                  disabled={index === 0 || workflowData.tokens.length <= 2}
+                  className="text-red-600 disabled:opacity-50"
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+          {workflowData.tokens.length < 5 && (
+            <button
+              type="button"
+              onClick={handleAddToken}
+              className="flex items-center gap-1 text-blue-600"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <div className="mt-4 space-y-1">
           <p>
             <strong>{t('risk_tolerance')}:</strong> {workflowData.risk}
@@ -114,41 +260,28 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
       />
       {user && (
         <div className="mt-4 max-w-2xl">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <ApiKeyProviderSelector
-                type="ai"
-                label={t('ai_provider')}
-                value={aiProvider}
-                onChange={setAiProvider}
-              />
-              {hasOpenAIKey && (models.length || draft?.model) && (
-                <div className="mt-2">
-                  <h2 className="text-md font-bold">{t('model')}</h2>
-                  <SelectInput
-                    id="model"
-                    value={model}
-                    onChange={setModel}
-                    options={
-                      draft?.model && !models.length
-                        ? [{ value: draft.model, label: draft.model }]
-                        : models.map((m) => ({ value: m, label: m }))
-                    }
-                  />
-                </div>
-              )}
-            </div>
-            <div>
-              <ApiKeyProviderSelector
-                type="exchange"
-                label={t('exchange')}
-                value={exchangeProvider}
-                onChange={setExchangeProvider}
-              />
+          <div>
+            <ApiKeyProviderSelector
+              type="ai"
+              label={t('ai_provider')}
+              value={aiProvider}
+              onChange={setAiProvider}
+            />
+            {hasOpenAIKey && (models.length || draft?.model) && (
               <div className="mt-2">
-                <WalletBalances balances={balances} hasBinanceKey={hasBinanceKey} />
+                <h2 className="text-md font-bold">{t('model')}</h2>
+                <SelectInput
+                  id="model"
+                  value={model}
+                  onChange={setModel}
+                  options={
+                    draft?.model && !models.length
+                      ? [{ value: draft.model, label: draft.model }]
+                      : models.map((m) => ({ value: m, label: m }))
+                  }
+                />
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
