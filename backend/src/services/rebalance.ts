@@ -45,10 +45,11 @@ export async function createRebalanceLimitOrder(opts: {
     quantity,
     manuallyEdited,
   } = opts;
+  log.info({ step: 'createLimitOrder' }, 'step start');
   const [token1, token2] = tokens;
   const order = await calcRebalanceOrder({ tokens, positions, newAllocation });
   if (!order) {
-    log.info('no rebalance needed');
+    log.info({ step: 'createLimitOrder' }, 'step success: no rebalance needed');
     return;
   }
   const info = await fetchPairInfo(token1, token2);
@@ -61,7 +62,7 @@ export async function createRebalanceLimitOrder(opts: {
   const roundedQty = Number(qty.toFixed(info.quantityPrecision));
   const roundedPrice = Number(prc.toFixed(info.pricePrecision));
   if (roundedQty * roundedPrice < info.minNotional) {
-    log.info('order below min notional');
+    log.info({ step: 'createLimitOrder' }, 'step success: order below min notional');
     return;
   }
   const params = {
@@ -70,11 +71,10 @@ export async function createRebalanceLimitOrder(opts: {
     quantity: roundedQty,
     price: roundedPrice,
   } as const;
-  log.info({ order: params }, 'creating limit order');
   try {
     const res = await createLimitOrder(userId, params);
     if (!res || res.orderId === undefined || res.orderId === null) {
-      log.error('failed to create limit order');
+      log.error({ step: 'createLimitOrder' }, 'step failed');
       return;
     }
     await insertLimitOrder({
@@ -84,8 +84,9 @@ export async function createRebalanceLimitOrder(opts: {
       reviewResultId,
       orderId: String(res.orderId),
     });
+    log.info({ step: 'createLimitOrder', orderId: res.orderId, order: params }, 'step success');
   } catch (err) {
-    log.error({ err }, 'failed to create limit order');
+    log.error({ err, step: 'createLimitOrder' }, 'step failed');
     throw err;
   }
 }

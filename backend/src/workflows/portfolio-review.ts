@@ -31,6 +31,7 @@ import {
 import { createRebalanceLimitOrder } from '../services/rebalance.js';
 import { type RebalancePrompt } from '../util/ai.js';
 import pLimit from 'p-limit';
+import { randomUUID } from 'crypto';
 
 /** Workflows currently running. Used to avoid concurrent runs. */
 const runningWorkflows = new Set<string>();
@@ -152,42 +153,61 @@ export async function executeWorkflow(
   wf: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
 ) {
+  const execLogId = randomUUID();
+  const runLog = log.child({ execLogId });
+  runLog.info('workflow run start');
+
+  const runStep = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
+    runLog.info({ step: name }, 'step start');
+    try {
+      const res = await fn();
+      runLog.info({ step: name }, 'step success');
+      return res;
+    } catch (err) {
+      runLog.error({ err, step: name }, 'step failed');
+      throw err;
+    }
+  };
+
   let prompt: RebalancePrompt | undefined;
   try {
-    await cleanupOpenOrders(wf, log);
+    await runStep('cleanupOpenOrders', () => cleanupOpenOrders(wf, runLog));
 
     const key = decrypt(wf.ai_api_key_enc, env.KEY_PASSWORD);
 
-    prompt = await collectPromptData(wf, log);
+    prompt = await runStep('collectPromptData', () => collectPromptData(wf, runLog));
     if (!prompt) {
       await saveFailure(wf, 'failed to collect prompt data');
+      runLog.info('workflow run complete');
       return;
     }
 
-    const params = { log, model: wf.model, apiKey: key, portfolioId: wf.id };
+    const params = { log: runLog, model: wf.model, apiKey: key, portfolioId: wf.id };
     await Promise.all([
-      runNewsAnalyst(params, prompt),
-      runTechnicalAnalyst(params, prompt),
+      runStep('runNewsAnalyst', () => runNewsAnalyst(params, prompt!)),
+      runStep('runTechnicalAnalyst', () => runTechnicalAnalyst(params, prompt!)),
     ]);
 
-    const decision = await runMainTrader(params, prompt);
-    const logId = await insertReviewRawLog({
-      portfolioId: wf.id,
-      prompt,
-      response: decision,
-    });
+    const decision = await runStep('runMainTrader', () => runMainTrader(params, prompt!));
+    const logId = await runStep('insertReviewRawLog', () =>
+      insertReviewRawLog({
+        portfolioId: wf.id,
+        prompt: prompt!,
+        response: decision,
+      }),
+    );
     const validationError = validateExecResponse(
       decision ?? undefined,
-      prompt.policy,
+      prompt!.policy,
     );
-    if (validationError) log.error({ err: validationError }, 'validation failed');
+    if (validationError) runLog.error({ err: validationError }, 'validation failed');
     const resultEntry = buildReviewResultEntry({
       workflowId: wf.id,
       decision,
       logId,
       validationError,
     });
-    const resultId = await insertReviewResult(resultEntry);
+    const resultId = await runStep('insertReviewResult', () => insertReviewResult(resultEntry));
     if (
       decision &&
       !validationError &&
@@ -200,14 +220,14 @@ export async function executeWorkflow(
         tokens: wf.tokens.map((t) => t.token),
         positions: prompt.portfolio.positions,
         newAllocation: decision.newAllocation,
-        log,
+        log: runLog,
         reviewResultId: resultId,
       });
     }
-    log.info('workflow run complete');
+    runLog.info('workflow run complete');
   } catch (err) {
     await saveFailure(wf, String(err), prompt);
-    log.error({ err }, 'workflow run failed');
+    runLog.error({ err }, 'workflow run failed');
   }
 }
 
