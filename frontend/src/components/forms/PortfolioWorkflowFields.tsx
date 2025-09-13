@@ -200,13 +200,23 @@ export default function PortfolioWorkflowFields({
                     min={0}
                     max={95}
                     {...field}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === ''
-                          ? ''
-                          : Number(e.target.value),
-                      )
-                    }
+                    onChange={(e) => {
+                      let value =
+                        e.target.value === '' ? '' : Number(e.target.value);
+                      if (value !== '') {
+                        if (value < 0) value = 0;
+                        const totalOthers = tokensWatch.reduce(
+                          (sum, t, i) =>
+                            i === index
+                              ? sum
+                              : sum + (t.minAllocation || 0),
+                          0,
+                        );
+                        const maxAllowed = Math.max(0, 95 - totalOthers);
+                        if (value > maxAllowed) value = maxAllowed;
+                      }
+                      field.onChange(value);
+                    }}
                   />
                 )}
               />
