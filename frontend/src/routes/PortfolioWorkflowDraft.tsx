@@ -189,38 +189,26 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
               setIsSavingDraft(true);
               try {
                 const values = methods.getValues();
+                const [cashToken, ...positions] = values.tokens;
+                const payload = {
+                  model,
+                  name,
+                  cash: cashToken.token.toUpperCase(),
+                  tokens: positions.map((t) => ({
+                    token: t.token.toUpperCase(),
+                    minAllocation: t.minAllocation,
+                  })),
+                  risk: values.risk,
+                  reviewInterval: values.reviewInterval,
+                  agentInstructions,
+                  manualRebalance,
+                  useEarn,
+                  status: 'draft',
+                };
                 if (draft) {
-                  await api.put(`/portfolio-workflows/${draft.id}`, {
-                    userId: draft.userId,
-                    model,
-                    name,
-                    tokens: values.tokens.map((t) => ({
-                      token: t.token.toUpperCase(),
-                      minAllocation: t.minAllocation,
-                    })),
-                    risk: values.risk,
-                    reviewInterval: values.reviewInterval,
-                    agentInstructions,
-                    manualRebalance,
-                    useEarn,
-                    status: 'draft',
-                  });
+                  await api.put(`/portfolio-workflows/${draft.id}`, payload);
                 } else {
-                  await api.post('/portfolio-workflows', {
-                    userId: user.id,
-                    model,
-                    name,
-                    tokens: values.tokens.map((t) => ({
-                      token: t.token.toUpperCase(),
-                      minAllocation: t.minAllocation,
-                    })),
-                    risk: values.risk,
-                    reviewInterval: values.reviewInterval,
-                    agentInstructions,
-                    manualRebalance,
-                    useEarn,
-                    status: 'draft',
-                  });
+                  await api.post('/portfolio-workflows', payload);
                 }
                 setIsSavingDraft(false);
                 toast.show(t('draft_saved_successfully'), 'success');

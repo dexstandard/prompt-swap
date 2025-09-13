@@ -61,11 +61,12 @@ export default function AgentStartButton({
         toast.show(t('agent_started_success'), 'success');
         navigate('/');
       } else {
+        const [cashToken, ...positions] = agentData.tokens;
         const res = await api.post('/portfolio-workflows', {
-          userId: user.id,
           model,
           name: agentData.name,
-          tokens: agentData.tokens.map((t) => ({
+          cash: cashToken.token.toUpperCase(),
+          tokens: positions.map((t) => ({
             token: t.token.toUpperCase(),
             minAllocation: t.minAllocation,
           })),

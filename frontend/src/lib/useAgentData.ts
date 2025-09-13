@@ -10,6 +10,7 @@ export interface Agent {
   status: 'active' | 'inactive' | 'draft';
   createdAt: number;
   name: string;
+  cashToken: string;
   tokens: { token: string; minAllocation: number }[];
   risk: PortfolioReviewFormValues['risk'];
   reviewInterval: PortfolioReviewFormValues['reviewInterval'];

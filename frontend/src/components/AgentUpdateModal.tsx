@@ -40,7 +40,7 @@ export default function AgentUpdateModal({
     agentInstructions: agent.agentInstructions,
   });
 
-  const tokens = data.tokens.map((t) => t.token);
+  const tokens = [agent.cashToken, ...data.tokens.map((t) => t.token)];
   const { hasOpenAIKey, hasBinanceKey, models, balances } =
     usePrerequisites(tokens);
   const [model, setModel] = useState(agent.model || '');
@@ -70,10 +70,10 @@ export default function AgentUpdateModal({
   const updateMut = useMutation({
     mutationFn: async () => {
       await api.put(`/portfolio-workflows/${agent.id}`, {
-        userId: agent.userId,
         model,
         status: agent.status,
         name: agent.name,
+        cash: agent.cashToken.toUpperCase(),
         tokens: data.tokens.map((t) => ({
           token: t.token.toUpperCase(),
           minAllocation: t.minAllocation,

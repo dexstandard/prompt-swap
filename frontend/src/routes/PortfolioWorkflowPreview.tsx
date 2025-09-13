@@ -328,36 +328,25 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
               if (!user) return;
               setIsSavingDraft(true);
               try {
+                const [cashToken, ...positions] = workflowData.tokens;
+                const payload = {
+                  model,
+                  name: workflowData.name,
+                  cash: cashToken.token.toUpperCase(),
+                  tokens: positions.map((t) => ({
+                    token: t.token.toUpperCase(),
+                    minAllocation: t.minAllocation,
+                  })),
+                  risk: workflowData.risk,
+                  reviewInterval: workflowData.reviewInterval,
+                  agentInstructions: workflowData.agentInstructions,
+                  manualRebalance: workflowData.manualRebalance,
+                  status: 'draft',
+                };
                 if (isDraft) {
-                  await api.put(`/portfolio-workflows/${draft!.id}`, {
-                    userId: draft!.userId,
-                    model,
-                    name: workflowData.name,
-                    tokens: workflowData.tokens.map((t) => ({
-                      token: t.token.toUpperCase(),
-                      minAllocation: t.minAllocation,
-                    })),
-                    risk: workflowData.risk,
-                    reviewInterval: workflowData.reviewInterval,
-                    agentInstructions: workflowData.agentInstructions,
-                    manualRebalance: workflowData.manualRebalance,
-                    status: 'draft',
-                  });
+                  await api.put(`/portfolio-workflows/${draft!.id}`, payload);
                 } else {
-                  await api.post('/portfolio-workflows', {
-                    userId: user.id,
-                    model,
-                    name: workflowData.name,
-                    tokens: workflowData.tokens.map((t) => ({
-                      token: t.token.toUpperCase(),
-                      minAllocation: t.minAllocation,
-                    })),
-                    risk: workflowData.risk,
-                    reviewInterval: workflowData.reviewInterval,
-                    agentInstructions: workflowData.agentInstructions,
-                    manualRebalance: workflowData.manualRebalance,
-                    status: 'draft',
-                  });
+                  await api.post('/portfolio-workflows', payload);
                 }
                 setIsSavingDraft(false);
                 toast.show(t('draft_saved_successfully'), 'success');

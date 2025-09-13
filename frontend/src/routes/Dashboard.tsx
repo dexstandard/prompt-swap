@@ -288,7 +288,6 @@ export default function Dashboard() {
         params: {
           page,
           pageSize: 10,
-          userId: user!.id,
           status: onlyActive ? 'active' : undefined,
         },
       });
