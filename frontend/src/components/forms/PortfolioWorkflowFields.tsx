@@ -9,7 +9,13 @@ import { Plus, Trash } from 'lucide-react';
 import type { BalanceInfo } from '../../lib/usePrerequisites';
 import type { BinanceAccount } from '../../lib/useBinanceAccount';
 import { useTranslation } from '../../lib/i18n';
-import { tokens, stableCoins, type PortfolioReviewFormValues } from '../../lib/constants';
+import {
+  tokens,
+  stableCoins,
+  riskOptions,
+  reviewIntervalOptions,
+  type PortfolioReviewFormValues,
+} from '../../lib/constants';
 import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import Toggle from '../ui/Toggle';
@@ -241,15 +247,45 @@ export default function PortfolioWorkflowFields({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-[auto_auto_auto_auto] items-center gap-x-4 text-sm font-medium mt-2">
+      <div className="grid grid-cols-2 grid-rows-4 grid-flow-col items-start gap-x-4 gap-y-2 text-sm font-medium mt-2">
         <span className="text-left">Total $:</span>
         <span>{totalUsd.toFixed(2)}</span>
-        <span className="text-left">{t('use_binance_earn')}:</span>
+        <label htmlFor="risk" className="text-left">
+          {t('risk_tolerance')}
+        </label>
+        <Controller
+          name="risk"
+          control={control}
+          render={({ field }) => (
+            <SelectInput
+              id="risk"
+              value={field.value}
+              onChange={field.onChange}
+              options={riskOptions}
+            />
+          )}
+        />
+        <span className="text-left">{t('use_binance_earn')}</span>
         <Toggle
           label=""
           checked={useEarn}
           onChange={onUseEarnChange}
           size="sm"
+        />
+        <label htmlFor="reviewInterval" className="text-left">
+          {t('review_interval')}
+        </label>
+        <Controller
+          name="reviewInterval"
+          control={control}
+          render={({ field }) => (
+            <SelectInput
+              id="reviewInterval"
+              value={field.value}
+              onChange={field.onChange}
+              options={reviewIntervalOptions(t)}
+            />
+          )}
         />
       </div>
       </>
