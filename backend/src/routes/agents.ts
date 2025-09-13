@@ -221,6 +221,7 @@ export default async function agentRoutes(app: FastifyInstance) {
             price: planned.price,
             status: r.status,
             createdAt: r.created_at.getTime(),
+            cancellationReason: r.cancellation_reason ?? undefined,
           } as const;
         }),
       };
