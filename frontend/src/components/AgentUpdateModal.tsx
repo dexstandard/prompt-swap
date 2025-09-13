@@ -1,20 +1,22 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import api from '../lib/axios';
-import type { Agent } from '../lib/useAgentData';
-import { useToast } from '../lib/useToast';
-import Button from './ui/Button';
-import Modal from './ui/Modal';
-import ConfirmDialog from './ui/ConfirmDialog';
-import StrategyForm from './StrategyForm';
-import AgentInstructions from './AgentInstructions';
+import axios from 'axios';
+
 import { normalizeAllocations } from '../lib/allocations';
-import ApiKeyProviderSelector from './forms/ApiKeyProviderSelector';
-import WalletBalances from './WalletBalances';
+import api from '../lib/axios';
 import { usePrerequisites } from '../lib/usePrerequisites';
-import SelectInput from './forms/SelectInput';
+import { useToast } from '../lib/useToast';
 import { useTranslation } from '../lib/i18n';
+import type { Agent } from '../lib/useAgentData';
+
+import AgentInstructions from './AgentInstructions';
+import ApiKeyProviderSelector from './forms/ApiKeyProviderSelector';
+import SelectInput from './forms/SelectInput';
+import StrategyForm from './StrategyForm';
+import WalletBalances from './WalletBalances';
+import Button from './ui/Button';
+import ConfirmDialog from './ui/ConfirmDialog';
+import Modal from './ui/Modal';
 
 interface Props {
   agent: Agent;
@@ -23,7 +25,12 @@ interface Props {
   onUpdated: () => void;
 }
 
-export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Props) {
+export default function AgentUpdateModal({
+  agent,
+  open,
+  onClose,
+  onUpdated,
+}: Props) {
   const toast = useToast();
   const t = useTranslation();
   const [data, setData] = useState({
@@ -34,7 +41,8 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
   });
 
   const tokens = data.tokens.map((t) => t.token);
-  const { hasOpenAIKey, hasBinanceKey, models, balances } = usePrerequisites(tokens);
+  const { hasOpenAIKey, hasBinanceKey, models, balances } =
+    usePrerequisites(tokens);
   const [model, setModel] = useState(agent.model || '');
   const [aiProvider, setAiProvider] = useState('openai');
   const [exchangeProvider, setExchangeProvider] = useState('binance');
@@ -106,8 +114,14 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
                 updated.tokens[1].minAllocation,
               );
               const tokens = [
-                { ...updated.tokens[0], minAllocation: norm.minTokenAAllocation },
-                { ...updated.tokens[1], minAllocation: norm.minTokenBAllocation },
+                {
+                  ...updated.tokens[0],
+                  minAllocation: norm.minTokenAAllocation,
+                },
+                {
+                  ...updated.tokens[1],
+                  minAllocation: norm.minTokenBAllocation,
+                },
               ];
               return { ...updated, tokens };
             })
@@ -151,7 +165,10 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
               onChange={setExchangeProvider}
             />
             <div className="mt-2">
-              <WalletBalances balances={balances} hasBinanceKey={hasBinanceKey} />
+              <WalletBalances
+                balances={balances}
+                hasBinanceKey={hasBinanceKey}
+              />
             </div>
           </div>
         </div>
@@ -182,4 +199,3 @@ export default function AgentUpdateModal({ agent, open, onClose, onUpdated }: Pr
     </Modal>
   );
 }
-

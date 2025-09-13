@@ -7,7 +7,8 @@
     "build": "rm -rf dist && tsc && mkdir -p dist/src/db && cp src/db/schema.sql dist/src/db/schema.sql && cp -r src/db/migrations dist/src/db/migrations",
     "start": "node dist/scripts/start.js",
     "test": "vitest run",
-    "migrate": "node dist/src/db/migrate.js"
+    "migrate": "node dist/src/db/migrate.js",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@fastify/cookie": "9.4.0",
@@ -28,11 +29,16 @@
     "zod": "3.22.4"
   },
   "devDependencies": {
+    "@eslint/js": "9.33.0",
     "@types/jsonwebtoken": "9.0.10",
     "@types/node": "22.18.1",
     "@types/node-cron": "3.0.11",
     "@types/pg": "8.10.2",
     "@types/qrcode": "1.5.5",
+    "eslint": "9.33.0",
+    "globals": "16.3.0",
+    "prettier": "3.6.2",
+    "typescript-eslint": "8.39.1",
     "typescript": "5.2.2",
     "vitest": "3.2.4"
   },

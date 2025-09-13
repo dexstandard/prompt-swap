@@ -1,9 +1,44 @@
-import { env } from '../util/env.js';
-import { decrypt } from '../util/crypto.js';
 import { createHmac } from 'node:crypto';
+
 import { getBinanceKeyRow } from '../repos/api-keys.js';
+import { decrypt } from '../util/crypto.js';
+import { env } from '../util/env.js';
 
 type UserCreds = { key: string; secret: string };
+
+interface LotSizeFilter {
+  filterType: 'LOT_SIZE';
+  stepSize: string;
+}
+
+interface PriceFilter {
+  filterType: 'PRICE_FILTER';
+  tickSize: string;
+}
+
+interface NotionalFilter {
+  filterType: 'NOTIONAL' | 'MIN_NOTIONAL';
+  minNotional: string;
+}
+
+type SymbolFilter =
+  | LotSizeFilter
+  | PriceFilter
+  | NotionalFilter
+  | { filterType: string };
+
+interface SymbolInfo {
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  quantityPrecision?: number;
+  pricePrecision?: number;
+  filters: SymbolFilter[];
+}
+
+interface ExchangeInfoResponse {
+  symbols?: SymbolInfo[];
+}
 
 export type PairInfo = {
   symbol: string;
@@ -13,6 +48,24 @@ export type PairInfo = {
   pricePrecision: number;
   minNotional: number;
 };
+
+export type Kline = [
+  number,
+  string,
+  string,
+  string,
+  string,
+  string,
+  ...unknown[],
+];
+
+export type OpenOrder = { orderId: number };
+
+interface FearGreedResponse {
+  data?: { value: string; value_classification: string }[];
+  value?: string;
+  value_classification?: string;
+}
 
 const pairInfoCache = new Map<string, PairInfo>();
 
@@ -39,19 +92,23 @@ export async function fetchPairInfo(
     );
     if (!res.ok) {
       const body = await res.text();
-      lastErr = new Error(`failed to fetch exchange info: ${res.status} ${body}`);
+      lastErr = new Error(
+        `failed to fetch exchange info: ${res.status} ${body}`,
+      );
       if (/Invalid symbol/i.test(body)) continue;
       throw lastErr;
     }
-    const json = (await res.json()) as { symbols?: any[] };
+    const json = (await res.json()) as ExchangeInfoResponse;
     const info = json.symbols?.[0];
     if (!info) continue;
-    const lot = info.filters?.find((f: any) => f.filterType === 'LOT_SIZE');
+    const lot = info.filters?.find(
+      (f): f is LotSizeFilter => f.filterType === 'LOT_SIZE',
+    );
     const priceF = info.filters?.find(
-      (f: any) => f.filterType === 'PRICE_FILTER',
+      (f): f is PriceFilter => f.filterType === 'PRICE_FILTER',
     );
     const notionalF = info.filters?.find(
-      (f: any) =>
+      (f): f is NotionalFilter =>
         f.filterType === 'NOTIONAL' || f.filterType === 'MIN_NOTIONAL',
     );
     const pair: PairInfo = {
@@ -62,14 +119,14 @@ export async function fetchPairInfo(
         typeof info.quantityPrecision === 'number'
           ? info.quantityPrecision
           : lot
-          ? precisionFromStep(lot.stepSize)
-          : 8,
+            ? precisionFromStep(lot.stepSize)
+            : 8,
       pricePrecision:
         typeof info.pricePrecision === 'number'
           ? info.pricePrecision
           : priceF
-          ? precisionFromStep(priceF.tickSize)
-          : 8,
+            ? precisionFromStep(priceF.tickSize)
+            : 8,
       minNotional: notionalF ? Number(notionalF.minNotional) : 0,
     };
     pairInfoCache.set(key, pair);
@@ -104,10 +161,12 @@ export async function fetchAccount(id: string) {
   if (!creds) return null;
   const timestamp = Date.now();
   const query = `timestamp=${timestamp}`;
-  const signature = createHmac('sha256', creds.secret).update(query).digest('hex');
+  const signature = createHmac('sha256', creds.secret)
+    .update(query)
+    .digest('hex');
   const accountRes = await fetch(
     `https://api.binance.com/api/v3/account?${query}&signature=${signature}`,
-    { headers: { 'X-MBX-APIKEY': creds.key } }
+    { headers: { 'X-MBX-APIKEY': creds.key } },
   );
   if (!accountRes.ok) throw new Error('failed to fetch account');
   return (await accountRes.json()) as {
@@ -128,7 +187,7 @@ export async function fetchEarnFlexibleBalance(id: string, asset: string) {
     .digest('hex');
   const res = await fetch(
     `https://api.binance.com/sapi/v1/simple-earn/flexible/position?${params.toString()}&signature=${signature}`,
-    { headers: { 'X-MBX-APIKEY': creds.key } }
+    { headers: { 'X-MBX-APIKEY': creds.key } },
   );
   if (!res.ok) throw new Error('failed to fetch earn balance');
   const json = (await res.json()) as {
@@ -251,7 +310,12 @@ export async function fetchTokensBalanceUsd(id: string, tokens: string[]) {
 
 export async function createLimitOrder(
   id: string,
-  opts: { symbol: string; side: 'BUY' | 'SELL'; quantity: number; price: number }
+  opts: {
+    symbol: string;
+    side: 'BUY' | 'SELL';
+    quantity: number;
+    price: number;
+  },
 ) {
   const creds = await getUserCreds(id);
   if (!creds) return null;
@@ -286,7 +350,7 @@ export async function createLimitOrder(
 
 export async function cancelOrder(
   id: string,
-  opts: { symbol: string; orderId: number }
+  opts: { symbol: string; orderId: number },
 ) {
   const creds = await getUserCreds(id);
   if (!creds) return null;
@@ -305,7 +369,7 @@ export async function cancelOrder(
     {
       method: 'DELETE',
       headers: { 'X-MBX-APIKEY': creds.key },
-    }
+    },
   );
   if (!res.ok) {
     const body = await res.text();
@@ -314,10 +378,7 @@ export async function cancelOrder(
   return res.json();
 }
 
-export async function cancelOpenOrders(
-  id: string,
-  opts: { symbol: string }
-) {
+export async function cancelOpenOrders(id: string, opts: { symbol: string }) {
   const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
@@ -343,10 +404,7 @@ export async function cancelOpenOrders(
   return res.json();
 }
 
-export async function fetchOpenOrders(
-  id: string,
-  opts: { symbol?: string },
-) {
+export async function fetchOpenOrders(id: string, opts: { symbol?: string }) {
   const creds = await getUserCreds(id);
   if (!creds) return null;
   const timestamp = Date.now();
@@ -364,7 +422,7 @@ export async function fetchOpenOrders(
     const body = await res.text();
     throw new Error(`failed to fetch open orders: ${res.status} ${body}`);
   }
-  return res.json();
+  return res.json() as Promise<OpenOrder[]>;
 }
 
 async function fetchSymbolData(symbol: string) {
@@ -393,7 +451,7 @@ async function fetchSymbolData(symbol: string) {
     bids: [string, string][];
     asks: [string, string][];
   };
-  const yearJson = (await yearRes.json()) as unknown[];
+  const yearJson = (await yearRes.json()) as Kline[];
   return {
     currentPrice: Number(priceJson.price),
     orderBook: {
@@ -450,38 +508,34 @@ export async function fetchMarketTimeseries(symbol: string) {
     }
   }
 
-  const [minJson, hourJson, monthJson] = await Promise.all([
+  const [minJson, hourJson, monthJson] = (await Promise.all([
     minRes.json(),
     hourRes.json(),
     monthRes.json(),
-  ]);
+  ])) as [Kline[], Kline[], Kline[]];
 
   return {
-    minute_60: (minJson as any[]).map(
-      (k: any) =>
-        [
-          Number(k[0]),
-          Number(k[1]),
-          Number(k[4]),
-          Number(k[5]),
-        ] as [number, number, number, number],
-    ),
-    hourly_24h: (hourJson as any[]).map(
-      (k: any) =>
-        [
-          Number(k[0]),
-          Number(k[1]),
-          Number(k[4]),
-          Number(k[5]),
-        ] as [number, number, number, number],
-    ),
-    monthly_24m: (monthJson as any[]).map(
-      (k: any) =>
-        [Number(k[0]), Number(k[1]), Number(k[4])] as [
+    minute_60: minJson.map(
+      (k) =>
+        [Number(k[0]), Number(k[1]), Number(k[4]), Number(k[5])] as [
+          number,
           number,
           number,
           number,
         ],
+    ),
+    hourly_24h: hourJson.map(
+      (k) =>
+        [Number(k[0]), Number(k[1]), Number(k[4]), Number(k[5])] as [
+          number,
+          number,
+          number,
+          number,
+        ],
+    ),
+    monthly_24m: monthJson.map(
+      (k) =>
+        [Number(k[0]), Number(k[1]), Number(k[4])] as [number, number, number],
     ),
   };
 }
@@ -496,7 +550,7 @@ export async function fetchFearGreedIndex(): Promise<FearGreedIndex> {
       `failed to fetch fear & greed index: ${res.status} ${body}`,
     );
   }
-  const json = (await res.json()) as any;
+  const json = (await res.json()) as FearGreedResponse;
   const value = Number(json?.data?.[0]?.value ?? json?.value);
   const classification =
     json?.data?.[0]?.value_classification ?? json?.value_classification ?? '';

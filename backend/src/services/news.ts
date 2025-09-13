@@ -19,7 +19,7 @@ export interface NewsItem {
 }
 
 function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|\[\]\\]/g, '\$&');
+  return str.replace(/[.*+?^${}()|[\]\\]/g, (match) => `\\${match}`);
 }
 
 export function tagTokens(text: string): string[] {

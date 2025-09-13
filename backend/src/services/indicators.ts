@@ -1,4 +1,4 @@
-import { fetchPairData } from './binance.js';
+import { fetchPairData, type Kline } from './binance.js';
 
 function pctChange(current: number, past: number) {
   return ((current - past) / past) * 100;
@@ -175,14 +175,14 @@ export async function fetchTokenIndicators(token: string) {
     const body = await hourRes.text();
     throw new Error(`failed to fetch hourly data: ${hourRes.status} ${body}`);
   }
-  const hourJson = (await hourRes.json()) as unknown[];
-  const hourCloses = hourJson.map((k: any) => Number(k[4]));
-  const hourVolumes = hourJson.map((k: any) => Number(k[5]));
+  const hourJson = (await hourRes.json()) as Kline[];
+  const hourCloses = hourJson.map((k) => Number(k[4]));
+  const hourVolumes = hourJson.map((k) => Number(k[5]));
 
-  const dayCloses = pair.year.map((k: any) => Number(k[4]));
-  const dayHighs = pair.year.map((k: any) => Number(k[2]));
-  const dayLows = pair.year.map((k: any) => Number(k[3]));
-  const dayVolumes = pair.year.map((k: any) => Number(k[5]));
+  const dayCloses = pair.year.map((k) => Number(k[4]));
+  const dayHighs = pair.year.map((k) => Number(k[2]));
+  const dayLows = pair.year.map((k) => Number(k[3]));
+  const dayVolumes = pair.year.map((k) => Number(k[5]));
   const current = pair.currentPrice;
 
   const ret = {
@@ -222,7 +222,7 @@ export async function fetchTokenIndicators(token: string) {
   const osc = { rsi_14, stoch_k, stoch_d } as const;
 
   const btc = await fetchPairData('BTC', 'USDT');
-  const btcCloses = btc.year.map((k: any) => Number(k[4]));
+  const btcCloses = btc.year.map((k) => Number(k[4]));
   const corr = {
     BTC_30d: correlation(
       dailyReturns(dayCloses, 30),
@@ -238,4 +238,3 @@ export async function fetchTokenIndicators(token: string) {
 }
 
 export type TokenIndicators = Awaited<ReturnType<typeof fetchTokenIndicators>>;
-
