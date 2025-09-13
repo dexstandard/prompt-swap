@@ -1,6 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import buildServer from '../src/server.js';
 import { parseExecLog } from '../src/util/parse-exec-log.js';
 import { insertReviewResult } from '../src/repos/agent-review-result.js';
@@ -252,23 +250,31 @@ describe('agent exec log routes', () => {
     });
     const agentId = agent.id;
 
-    const aiLog = readFileSync(
-      join(__dirname, 'fixtures/real-openai-log.json'),
-      'utf8',
-    );
+    const aiLog = JSON.stringify({
+      object: 'response',
+      output: [
+        {
+          id: 'msg_1',
+          type: 'message',
+          status: 'completed',
+          role: 'assistant',
+          content: [
+            {
+              type: 'output_text',
+              text: '{"result":{"orders":[{"pair":"BTCUSDT","side":"SELL","quantity":1}],"shortReport":"s"}}',
+            },
+          ],
+        },
+      ],
+    });
 
-      await insertReviewRawLog({ portfolioId: agentId, prompt: 'p', response: aiLog });
+    await insertReviewRawLog({ portfolioId: agentId, prompt: 'p', response: aiLog });
     const parsedAi = parseExecLog(aiLog);
     await insertReviewResult({
       portfolioId: agentId,
-      log: parsedAi.text,
-      ...(parsedAi.response
-        ? {
-            rebalance: parsedAi.response.rebalance,
-            newAllocation: parsedAi.response.newAllocation,
-            shortReport: parsedAi.response.shortReport,
-          }
-        : {}),
+      log: aiLog,
+      rebalance: true,
+      shortReport: parsedAi.response?.shortReport,
       ...(parsedAi.error ? { error: parsedAi.error } : {}),
     });
 
@@ -282,15 +288,14 @@ describe('agent exec log routes', () => {
     const body = res.json();
 
     expect(typeof body.items[0].log).toBe('string');
-    expect(body.items[0].log).toContain('"result"');
-    expect(body.items[0].log).toContain('"rebalance"');
+    expect(body.items[0].log).toContain('result');
+    expect(body.items[0].log).toContain('orders');
 
-    expect(body.items[0].response).toMatchObject({
-      rebalance: true,
-      newAllocation: 70, // matches the provided fixture
+    const parsedLog = parseExecLog(body.items[0].log);
+    expect(parsedLog.response).toMatchObject({
+      orders: [{ pair: 'BTCUSDT', side: 'SELL', quantity: 1 }],
+      shortReport: 's',
     });
-    expect(typeof body.items[0].response.shortReport).toBe('string');
-    expect(body.items[0].response.shortReport.length).toBeGreaterThan(0);
 
     await app.close();
   });

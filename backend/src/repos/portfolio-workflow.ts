@@ -11,6 +11,7 @@ export interface PortfolioWorkflowRow {
   created_at: string;
   start_balance: number | null;
   name: string;
+  cash_token: string;
   tokens: PortfolioWorkflowTokenRow[];
   risk: string;
   review_interval: string;
@@ -30,6 +31,7 @@ export function toApi(row: PortfolioWorkflowRow) {
     createdAt: Date.parse(row.created_at),
     startBalanceUsd: row.start_balance ?? null,
     name: row.name,
+    cashToken: row.cash_token,
     tokens: row.tokens.map((t) => ({
       token: t.token,
       minAllocation: t.min_allocation,
@@ -45,7 +47,7 @@ export function toApi(row: PortfolioWorkflowRow) {
 }
 
 const baseSelect = `
-  SELECT a.id, a.user_id, a.model, a.status, a.created_at, a.start_balance, a.name,
+  SELECT a.id, a.user_id, a.model, a.status, a.created_at, a.start_balance, a.name, a.cash_token,
          COALESCE(json_agg(json_build_object('token', t.token, 'min_allocation', t.min_allocation) ORDER BY t.position)
                   FILTER (WHERE t.token IS NOT NULL), '[]') AS tokens,
          a.risk, a.review_interval, a.agent_instructions, a.manual_rebalance, a.use_earn,
@@ -102,6 +104,7 @@ export async function findIdenticalDraftAgent(
     userId: string;
     model: string;
     name: string;
+    cashToken: string;
     tokens: { token: string; minAllocation: number }[];
     risk: string;
     reviewInterval: string;
@@ -118,14 +121,15 @@ export async function findIdenticalDraftAgent(
         FROM portfolio_workflow_tokens GROUP BY portfolio_workflow_id
     ) t ON t.portfolio_workflow_id = a.id
     WHERE a.user_id = $1 AND a.status = 'draft' AND ($2::bigint IS NULL OR a.id != $2)
-      AND a.model = $3 AND a.name = $4
-      AND a.risk = $5 AND a.review_interval = $6 AND a.agent_instructions = $7 AND a.manual_rebalance = $8 AND a.use_earn = $9
-      AND COALESCE(t.tokens::jsonb, '[]'::jsonb) = $10::jsonb`;
+      AND a.model = $3 AND a.name = $4 AND a.cash_token = $5
+      AND a.risk = $6 AND a.review_interval = $7 AND a.agent_instructions = $8 AND a.manual_rebalance = $9 AND a.use_earn = $10
+      AND COALESCE(t.tokens::jsonb, '[]'::jsonb) = $11::jsonb`;
   const params: unknown[] = [
     data.userId,
     excludeId ?? null,
     data.model,
     data.name,
+    data.cashToken,
     data.risk,
     data.reviewInterval,
     data.agentInstructions,
@@ -176,6 +180,7 @@ export async function insertAgent(data: {
   status: string;
   startBalance: number | null;
   name: string;
+  cashToken: string;
   tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
@@ -184,8 +189,8 @@ export async function insertAgent(data: {
   useEarn: boolean;
 }): Promise<PortfolioWorkflowRow> {
   const { rows } = await db.query(
-    `INSERT INTO portfolio_workflow (user_id, model, status, start_balance, name, risk, review_interval, agent_instructions, manual_rebalance, use_earn)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `INSERT INTO portfolio_workflow (user_id, model, status, start_balance, name, cash_token, risk, review_interval, agent_instructions, manual_rebalance, use_earn)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id`,
     [
       data.userId,
@@ -193,6 +198,7 @@ export async function insertAgent(data: {
       data.status,
       data.startBalance,
       data.name,
+      data.cashToken,
       data.risk,
       data.reviewInterval,
       data.agentInstructions,
@@ -222,6 +228,7 @@ export async function updateAgent(data: {
   model: string;
   status: string;
   name: string;
+  cashToken: string;
   tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
@@ -231,11 +238,12 @@ export async function updateAgent(data: {
   useEarn: boolean;
 }): Promise<void> {
   await db.query(
-    `UPDATE portfolio_workflow SET model = $1, status = $2, name = $3, risk = $4, review_interval = $5, agent_instructions = $6, start_balance = $7, manual_rebalance = $8, use_earn = $9 WHERE id = $10`,
+    `UPDATE portfolio_workflow SET model = $1, status = $2, name = $3, cash_token = $4, risk = $5, review_interval = $6, agent_instructions = $7, start_balance = $8, manual_rebalance = $9, use_earn = $10 WHERE id = $11`,
     [
       data.model,
       data.status,
       data.name,
+      data.cashToken,
       data.risk,
       data.reviewInterval,
       data.agentInstructions,
@@ -289,6 +297,7 @@ export interface ActivePortfolioWorkflowRow {
   id: string;
   user_id: string;
   model: string;
+  cash_token: string;
   tokens: PortfolioWorkflowTokenRow[];
   risk: string;
   review_interval: string;
@@ -305,7 +314,7 @@ export async function getActivePortfolioWorkflowById(
   portfolioWorkflowId: string,
 ): Promise<ActivePortfolioWorkflowRow | undefined> {
   const sql = `SELECT a.id, a.user_id, a.model,
-                      COALESCE(t.tokens, '[]') AS tokens,
+                      a.cash_token, COALESCE(t.tokens, '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
                       COALESCE(
                         (SELECT api_key_enc FROM ai_api_keys WHERE user_id = a.user_id AND provider = 'openai'),
@@ -337,7 +346,7 @@ export async function getActivePortfolioWorkflowsByInterval(
   interval: string,
 ): Promise<ActivePortfolioWorkflowRow[]> {
   const sql = `SELECT a.id, a.user_id, a.model,
-                      COALESCE(t.tokens, '[]') AS tokens,
+                      a.cash_token, COALESCE(t.tokens, '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
                       COALESCE(
                         (SELECT api_key_enc FROM ai_api_keys WHERE user_id = a.user_id AND provider = 'openai'),
@@ -369,7 +378,7 @@ export async function getActivePortfolioWorkflowsByUser(
   userId: string,
 ): Promise<ActivePortfolioWorkflowRow[]> {
   const sql = `SELECT a.id, a.user_id, a.model,
-                      COALESCE(t.tokens, '[]') AS tokens,
+                      a.cash_token, COALESCE(t.tokens, '[]') AS tokens,
                       a.risk, a.review_interval, a.agent_instructions,
                       COALESCE(
                         (SELECT api_key_enc FROM ai_api_keys WHERE user_id = a.user_id AND provider = 'openai'),

@@ -25,6 +25,7 @@ export interface AgentInput {
   userId: string;
   model: string;
   name: string;
+  cash: string;
   tokens: { token: string; minAllocation: number }[];
   risk: string;
   reviewInterval: string;
@@ -64,9 +65,18 @@ async function validateAgentInput(
     log.error('user mismatch');
     return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
   }
-  if (body.tokens.length < 2 || body.tokens.length > 5) {
+  body.cash = body.cash.toUpperCase();
+  if (!['USDT', 'USDC'].includes(body.cash)) {
+    log.error('invalid cash token');
+    return { code: 400, body: errorResponse('invalid cash token') };
+  }
+  if (body.tokens.length < 1 || body.tokens.length > 4) {
     log.error('invalid tokens');
     return { code: 400, body: errorResponse('invalid tokens') };
+  }
+  if (body.tokens.some((t) => t.token === body.cash)) {
+    log.error('cash token in positions');
+    return { code: 400, body: errorResponse('cash token in positions') };
   }
   if (body.status === AgentStatus.Retired) {
     log.error('invalid status');
@@ -93,6 +103,7 @@ async function validateAgentInput(
         userId: body.userId,
         model: body.model,
         name: body.name,
+        cashToken: body.cash,
         tokens: body.tokens,
         risk: body.risk,
         reviewInterval: body.reviewInterval,
@@ -180,7 +191,7 @@ export async function prepareAgentForUpsert(
     const bal = await getStartBalance(
       log,
       userId,
-      body.tokens.map((t) => t.token),
+      [body.cash, ...body.tokens.map((t) => t.token)],
     );
     if (typeof bal === 'number') startBalance = bal;
     else return bal;

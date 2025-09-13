@@ -28,7 +28,7 @@ import {
   cancelOrder,
   parseBinanceError,
 } from '../services/binance.js';
-import { createRebalanceLimitOrder } from '../services/rebalance.js';
+import { createDecisionLimitOrders } from '../services/rebalance.js';
 import { type RebalancePrompt } from '../util/ai.js';
 import pLimit from 'p-limit';
 import { randomUUID } from 'crypto';
@@ -139,8 +139,7 @@ function buildReviewResultEntry({
   };
 
   if (decision && !validationError) {
-    entry.rebalance = decision.rebalance;
-    entry.newAllocation = decision.newAllocation;
+    entry.rebalance = decision.orders.length > 0;
     entry.shortReport = decision.shortReport;
   } else {
     entry.error = { message: validationError ?? 'decision unavailable' };
@@ -198,7 +197,7 @@ export async function executeWorkflow(
     );
     const validationError = validateExecResponse(
       decision ?? undefined,
-      prompt!.policy,
+      prompt!.portfolio.positions.map((p) => p.sym),
     );
     if (validationError) runLog.error({ err: validationError }, 'validation failed');
     const resultEntry = buildReviewResultEntry({
@@ -212,16 +211,13 @@ export async function executeWorkflow(
       decision &&
       !validationError &&
       !wf.manual_rebalance &&
-      decision.rebalance &&
-      decision.newAllocation !== undefined
+      decision.orders.length
     ) {
-      await createRebalanceLimitOrder({
+      await createDecisionLimitOrders({
         userId: wf.user_id,
-        tokens: wf.tokens.map((t) => t.token),
-        positions: prompt.portfolio.positions,
-        newAllocation: decision.newAllocation,
-        log: runLog,
+        orders: decision.orders,
         reviewResultId: resultId,
+        log: runLog,
       });
     }
     runLog.info('workflow run complete');
@@ -251,8 +247,7 @@ async function saveFailure(
   };
   if (rawId) entry.rawLogId = rawId;
   if (parsed.response) {
-    entry.rebalance = parsed.response.rebalance;
-    entry.newAllocation = parsed.response.newAllocation;
+    entry.rebalance = (parsed.response.orders || []).length > 0;
     entry.shortReport = parsed.response.shortReport;
   }
   if (

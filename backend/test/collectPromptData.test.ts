@@ -7,10 +7,10 @@ vi.mock('../src/services/binance.js', () => ({
     balances: [
       { asset: 'BTC', free: '1', locked: '0' },
       { asset: 'USDT', free: '1000', locked: '0' },
+      { asset: 'ETH', free: '5', locked: '0' },
     ],
   }),
   fetchPairData: vi.fn().mockResolvedValue({ currentPrice: 20000 }),
-  fetchPairInfo: vi.fn().mockResolvedValue({ minNotional: 10 }),
 }));
 
 vi.mock('../src/repos/agent-review-result.js', () => ({
@@ -38,10 +38,8 @@ describe('collectPromptData', () => {
       id: '1',
       user_id: 'u1',
       model: 'm',
-      tokens: [
-        { token: 'BTC', min_allocation: 50 },
-        { token: 'USDT', min_allocation: 50 },
-      ],
+      cash_token: 'USDT',
+      tokens: [{ token: 'BTC', min_allocation: 50 }],
       risk: 'low',
       review_interval: '1h',
       agent_instructions: 'inst',
@@ -64,10 +62,8 @@ describe('collectPromptData', () => {
       id: '1',
       user_id: 'u1',
       model: 'm',
-      tokens: [
-        { token: 'BTC', min_allocation: 50 },
-        { token: 'USDT', min_allocation: 50 },
-      ],
+      cash_token: 'USDT',
+      tokens: [{ token: 'BTC', min_allocation: 50 }],
       risk: 'low',
       review_interval: '1h',
       agent_instructions: 'inst',
@@ -87,6 +83,32 @@ describe('collectPromptData', () => {
       datetime: '2025-01-01T00:00:00.000Z',
       status: 'filled',
     });
+  });
+
+  it('handles three-token portfolio', async () => {
+    const { collectPromptData } = await import('../src/agents/main-trader.js');
+    const row: ActivePortfolioWorkflowRow = {
+      id: '1',
+      user_id: 'u1',
+      model: 'm',
+      cash_token: 'USDT',
+      tokens: [
+        { token: 'BTC', min_allocation: 40 },
+        { token: 'ETH', min_allocation: 30 },
+      ],
+      risk: 'low',
+      review_interval: '1h',
+      agent_instructions: 'inst',
+      ai_api_key_enc: '',
+      manual_rebalance: false,
+      start_balance: null,
+      created_at: '2025-01-01T00:00:00.000Z',
+      portfolio_id: '1',
+    };
+
+    const prompt = await collectPromptData(row, createLogger());
+    expect(prompt?.portfolio.positions).toHaveLength(3);
+    expect(prompt?.cash).toBe('USDT');
   });
 });
 

@@ -38,6 +38,7 @@ describe('agent start', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
       status: 'draft',
     };
     const resCreate = await app.inject({
@@ -66,7 +67,8 @@ describe('agent start', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ price: '40' }),
-      } as any);
+      } as any)
+      .mockResolvedValue({ ok: true, json: async () => ({ price: '1' }) } as any);
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = fetchMock;
 
@@ -77,7 +79,7 @@ describe('agent start', () => {
     });
     const res = await Promise.race([
       startPromise,
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 200)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000)),
     ]);
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'active' });

@@ -5,10 +5,9 @@ export const developerInstructions = [
   '- You are a day-trading portfolio manager who sets target allocations autonomously, trimming highs and buying dips.',
   '- You lead a crypto analyst team (news, technical). Reports from each member are attached.',
   '- Know every team member, their role, and ensure decisions follow the overall trading strategy.',
-  '- Decide whether to rebalance based on portfolio, market data, and analyst reports.',
+  '- Decide which limit orders to place based on portfolio, market data, and analyst reports.',
   '- Verify limit orders meet minNotional to avoid cancellations, especially for small amounts.',
-  '- If rebalancing, return {rebalance:true,newAllocation:0-100 for first token,shortReport}.',
-  '- If not, return {rebalance:false,shortReport}.',
+  '- Return {orders:[{pair:"TOKEN1TOKEN2",side:"BUY"|"SELL",quantity:number},...],shortReport}.',
   '- shortReport ≤255 chars.',
   '- On error, return {error:"message"}.',
 ].join('\n');
@@ -48,8 +47,7 @@ export interface RebalancePosition {
 }
 
 export interface PreviousResponse {
-  rebalance?: boolean;
-  newAllocation?: number;
+  orders?: { pair: string; side: string; quantity: number }[];
   shortReport?: string;
   error?: unknown;
 }
@@ -57,6 +55,7 @@ export interface PreviousResponse {
 export interface RebalancePrompt {
   instructions: string;
   policy: { floor: Record<string, number> };
+  cash: string;
   portfolio: {
     ts: string;
     positions: RebalancePosition[];
@@ -76,8 +75,6 @@ export interface RebalancePrompt {
     status: string;
   }[];
   marketData: {
-    currentPrice: number;
-    minNotional: number;
     indicators?: Record<string, TokenMetrics>;
     market_timeseries?: Record<string, MarketTimeseries>;
     fearGreedIndex?: { value: number; classification: string };
@@ -104,20 +101,22 @@ export const rebalanceResponseSchema = {
           {
             type: 'object',
             properties: {
-              rebalance: { type: 'boolean', const: false },
+              orders: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    pair: { type: 'string' },
+                    side: { type: 'string', enum: ['BUY', 'SELL'] },
+                    quantity: { type: 'number' },
+                  },
+                  required: ['pair', 'side', 'quantity'],
+                  additionalProperties: false,
+                },
+              },
               shortReport: { type: 'string' },
             },
-            required: ['rebalance', 'shortReport'],
-            additionalProperties: false,
-          },
-          {
-            type: 'object',
-            properties: {
-              rebalance: { type: 'boolean', const: true },
-              newAllocation: { type: 'number' },
-              shortReport: { type: 'string' },
-            },
-            required: ['rebalance', 'newAllocation', 'shortReport'],
+            required: ['orders', 'shortReport'],
             additionalProperties: false,
           },
           {

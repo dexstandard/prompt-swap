@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { insertLimitOrder, type LimitOrderStatus } from '../repos/limit-orders.js';
 import { fetchPairData, fetchPairInfo, createLimitOrder } from './binance.js';
+import { TOKEN_SYMBOLS } from '../util/tokens.js';
 
 export const MIN_LIMIT_ORDER_USD = 0.02;
 
@@ -88,5 +89,48 @@ export async function createRebalanceLimitOrder(opts: {
   } catch (err) {
     log.error({ err, step: 'createLimitOrder' }, 'step failed');
     throw err;
+  }
+}
+
+function splitPair(pair: string): [string, string] {
+  for (const sym of TOKEN_SYMBOLS) {
+    if (pair.startsWith(sym)) {
+      const rest = pair.slice(sym.length);
+      if (TOKEN_SYMBOLS.includes(rest)) return [sym, rest];
+    }
+  }
+  return ['', ''];
+}
+
+export async function createDecisionLimitOrders(opts: {
+  userId: string;
+  orders: { pair: string; side: string; quantity: number }[];
+  reviewResultId: string;
+  log: FastifyBaseLogger;
+}) {
+  for (const o of opts.orders) {
+    const [a, b] = splitPair(o.pair);
+    if (!a || !b) continue;
+    const info = await fetchPairInfo(a, b);
+    const { currentPrice } = await fetchPairData(a, b);
+    const price = currentPrice * (o.side === 'BUY' ? 0.999 : 1.001);
+    const qty = Number(o.quantity.toFixed(info.quantityPrecision));
+    const prc = Number(price.toFixed(info.pricePrecision));
+    if (qty * prc < info.minNotional) continue;
+    const params = { symbol: info.symbol, side: o.side as any, quantity: qty, price: prc } as const;
+    try {
+      const res = await createLimitOrder(opts.userId, params);
+      if (!res || res.orderId === undefined || res.orderId === null) continue;
+      await insertLimitOrder({
+        userId: opts.userId,
+        planned: { ...params, manuallyEdited: false },
+        status: 'open' as LimitOrderStatus,
+        reviewResultId: opts.reviewResultId,
+        orderId: String(res.orderId),
+      });
+      opts.log.info({ step: 'createLimitOrder', orderId: res.orderId }, 'step success');
+    } catch (err) {
+      opts.log.error({ err, step: 'createLimitOrder' }, 'step failed');
+    }
   }
 }

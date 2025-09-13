@@ -88,9 +88,9 @@ vi.mock('../src/services/indicators.js', () => ({
   fetchTokenIndicators: vi.fn().mockResolvedValue(sampleIndicators),
 }));
 
-const createRebalanceLimitOrder = vi.fn().mockResolvedValue(undefined);
+const createDecisionLimitOrders = vi.fn().mockResolvedValue(undefined);
 vi.mock('../src/services/rebalance.js', () => ({
-  createRebalanceLimitOrder,
+  createDecisionLimitOrders,
 }));
 
 const runNewsAnalyst = vi.fn((_params: any, prompt: any) => {
@@ -119,23 +119,30 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  ['1', '2', '3', '4'].forEach((id) => removeWorkflowFromSchedule(id));
+  ['1', '2', '3', '4', '5'].forEach((id) => removeWorkflowFromSchedule(id));
 });
 
-async function setupAgent(id: string, manual = false) {
+async function setupAgent(id: string, tokens: string[], manual = false) {
   await db.query('INSERT INTO users (id) VALUES ($1)', [id]);
   await db.query(
     "INSERT INTO ai_api_keys (user_id, provider, api_key_enc) VALUES ($1, 'openai', $2)",
     [id, 'enc'],
   );
   await db.query(
-    "INSERT INTO portfolio_workflow (id, user_id, model, status, name, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent', 'low', '1h', 'inst', $3)",
+    "INSERT INTO portfolio_workflow (id, user_id, model, status, name, cash_token, risk, review_interval, agent_instructions, manual_rebalance) VALUES ($1, $2, 'gpt', 'active', 'Agent', 'USDT', 'low', '1h', 'inst', $3)",
     [id, id, manual],
   );
-  await db.query(
-    "INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ($1, 'BTC', 10, 1), ($1, 'ETH', 20, 2)",
-    [id],
-  );
+  const params: any[] = [id];
+  const values: string[] = [];
+  tokens.forEach((t, i) => {
+    values.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, ${i + 1})`);
+    params.push(t, (i + 1) * 10);
+  });
+  if (values.length)
+    await db.query(
+      `INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ${values.join(', ')}`,
+      params,
+    );
 }
 
 function createLogger(): FastifyBaseLogger {
@@ -145,8 +152,8 @@ function createLogger(): FastifyBaseLogger {
 
 describe('reviewPortfolio', () => {
   it('saves decision and logs', async () => {
-    await setupAgent('1');
-    const decision = { rebalance: false, newAllocation: 40, shortReport: 'ok' };
+    await setupAgent('1', ['BTC']);
+    const decision = { orders: [{ pair: 'BTCUSDT', side: 'SELL', quantity: 1 }], shortReport: 'ok' };
     runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '1');
@@ -160,62 +167,60 @@ describe('reviewPortfolio', () => {
     const row = rows[0] as { prompt: string; response: string };
     expect(JSON.parse(row.response)).toEqual(decision);
     const { rows: resRows } = await db.query(
-      'SELECT rebalance, new_allocation, short_report FROM agent_review_result WHERE agent_id=$1',
+      'SELECT rebalance, short_report FROM agent_review_result WHERE agent_id=$1',
       ['1'],
     );
-    const res = resRows[0] as { rebalance: boolean; new_allocation: number; short_report: string };
-    expect(res.new_allocation).toBe(40);
-    expect(res.rebalance).toBe(false);
+    const res = resRows[0] as { rebalance: boolean; short_report: string };
+    expect(res.rebalance).toBe(true);
+    expect(res.short_report).toBe('ok');
   });
 
-  it('calls createRebalanceLimitOrder when rebalance requested', async () => {
-    await setupAgent('2');
-    const decision = { rebalance: true, newAllocation: 60, shortReport: 's' };
+  it('calls createDecisionLimitOrders when orders requested', async () => {
+    await setupAgent('2', ['BTC', 'ETH']);
+    const decision = { orders: [{ pair: 'BTCUSDT', side: 'BUY', quantity: 1 }, { pair: 'ETHBTC', side: 'SELL', quantity: 0.5 }], shortReport: 's' };
     runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '2');
-    expect(createRebalanceLimitOrder).toHaveBeenCalledTimes(1);
-    const args = createRebalanceLimitOrder.mock.calls[0][0];
+    expect(createDecisionLimitOrders).toHaveBeenCalledTimes(1);
+    const args = createDecisionLimitOrders.mock.calls[0][0];
     expect(args.userId).toBe('2');
-    expect(args.newAllocation).toBe(60);
+    expect(args.orders).toHaveLength(2);
   });
 
-  it('skips createRebalanceLimitOrder when manualRebalance is enabled', async () => {
-    await setupAgent('3', true);
-    const decision = { rebalance: true, newAllocation: 55, shortReport: 's' };
+  it('skips createDecisionLimitOrders when manualRebalance is enabled', async () => {
+    await setupAgent('3', ['BTC'], true);
+    const decision = { orders: [{ pair: 'BTCUSDT', side: 'BUY', quantity: 1 }], shortReport: 's' };
     runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '3');
-    expect(createRebalanceLimitOrder).not.toHaveBeenCalled();
+    expect(createDecisionLimitOrders).not.toHaveBeenCalled();
   });
 
-  it('records error when newAllocation is out of range', async () => {
-    await setupAgent('4');
-    const decision = { rebalance: true, newAllocation: 150, shortReport: 's' };
+  it('records error when pair is invalid', async () => {
+    await setupAgent('4', ['BTC']);
+    const decision = { orders: [{ pair: 'FOO', side: 'BUY', quantity: 1 }], shortReport: 's' };
     runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '4');
     const { rows } = await db.query(
-      'SELECT new_allocation, error FROM agent_review_result WHERE agent_id=$1',
+      'SELECT error FROM agent_review_result WHERE agent_id=$1',
       ['4'],
     );
-    const row = rows[0] as { new_allocation: number | null; error: string | null };
-    expect(row.new_allocation).toBeNull();
+    const row = rows[0] as { error: string | null };
     expect(row.error).not.toBeNull();
   });
 
-  it('records error when newAllocation violates floor', async () => {
-    await setupAgent('5');
-    const decision = { rebalance: true, newAllocation: 5, shortReport: 's' };
+  it('records error when quantity is invalid', async () => {
+    await setupAgent('5', ['BTC']);
+    const decision = { orders: [{ pair: 'BTCUSDT', side: 'BUY', quantity: 0 }], shortReport: 's' };
     runMainTrader.mockResolvedValue(decision);
     const log = createLogger();
     await reviewAgentPortfolio(log, '5');
     const { rows } = await db.query(
-      'SELECT new_allocation, error FROM agent_review_result WHERE agent_id=$1',
+      'SELECT error FROM agent_review_result WHERE agent_id=$1',
       ['5'],
     );
-    const row = rows[0] as { new_allocation: number | null; error: string | null };
-    expect(row.new_allocation).toBeNull();
+    const row = rows[0] as { error: string | null };
     expect(row.error).not.toBeNull();
   });
 });

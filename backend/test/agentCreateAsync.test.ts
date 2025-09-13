@@ -61,6 +61,7 @@ describe('agent creation', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
       status: 'active',
     };
 
@@ -78,7 +79,8 @@ describe('agent creation', () => {
     ]);
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
-    expect(res.json()).toMatchObject({ id, ...payload });
+    const { cash, ...rest } = payload;
+    expect(res.json()).toMatchObject({ id, cashToken: cash, ...rest });
     expect(reviewAgentPortfolioMock).toHaveBeenCalledTimes(1);
     expect(reviewAgentPortfolioMock.mock.calls[0][1]).toBe(id);
 
@@ -102,6 +104,7 @@ describe('agent creation', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
       status: 'draft',
     };
 

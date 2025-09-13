@@ -88,6 +88,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
       status: 'active',
     };
 
@@ -99,7 +100,8 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(200);
     const id = res.json().id as string;
-    expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
+    const { cash, ...rest } = payload;
+    expect(res.json()).toMatchObject({ id, cashToken: cash, ...rest, startBalanceUsd: 100 });
     expect(typeof res.json().aiApiKeyId).toBe('string');
     expect(typeof res.json().exchangeApiKeyId).toBe('string');
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -110,7 +112,7 @@ describe('agent routes', () => {
       cookies: authCookies(userId),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...payload, startBalanceUsd: 100 });
+    expect(res.json()).toMatchObject({ id, cashToken: cash, ...rest, startBalanceUsd: 100 });
     expect(typeof res.json().aiApiKeyId).toBe('string');
     expect(typeof res.json().exchangeApiKeyId).toBe('string');
 
@@ -140,7 +142,8 @@ describe('agent routes', () => {
       payload: update,
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ id, ...update });
+    const { cash: cashUpd, ...restUpd } = update;
+    expect(res.json()).toMatchObject({ id, cashToken: cashUpd, ...restUpd });
 
     res = await app.inject({
       method: 'GET',
@@ -236,6 +239,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
       status: 'draft',
     };
     const resCreate = await app.inject({
@@ -271,6 +275,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
       status: 'draft',
     };
     const resCreate = await app.inject({
@@ -393,6 +398,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
       status: 'active',
     };
 
@@ -442,6 +448,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
     };
 
     let res = await app.inject({
@@ -556,6 +563,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
+      cash: 'USDT',
       status: 'active',
     };
 
@@ -621,6 +629,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
+      cash: 'USDT',
       status: 'draft',
     };
 
@@ -668,6 +677,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'p',
+      cash: 'USDT',
       status: 'draft',
     };
 
@@ -721,6 +731,7 @@ describe('agent routes', () => {
       risk: 'low',
       reviewInterval: '1h',
       agentInstructions: 'prompt',
+      cash: 'USDT',
       status: 'draft',
     };
     const resCreate = await app.inject({
@@ -787,6 +798,7 @@ describe('agent routes', () => {
       agentInstructions: 'prompt',
       manualRebalance: false,
       useEarn: true,
+      cash: 'USDT',
       status: 'draft',
     };
     const res = await app.inject({

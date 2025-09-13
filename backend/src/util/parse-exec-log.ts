@@ -1,8 +1,9 @@
+import { TOKEN_SYMBOLS } from './tokens.js';
+
 export interface ParsedExecLog {
   text: string;
   response?: {
-    rebalance: boolean;
-    newAllocation?: number;
+    orders: any[];
     shortReport: string;
   };
   error?: Record<string, unknown>;
@@ -78,40 +79,17 @@ export function parseExecLog(log: unknown): ParsedExecLog {
                           ? result.error
                           : JSON.stringify(result.error),
                 };
-              } else if ('rebalance' in result) {
-                const r = result as {
-                  rebalance: boolean;
-                  newAllocation?: number | string;
-                  shortReport?: string;
-                };
-                const newAllocation =
-                    r.newAllocation === undefined
-                        ? undefined
-                        : typeof r.newAllocation === 'number'
-                            ? r.newAllocation
-                            : Number(r.newAllocation);
-
+              } else if ('orders' in result) {
+                const r = result as { orders: any[]; shortReport?: string };
                 response = {
-                  rebalance: !!r.rebalance,
-                  ...(newAllocation !== undefined ? { newAllocation } : {}),
+                  orders: Array.isArray(r.orders) ? r.orders : [],
                   shortReport: typeof r.shortReport === 'string' ? r.shortReport : '',
                 };
               }
             }
           }
         } catch {
-          const rebalanceMatch = textField.match(/"rebalance"\s*:\s*(true|false)/i);
-          const reportMatch = textField.match(/"shortReport"\s*:\s*"([\s\S]*?)"/i);
-          if (rebalanceMatch && reportMatch) {
-            response = {
-              rebalance: rebalanceMatch[1].toLowerCase() === 'true',
-              shortReport: reportMatch[1],
-            };
-            const allocMatch = textField.match(
-                /"newAllocation"\s*:\s*([0-9]+(?:\.[0-9]+)?|[0-9.eE+-]+)/i
-            );
-            if (allocMatch) response.newAllocation = Number(allocMatch[1]);
-          }
+          // ignore parsing errors for fallback
         }
       } else {
         text = JSON.stringify(parsed);
@@ -124,17 +102,24 @@ export function parseExecLog(log: unknown): ParsedExecLog {
 
 export function validateExecResponse(
   response: ParsedExecLog['response'] | undefined,
-  policy: { floor: Record<string, number> },
+  allowedTokens: string[],
 ): string | undefined {
-  if (!response || response.newAllocation === undefined) return undefined;
-  const na = response.newAllocation;
-  if (typeof na !== 'number' || Number.isNaN(na) || na < 0 || na > 100)
-    return 'newAllocation must be between 0 and 100';
-  const tokens = Object.keys(policy.floor || {});
-  const [t1, t2] = tokens;
-  const floor1 = t1 ? policy.floor[t1] || 0 : 0;
-  const floor2 = t2 ? policy.floor[t2] || 0 : 0;
-  if (na < floor1 || na > 100 - floor2)
-    return 'newAllocation violates policy floor';
+  if (!response) return undefined;
+  for (const o of response.orders || []) {
+    if (typeof o.pair !== 'string' || typeof o.side !== 'string')
+      return 'invalid order';
+    let valid = false;
+    for (const sym of TOKEN_SYMBOLS) {
+      if (o.pair.startsWith(sym)) {
+        const rest = o.pair.slice(sym.length);
+        if (allowedTokens.includes(sym) && allowedTokens.includes(rest)) {
+          valid = true;
+        }
+      }
+    }
+    if (!valid) return 'invalid pair';
+    if (typeof o.quantity !== 'number' || o.quantity <= 0)
+      return 'invalid quantity';
+  }
   return undefined;
 }
