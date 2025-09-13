@@ -258,12 +258,17 @@ function AgentBlock({
 export default function Dashboard() {
   const { user } = useUser();
   const [page, setPage] = useState(1);
-  const [tokens, setTokens] = useState(['USDT', 'BTC']);
+  const [tokens, setTokens] = useState(['USDT']);
   const [onlyActive, setOnlyActive] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToast();
   const t = useTranslation();
-  const { hasBinanceKey, balances, accountBalances } = usePrerequisites(tokens, {
+  const {
+    hasBinanceKey,
+    balances,
+    accountBalances,
+    isAccountLoading,
+  } = usePrerequisites(tokens, {
     includeAiKey: false,
   });
 
@@ -367,6 +372,7 @@ export default function Dashboard() {
               balances={balances}
               accountBalances={accountBalances}
               onTokensChange={handleTokensChange}
+              accountLoading={isAccountLoading}
             />
           )}
         </div>

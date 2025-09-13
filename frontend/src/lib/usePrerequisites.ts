@@ -140,6 +140,7 @@ export function usePrerequisites(
     models: includeAiKey ? modelsQuery.data ?? [] : [],
     balances,
     accountBalances,
+    isAccountLoading: accountQuery.isLoading,
   } as const;
 }
 

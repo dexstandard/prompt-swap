@@ -19,12 +19,14 @@ interface Props {
   onTokensChange?: (tokens: string[]) => void;
   balances: BalanceInfo[];
   accountBalances: BinanceAccount['balances'];
+  accountLoading: boolean;
 }
 
 export default function PortfolioReviewForm({
   onTokensChange,
   balances,
   accountBalances,
+  accountLoading,
 }: Props) {
   const { user } = useUser();
   const t = useTranslation();
@@ -66,6 +68,7 @@ export default function PortfolioReviewForm({
             autoPopulateTopTokens
             useEarn={useEarn}
             onUseEarnChange={setUseEarn}
+            accountLoading={accountLoading}
           />
           {!user && (
             <p className="text-sm text-gray-600 mb-2">{t('log_in_to_continue')}</p>

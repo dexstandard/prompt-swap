@@ -91,10 +91,7 @@ export const portfolioReviewSchema = z
 export type PortfolioReviewFormValues = z.infer<typeof portfolioReviewSchema>;
 
 export const portfolioReviewDefaults: PortfolioReviewFormValues = {
-  tokens: [
-    { token: 'USDT', minAllocation: 0 },
-    { token: 'BTC', minAllocation: 0 },
-  ],
+  tokens: [{ token: 'USDT', minAllocation: 0 }],
   risk: 'low',
   reviewInterval: '30m',
 };

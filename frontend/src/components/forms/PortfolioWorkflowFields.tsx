@@ -19,6 +19,7 @@ interface Props {
   onTokensChange?: (tokens: string[]) => void;
   balances: BalanceInfo[];
   accountBalances: BinanceAccount['balances'];
+  accountLoading: boolean;
   autoPopulateTopTokens?: boolean;
   useEarn: boolean;
   onUseEarnChange: (v: boolean) => void;
@@ -28,6 +29,7 @@ export default function PortfolioWorkflowFields({
   onTokensChange,
   balances,
   accountBalances,
+  accountLoading,
   autoPopulateTopTokens = false,
   useEarn,
   onUseEarnChange,
@@ -62,8 +64,10 @@ export default function PortfolioWorkflowFields({
 
   useEffect(() => {
     if (!autoPopulateTopTokens || initializedTopTokens) return;
+    if (accountLoading) return;
+    if (!tokensWatch.length) return;
+    const stable = tokensWatch[0]?.token || stableCoins[0];
     if (topTokens.length > 0) {
-      const stable = tokensWatch[0]?.token;
       const newTokens = [stable, ...topTokens]
         .filter((t): t is string => Boolean(t))
         .slice(0, 5);
@@ -74,8 +78,17 @@ export default function PortfolioWorkflowFields({
         })),
       );
       onTokensChange?.(newTokens);
-      setInitializedTopTokens(true);
+    } else {
+      const defaultTokens = [stable, 'BTC'];
+      replace(
+        defaultTokens.map((t) => ({
+          token: t,
+          minAllocation: 0,
+        })),
+      );
+      onTokensChange?.(defaultTokens);
     }
+    setInitializedTopTokens(true);
   }, [
     autoPopulateTopTokens,
     topTokens,
@@ -83,6 +96,7 @@ export default function PortfolioWorkflowFields({
     replace,
     onTokensChange,
     tokensWatch,
+    accountLoading,
   ]);
 
   useEffect(() => {
@@ -218,53 +232,46 @@ export default function PortfolioWorkflowFields({
           </button>
         )}
       </div>
-      <div className="flex items-center justify-between text-sm font-medium mt-2">
-        <span>Total $: {totalUsd.toFixed(2)}</span>
+      <div className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-2 text-sm font-medium mt-2">
+        <span className="text-left">Total $:</span>
+        <span>{totalUsd.toFixed(2)}</span>
+        <span className="text-left">{t('use_binance_earn')}</span>
         <Toggle
-          label={t('use_binance_earn')}
+          label=""
           checked={useEarn}
           onChange={onUseEarnChange}
           size="sm"
         />
-      </div>
-      <div className="grid grid-cols-2 gap-4 items-center mt-4">
-        <div>
-          <label htmlFor="risk" className="block text-sm font-medium">
-            {t('risk_tolerance')}
-          </label>
-          <Controller
-            name="risk"
-            control={control}
-            render={({ field }) => (
-              <SelectInput
-                id="risk"
-                value={field.value}
-                onChange={field.onChange}
-                options={riskOptions}
-              />
-            )}
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="reviewInterval"
-            className="block text-sm font-medium"
-          >
-            {t('review_interval')}
-          </label>
-          <Controller
-            name="reviewInterval"
-            control={control}
-            render={({ field }) => (
-              <SelectInput
-                id="reviewInterval"
-                value={field.value}
-                onChange={field.onChange}
-                options={reviewIntervalOptions(t)}
-              />
-            )}
-          />
-        </div>
+        <label htmlFor="risk" className="text-left">
+          {t('risk_tolerance')}
+        </label>
+        <Controller
+          name="risk"
+          control={control}
+          render={({ field }) => (
+            <SelectInput
+              id="risk"
+              value={field.value}
+              onChange={field.onChange}
+              options={riskOptions}
+            />
+          )}
+        />
+        <label htmlFor="reviewInterval" className="text-left">
+          {t('review_interval')}
+        </label>
+        <Controller
+          name="reviewInterval"
+          control={control}
+          render={({ field }) => (
+            <SelectInput
+              id="reviewInterval"
+              value={field.value}
+              onChange={field.onChange}
+              options={reviewIntervalOptions(t)}
+            />
+          )}
+        />
       </div>
     </>
   );
