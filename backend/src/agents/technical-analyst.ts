@@ -13,10 +13,17 @@ const indicatorCache = new Map<
   { promise: Promise<TokenIndicators>; expires: number }
 >();
 
-export function fetchTokenIndicatorsCached(token: string): Promise<TokenIndicators> {
+export function fetchTokenIndicatorsCached(
+  token: string,
+  log: FastifyBaseLogger,
+): Promise<TokenIndicators> {
   const now = Date.now();
   const cached = indicatorCache.get(token);
-  if (cached && cached.expires > now) return cached.promise;
+  if (cached && cached.expires > now) {
+    log.info({ token }, 'indicator cache hit');
+    return cached.promise;
+  }
+  log.info({ token }, 'indicator cache miss');
   const promise = fetchTokenIndicators(token);
   indicatorCache.set(token, { promise, expires: now + CACHE_MS });
   promise.catch(() => indicatorCache.delete(token));
@@ -32,7 +39,11 @@ export function getTechnicalOutlookCached(
 ): Promise<AnalysisLog> {
   const now = Date.now();
   const cached = cache.get(token);
-  if (cached && cached.expires > now) return cached.promise;
+  if (cached && cached.expires > now) {
+    log.info({ token }, 'technical outlook cache hit');
+    return cached.promise;
+  }
+  log.info({ token }, 'technical outlook cache miss');
   const promise = getTechnicalOutlook(token, indicators, model, apiKey, log);
   cache.set(token, { promise, expires: now + CACHE_MS });
   promise.catch(() => cache.delete(token));
@@ -84,7 +95,7 @@ export async function runTechnicalAnalyst(
 
   await Promise.all(
     [...tokenReports.entries()].map(async ([token, reports]) => {
-      const indicators = await fetchTokenIndicatorsCached(token);
+      const indicators = await fetchTokenIndicatorsCached(token, log);
       const { analysis, prompt: p, response } = await getTechnicalOutlookCached(
         token,
         indicators,

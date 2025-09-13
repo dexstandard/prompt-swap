@@ -341,7 +341,7 @@ export default async function agentRoutes(app: FastifyInstance) {
           positions,
           newAllocation: result.newAllocation,
           reviewResultId: logId,
-          log,
+          log: log.child({ execLogId: logId }),
           price: finalPrice,
           quantity: finalQuantity,
           manuallyEdited: body?.manuallyEdited,

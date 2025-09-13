@@ -19,7 +19,11 @@ export function getTokenNewsSummaryCached(
 ): Promise<AnalysisLog> {
   const now = Date.now();
   const cached = cache.get(token);
-  if (cached && cached.expires > now) return cached.promise;
+  if (cached && cached.expires > now) {
+    log.info({ token }, 'news summary cache hit');
+    return cached.promise;
+  }
+  log.info({ token }, 'news summary cache miss');
   const promise = getTokenNewsSummary(token, model, apiKey, log);
   cache.set(token, { promise, expires: now + CACHE_MS });
   promise.catch(() => cache.delete(token));
