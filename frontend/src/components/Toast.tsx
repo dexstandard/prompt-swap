@@ -1,13 +1,22 @@
 import { useState, type ReactNode } from 'react';
 import { ToastContext } from '../lib/useToast';
+import { ERROR_MESSAGES, ERROR_MESSAGE_PREFIXES } from '../lib/errorMessages';
+import { useTranslation } from '../lib/i18n';
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<
     { message: string; variant: 'error' | 'success' } | null
   >(null);
+  const t = useTranslation();
 
   const show = (msg: string, variant: 'error' | 'success' = 'error') => {
-    setToast({ message: msg, variant });
+    const key =
+      ERROR_MESSAGES[msg] ||
+      Object.entries(ERROR_MESSAGE_PREFIXES).find(([p]) =>
+        msg.startsWith(p),
+      )?.[1];
+    const message = key ? t(key) : msg;
+    setToast({ message, variant });
     setTimeout(() => setToast(null), 4500);
   };
 
