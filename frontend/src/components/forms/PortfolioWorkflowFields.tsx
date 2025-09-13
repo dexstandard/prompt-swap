@@ -232,10 +232,10 @@ export default function PortfolioWorkflowFields({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-2 text-sm font-medium mt-2">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm font-medium mt-2">
         <span className="text-left">Total $:</span>
-        <span>{totalUsd.toFixed(2)}</span>
         <span className="text-left">{t('use_binance_earn')}</span>
+        <span>{totalUsd.toFixed(2)}</span>
         <Toggle
           label=""
           checked={useEarn}
@@ -244,6 +244,9 @@ export default function PortfolioWorkflowFields({
         />
         <label htmlFor="risk" className="text-left">
           {t('risk_tolerance')}
+        </label>
+        <label htmlFor="reviewInterval" className="text-left">
+          {t('review_interval')}
         </label>
         <Controller
           name="risk"
@@ -257,9 +260,6 @@ export default function PortfolioWorkflowFields({
             />
           )}
         />
-        <label htmlFor="reviewInterval" className="text-left">
-          {t('review_interval')}
-        </label>
         <Controller
           name="reviewInterval"
           control={control}
