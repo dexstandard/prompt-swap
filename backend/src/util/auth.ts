@@ -22,6 +22,17 @@ export function requireUserId(
   }
 }
 
+export function tryGetUserId(req: FastifyRequest): string | null {
+  const token = req.cookies?.session as string | undefined;
+  if (!token) return null;
+  try {
+    const payload = jwt.verify(token, env.KEY_PASSWORD) as { id: string };
+    return payload.id;
+  } catch {
+    return null;
+  }
+}
+
 export async function requireAdmin(
   req: FastifyRequest,
   reply: FastifyReply,
