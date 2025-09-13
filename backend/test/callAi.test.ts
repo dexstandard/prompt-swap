@@ -29,7 +29,7 @@ describe('callAi structured output', () => {
     const [, opts] = fetchMock.mock.calls[0];
     const body = JSON.parse(opts.body);
     expect(opts.body).toBe(JSON.stringify(body));
-    expect(body.instructions).toMatch(/- Decide whether to rebalance/i);
+    expect(body.instructions).toMatch(/- Decide which limit orders to place/i);
     expect(body.instructions).toMatch(/On error, return \{error:"message"\}/i);
     expect(typeof body.input).toBe('string');
     const parsed = JSON.parse(body.input);
@@ -41,7 +41,7 @@ describe('callAi structured output', () => {
     expect(body.text.format.type).toBe('json_schema');
     const anyOf = body.text.format.schema.properties.result.anyOf;
     expect(Array.isArray(anyOf)).toBe(true);
-    expect(anyOf).toHaveLength(3);
+    expect(anyOf).toHaveLength(2);
     (globalThis as any).fetch = originalFetch;
   });
 

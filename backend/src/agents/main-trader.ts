@@ -9,49 +9,15 @@ import {
   extractJson,
 } from '../util/ai.js';
 import { isStablecoin } from '../util/tokens.js';
-import { fetchAccount, fetchPairData, fetchPairInfo } from '../services/binance.js';
+import { fetchAccount, fetchPairData } from '../services/binance.js';
 import { getRecentReviewResults } from '../repos/agent-review-result.js';
 import { getRecentLimitOrders } from '../repos/limit-orders.js';
 import type { ActivePortfolioWorkflowRow } from '../repos/portfolio-workflow.js';
 import type { RunParams } from './types.js';
 
-function computePortfolioValues(
-  row: ActivePortfolioWorkflowRow,
-  balances: { token1Balance: number; token2Balance: number },
-  price1: number,
-  price2: number,
-) {
-  const token1 = row.tokens[0].token;
-  const token2 = row.tokens[1].token;
-  const min1 = row.tokens[0].min_allocation;
-  const min2 = row.tokens[1].min_allocation;
-  const value1 = balances.token1Balance * price1;
-  const value2 = balances.token2Balance * price2;
-  const floor: Record<string, number> = {
-    [token1]: min1,
-    [token2]: min2,
-  };
-  const positions: RebalancePosition[] = [
-    {
-      sym: token1,
-      qty: balances.token1Balance,
-      price_usdt: price1,
-      value_usdt: value1,
-    },
-    {
-      sym: token2,
-      qty: balances.token2Balance,
-      price_usdt: price2,
-      value_usdt: value2,
-    },
-  ];
-  return { floor, positions };
-}
-
 function extractPreviousResponse(r: any): PreviousResponse | undefined {
   const res: PreviousResponse = {};
-  if (typeof r.rebalance === 'boolean') res.rebalance = r.rebalance;
-  if (typeof r.newAllocation === 'number') res.newAllocation = r.newAllocation;
+  if (Array.isArray(r.orders)) res.orders = r.orders;
   if (typeof r.shortReport === 'string') res.shortReport = r.shortReport;
   if (r.error !== undefined && r.error !== null) res.error = r.error;
   return Object.keys(res).length ? res : undefined;
@@ -61,43 +27,38 @@ export async function collectPromptData(
   row: ActivePortfolioWorkflowRow,
   log: FastifyBaseLogger,
 ): Promise<RebalancePrompt | undefined> {
-  const token1 = row.tokens[0].token;
-  const token2 = row.tokens[1].token;
-  const price1Promise =
-    token1 === 'USDT' || token1 === 'USDC'
-      ? Promise.resolve({ currentPrice: 1 })
-      : fetchPairData(token1, 'USDT');
-  const price2Promise =
-    token2 === 'USDT' || token2 === 'USDC'
-      ? Promise.resolve({ currentPrice: 1 })
-      : fetchPairData(token2, 'USDT');
+  const cash = row.cash_token;
+  const tokens = row.tokens.map((t) => t.token);
 
-  const [account, pair, price1Data, price2Data, info] = await Promise.all([
-    fetchAccount(row.user_id).catch((err) => {
-      log.error({ err }, 'failed to fetch balance');
-      return null;
-    }),
-    fetchPairData(token1, token2),
-    price1Promise,
-    price2Promise,
-    fetchPairInfo(token1, token2),
-  ]);
+  const account = await fetchAccount(row.user_id).catch((err) => {
+    log.error({ err }, 'failed to fetch balance');
+    return null;
+  });
+  if (!account) return undefined;
 
-  const bal1 = account?.balances.find((b) => b.asset === token1);
-  const token1Balance = bal1 ? Number(bal1.free) + Number(bal1.locked) : undefined;
-  const bal2 = account?.balances.find((b) => b.asset === token2);
-  const token2Balance = bal2 ? Number(bal2.free) + Number(bal2.locked) : undefined;
-  if (token1Balance === undefined || token2Balance === undefined) {
-    log.error('failed to fetch token balances');
-    return undefined;
+  const floor: Record<string, number> = {};
+  const positions: RebalancePosition[] = [];
+
+  const balCash = account.balances.find((b) => b.asset === cash);
+  const cashQty = balCash ? Number(balCash.free) + Number(balCash.locked) : 0;
+  positions.push({ sym: cash, qty: cashQty, price_usdt: 1, value_usdt: cashQty });
+
+  for (const t of row.tokens) {
+    const bal = account.balances.find((b) => b.asset === t.token);
+    const qty = bal ? Number(bal.free) + Number(bal.locked) : undefined;
+    if (qty === undefined) {
+      log.error('failed to fetch token balances');
+      return undefined;
+    }
+    const { currentPrice } = await fetchPairData(t.token, cash);
+    positions.push({
+      sym: t.token,
+      qty,
+      price_usdt: currentPrice,
+      value_usdt: currentPrice * qty,
+    });
+    floor[t.token] = t.min_allocation;
   }
-
-  const { floor, positions } = computePortfolioValues(
-    row,
-    { token1Balance, token2Balance },
-    price1Data.currentPrice,
-    price2Data.currentPrice,
-  );
 
   const portfolio: RebalancePrompt['portfolio'] = {
     ts: new Date().toISOString(),
@@ -132,10 +93,10 @@ export async function collectPromptData(
   const prompt: RebalancePrompt = {
     instructions: row.agent_instructions,
     policy: { floor },
+    cash,
     portfolio,
-    marketData: { currentPrice: pair.currentPrice, minNotional: info.minNotional },
-    reports: row.tokens
-      .map((t) => t.token)
+    marketData: {},
+    reports: tokens
       .filter((t) => !isStablecoin(t))
       .map((token) => ({ token, news: null, tech: null })),
   };
@@ -148,9 +109,14 @@ export async function collectPromptData(
   return prompt;
 }
 
+export interface MainTraderOrder {
+  pair: string;
+  side: string;
+  quantity: number;
+}
+
 export interface MainTraderDecision {
-  rebalance: boolean;
-  newAllocation?: number;
+  orders: MainTraderOrder[];
   shortReport: string;
 }
 
