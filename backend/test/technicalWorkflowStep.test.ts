@@ -6,18 +6,19 @@ vi.mock('../src/repos/agent-review-raw-log.js', () => ({
   insertReviewRawLog: insertReviewRawLogMock,
 }));
 
+const fetchTokenIndicatorsMock = vi.fn().mockResolvedValue({
+  ret: {},
+  sma_dist: {},
+  macd_hist: 0,
+  vol: {},
+  range: {},
+  volume: {},
+  corr: {},
+  regime: {},
+  osc: {},
+});
 vi.mock('../src/services/indicators.js', () => ({
-  fetchTokenIndicators: vi.fn().mockResolvedValue({
-    ret: {},
-    sma_dist: {},
-    macd_hist: 0,
-    vol: {},
-    range: {},
-    volume: {},
-    corr: {},
-    regime: {},
-    osc: {},
-  }),
+  fetchTokenIndicators: fetchTokenIndicatorsMock,
 }));
 vi.mock('../src/services/derivatives.js', () => ({
   fetchOrderBook: vi.fn().mockResolvedValue({ bid: [0, 0], ask: [0, 0] }),
@@ -59,5 +60,33 @@ describe('technical analyst step', () => {
     expect(prompt.marketData.indicators.BTC).toBeDefined();
     expect(insertReviewRawLogMock).toHaveBeenCalled();
     expect(callAiMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('dedupes tokens and caches indicators', async () => {
+    vi.resetModules();
+    fetchTokenIndicatorsMock.mockClear();
+    callAiMock.mockClear();
+    insertReviewRawLogMock.mockClear();
+    const mod = await import('../src/agents/technical-analyst.js');
+    const prompt: any = {
+      marketData: {},
+      reports: [
+        { token: 'BTC', news: null, tech: null },
+        { token: 'BTC', news: null, tech: null },
+      ],
+    };
+    await mod.runTechnicalAnalyst(
+      {
+        log: createLogger(),
+        model: 'gpt',
+        apiKey: 'key',
+        portfolioId: 'agent1',
+      },
+      prompt,
+    );
+    expect(callAiMock).toHaveBeenCalledTimes(1);
+    expect(fetchTokenIndicatorsMock).toHaveBeenCalledTimes(1);
+    expect(prompt.reports[0].tech?.comment).toBe('outlook for BTC');
+    expect(prompt.reports[1].tech?.comment).toBe('outlook for BTC');
   });
 });

@@ -8,6 +8,20 @@ import { type AnalysisLog, type Analysis, analysisSchema, type RunParams } from 
 
 const CACHE_MS = 3 * 60 * 1000;
 const cache = new Map<string, { promise: Promise<AnalysisLog>; expires: number }>();
+const indicatorCache = new Map<
+  string,
+  { promise: Promise<TokenIndicators>; expires: number }
+>();
+
+export function fetchTokenIndicatorsCached(token: string): Promise<TokenIndicators> {
+  const now = Date.now();
+  const cached = indicatorCache.get(token);
+  if (cached && cached.expires > now) return cached.promise;
+  const promise = fetchTokenIndicators(token);
+  indicatorCache.set(token, { promise, expires: now + CACHE_MS });
+  promise.catch(() => indicatorCache.delete(token));
+  return promise;
+}
 
 export function getTechnicalOutlookCached(
   token: string,
@@ -55,21 +69,33 @@ export async function runTechnicalAnalyst(
   prompt: RebalancePrompt,
 ): Promise<void> {
   if (!prompt.reports) return;
+
+  const tokenReports = new Map<string, any[]>();
   for (const report of prompt.reports) {
     const { token } = report;
     if (isStablecoin(token)) continue;
-    const indicators = await fetchTokenIndicators(token);
-    const { analysis, prompt: p, response } = await getTechnicalOutlookCached(
-      token,
-      indicators,
-      model,
-      apiKey,
-      log,
-    );
-    if (p && response)
-      await insertReviewRawLog({ portfolioId, prompt: p, response });
-    report.tech = analysis;
-    if (!prompt.marketData.indicators) prompt.marketData.indicators = {};
-    (prompt.marketData.indicators as Record<string, any>)[token] = indicators;
+    const arr = tokenReports.get(token);
+    if (arr) arr.push(report);
+    else tokenReports.set(token, [report]);
   }
+
+  if (tokenReports.size === 0) return;
+  if (!prompt.marketData.indicators) prompt.marketData.indicators = {};
+
+  await Promise.all(
+    [...tokenReports.entries()].map(async ([token, reports]) => {
+      const indicators = await fetchTokenIndicatorsCached(token);
+      const { analysis, prompt: p, response } = await getTechnicalOutlookCached(
+        token,
+        indicators,
+        model,
+        apiKey,
+        log,
+      );
+      if (p && response)
+        await insertReviewRawLog({ portfolioId, prompt: p, response });
+      (prompt.marketData.indicators as Record<string, any>)[token] = indicators;
+      for (const r of reports) r.tech = analysis;
+    }),
+  );
 }
