@@ -3,12 +3,21 @@ import {
   getAllOpenLimitOrders,
   updateLimitOrderStatus,
 } from '../repos/limit-orders.js';
-import { cancelOrder, fetchOpenOrders, parseBinanceError } from '../services/binance.js';
+import {
+  cancelOrder,
+  fetchOpenOrders,
+  parseBinanceError,
+  type OpenOrder,
+} from '../services/binance.js';
 
-interface GroupedOrder {
+interface Order {
   user_id: string;
   order_id: string;
   agent_status: string;
+  planned_json: string;
+}
+
+interface GroupedOrder extends Order {
   planned: { symbol: string };
 }
 
@@ -22,10 +31,10 @@ export default async function checkOpenOrders(log: FastifyBaseLogger) {
   }
 }
 
-function groupByUserAndSymbol(orders: any[]) {
+function groupByUserAndSymbol(orders: Order[]) {
   const groups = new Map<string, GroupedOrder[]>();
   for (const o of orders) {
-    const planned = JSON.parse(o.planned_json);
+    const planned = JSON.parse(o.planned_json) as { symbol: string };
     const key = `${o.user_id}-${planned.symbol}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push({ ...o, planned });
@@ -35,7 +44,7 @@ function groupByUserAndSymbol(orders: any[]) {
 
 async function reconcileGroup(log: FastifyBaseLogger, list: GroupedOrder[]) {
   const { user_id, planned } = list[0];
-  let open: any[] = [];
+  let open: OpenOrder[] = [];
   try {
     const res = await fetchOpenOrders(user_id, { symbol: planned.symbol });
     open = Array.isArray(res) ? res : [];
@@ -52,7 +61,7 @@ async function reconcileOrder(
   log: FastifyBaseLogger,
   o: GroupedOrder,
   symbol: string,
-  open: any[],
+  open: OpenOrder[],
 ) {
   const exists = open.some((r) => String(r.orderId) === o.order_id);
   if (!exists) {
