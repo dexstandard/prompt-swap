@@ -20,7 +20,7 @@ export default function Toggle({
   const marginClass = labelPosition === 'top' ? 'mt-2' : 'ml-2';
   const sizeClass =
     size === 'sm'
-      ? "w-8 h-4 after:h-3 after:w-3 after:top-[1px] after:left-[1px] peer-checked:after:translate-x-4"
+      ? "w-8 h-4 after:h-3 after:w-3 after:top-[2px] after:left-[1px] peer-checked:after:translate-x-4"
       : "w-10 h-5 after:h-4 after:w-4 after:top-[2px] after:left-[2px] peer-checked:after:translate-x-5";
 
   return (
