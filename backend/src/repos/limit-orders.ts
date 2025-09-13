@@ -8,17 +8,19 @@ export interface LimitOrderEntry {
   status: LimitOrderStatus;
   reviewResultId: string;
   orderId: string;
+  cancellationReason?: string;
 }
 
 export async function insertLimitOrder(entry: LimitOrderEntry): Promise<void> {
   await db.query(
-    'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id) VALUES ($1, $2, $3, $4, $5)',
+    'INSERT INTO limit_order (user_id, planned_json, status, review_result_id, order_id, cancellation_reason) VALUES ($1, $2, $3, $4, $5, $6)',
     [
       entry.userId,
       JSON.stringify(entry.planned),
       entry.status,
       entry.reviewResultId,
-      entry.orderId,
+       entry.orderId,
+      entry.cancellationReason ?? null,
     ],
   );
 }
@@ -45,9 +47,10 @@ export async function getLimitOrdersByReviewResult(
   status: LimitOrderStatus;
   created_at: Date;
   order_id: string;
+  cancellation_reason: string | null;
 }[]> {
   const { rows } = await db.query(
-    `SELECT e.planned_json, e.status, e.created_at, e.order_id
+    `SELECT e.planned_json, e.status, e.created_at, e.order_id, e.cancellation_reason
        FROM limit_order e
        JOIN agent_review_result r ON e.review_result_id = r.id
       WHERE r.agent_id = $1 AND e.review_result_id = $2`,
@@ -58,12 +61,13 @@ export async function getLimitOrdersByReviewResult(
     status: LimitOrderStatus;
     created_at: Date;
     order_id: string;
+    cancellation_reason: string | null;
   }[];
 }
 
 export async function getRecentLimitOrders(agentId: string, limit: number) {
   const { rows } = await db.query(
-    `SELECT e.planned_json, e.status, e.created_at
+    `SELECT e.planned_json, e.status, e.created_at, e.cancellation_reason
        FROM limit_order e
        JOIN agent_review_result r ON e.review_result_id = r.id
       WHERE r.agent_id = $1
@@ -75,6 +79,7 @@ export async function getRecentLimitOrders(agentId: string, limit: number) {
     planned_json: string;
     status: LimitOrderStatus;
     created_at: Date;
+    cancellation_reason: string | null;
   }[];
 }
 
@@ -110,9 +115,10 @@ export async function updateLimitOrderStatus(
   userId: string,
   orderId: string,
   status: LimitOrderStatus,
+  cancellationReason?: string,
 ) {
   await db.query(
-    `UPDATE limit_order SET status = $3 WHERE user_id = $1 AND order_id = $2`,
-    [userId, orderId, status],
+    `UPDATE limit_order SET status = $3, cancellation_reason = COALESCE($4, cancellation_reason) WHERE user_id = $1 AND order_id = $2`,
+    [userId, orderId, status, cancellationReason ?? null],
   );
 }

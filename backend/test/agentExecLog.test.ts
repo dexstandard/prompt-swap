@@ -645,6 +645,26 @@ describe('agent exec log routes', () => {
     expect(res.json()).toEqual({
       error: 'Invalid API-key, IP, or permissions for action.',
     });
+    const { rows } = await db.query(
+      'SELECT status, cancellation_reason FROM limit_order WHERE review_result_id = $1',
+      [reviewResultId],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('canceled');
+    expect(rows[0].cancellation_reason).toBe(
+      'Invalid API-key, IP, or permissions for action.',
+    );
+    const res2 = await app.inject({
+      method: 'GET',
+      url: `/api/portfolio-workflows/${agent.id}/exec-log/${reviewResultId}/orders`,
+      cookies: authCookies(userId),
+    });
+    expect(res2.statusCode).toBe(200);
+    const body = res2.json();
+    expect(body.orders).toHaveLength(1);
+    expect(body.orders[0].cancellationReason).toBe(
+      'Invalid API-key, IP, or permissions for action.',
+    );
     vi.restoreAllMocks();
     await app.close();
   });

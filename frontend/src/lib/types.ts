@@ -7,4 +7,5 @@ export interface LimitOrder {
   price: number;
   status: LimitOrderStatus;
   createdAt: number;
+  cancellationReason?: string;
 }

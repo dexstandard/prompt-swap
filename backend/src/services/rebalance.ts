@@ -1,6 +1,11 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { insertLimitOrder, type LimitOrderStatus } from '../repos/limit-orders.js';
-import { fetchPairData, fetchPairInfo, createLimitOrder } from './binance.js';
+import {
+  fetchPairData,
+  fetchPairInfo,
+  createLimitOrder,
+  parseBinanceError,
+} from './binance.js';
 import { TOKEN_SYMBOLS } from '../util/tokens.js';
 
 export const MIN_LIMIT_ORDER_USD = 0.02;
@@ -75,6 +80,15 @@ export async function createRebalanceLimitOrder(opts: {
   try {
     const res = await createLimitOrder(userId, params);
     if (!res || res.orderId === undefined || res.orderId === null) {
+      const reason = 'order id missing';
+      await insertLimitOrder({
+        userId,
+        planned: { ...params, manuallyEdited: manuallyEdited ?? false },
+        status: 'canceled' as LimitOrderStatus,
+        reviewResultId,
+        orderId: String(Date.now()),
+        cancellationReason: reason,
+      });
       log.error({ step: 'createLimitOrder' }, 'step failed');
       return;
     }
@@ -87,6 +101,16 @@ export async function createRebalanceLimitOrder(opts: {
     });
     log.info({ step: 'createLimitOrder', orderId: res.orderId, order: params }, 'step success');
   } catch (err) {
+    const reason =
+      parseBinanceError(err) || (err instanceof Error ? err.message : 'unknown error');
+    await insertLimitOrder({
+      userId,
+      planned: { ...params, manuallyEdited: manuallyEdited ?? false },
+      status: 'canceled' as LimitOrderStatus,
+      reviewResultId,
+      orderId: String(Date.now()),
+      cancellationReason: reason,
+    });
     log.error({ err, step: 'createLimitOrder' }, 'step failed');
     throw err;
   }
@@ -120,7 +144,17 @@ export async function createDecisionLimitOrders(opts: {
     const params = { symbol: info.symbol, side: o.side as any, quantity: qty, price: prc } as const;
     try {
       const res = await createLimitOrder(opts.userId, params);
-      if (!res || res.orderId === undefined || res.orderId === null) continue;
+      if (!res || res.orderId === undefined || res.orderId === null) {
+        await insertLimitOrder({
+          userId: opts.userId,
+          planned: { ...params, manuallyEdited: false },
+          status: 'canceled' as LimitOrderStatus,
+          reviewResultId: opts.reviewResultId,
+          orderId: String(Date.now()),
+          cancellationReason: 'order id missing',
+        });
+        continue;
+      }
       await insertLimitOrder({
         userId: opts.userId,
         planned: { ...params, manuallyEdited: false },
@@ -130,6 +164,16 @@ export async function createDecisionLimitOrders(opts: {
       });
       opts.log.info({ step: 'createLimitOrder', orderId: res.orderId }, 'step success');
     } catch (err) {
+      const reason =
+        parseBinanceError(err) || (err instanceof Error ? err.message : 'unknown error');
+      await insertLimitOrder({
+        userId: opts.userId,
+        planned: { ...params, manuallyEdited: false },
+        status: 'canceled' as LimitOrderStatus,
+        reviewResultId: opts.reviewResultId,
+        orderId: String(Date.now()),
+        cancellationReason: reason,
+      });
       opts.log.error({ err, step: 'createLimitOrder' }, 'step failed');
     }
   }

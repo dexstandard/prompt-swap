@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 import type { LimitOrder } from '../lib/types';
 import api from '../lib/axios';
 import Button from './ui/Button';
+import Modal from './ui/Modal';
+import { useTranslation } from '../lib/i18n';
 
 interface Props {
   agentId: string;
@@ -12,6 +15,8 @@ interface Props {
 
 export default function ExecTxCard({ agentId, logId, orders, onCancel }: Props) {
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const t = useTranslation();
 
   async function handleCancel(id: string) {
     setCanceling(id);
@@ -46,7 +51,15 @@ export default function ExecTxCard({ agentId, logId, orders, onCancel }: Props) 
               <td className="pr-2">{o.side}</td>
               <td className="pr-2">{o.quantity}</td>
               <td className="pr-2">{o.price}</td>
-              <td className="pr-2">{o.status}</td>
+              <td className="pr-2">
+                {o.status}
+                {o.cancellationReason && (
+                  <AlertCircle
+                    className="ml-1 inline h-4 w-4 text-red-600 cursor-pointer"
+                    onClick={() => setErrorMsg(o.cancellationReason!)}
+                  />
+                )}
+              </td>
               <td>
                 {o.status === 'open' && (
                   <Button
@@ -62,6 +75,14 @@ export default function ExecTxCard({ agentId, logId, orders, onCancel }: Props) 
           ))}
         </tbody>
       </table>
+      {errorMsg && (
+        <Modal open onClose={() => setErrorMsg(null)}>
+          <p className="mb-4">{errorMsg}</p>
+          <div className="flex justify-end">
+            <Button onClick={() => setErrorMsg(null)}>{t('close')}</Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
