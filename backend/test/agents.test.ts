@@ -78,7 +78,6 @@ describe('agent routes', () => {
     (globalThis as any).fetch = fetchMock;
 
     const payload = {
-      userId,
       model: 'gpt-5',
       name: 'A1',
       tokens: [
@@ -213,14 +212,6 @@ describe('agent routes', () => {
     });
     expect(res.statusCode).toBe(404);
 
-    res = await app.inject({
-      method: 'POST',
-      url: '/api/portfolio-workflows',
-      cookies: authCookies('999'),
-      payload: { ...payload, userId, name: 'A2' },
-    });
-    expect(res.statusCode).toBe(403);
-
     await app.close();
     (globalThis as any).fetch = originalFetch;
   });
@@ -229,7 +220,6 @@ describe('agent routes', () => {
     const app = await buildServer();
     const userId = await addUserNoKeys('nokeys');
     const payload = {
-      userId,
       model: 'm',
       name: 'NoKeys',
       tokens: [
@@ -265,7 +255,6 @@ describe('agent routes', () => {
     const app = await buildServer();
     const starterId = await addUser('starter');
     const draftPayload = {
-      userId: starterId,
       model: 'm',
       name: 'Draft',
       tokens: [
@@ -388,7 +377,6 @@ describe('agent routes', () => {
     (globalThis as any).fetch = fetchMock;
 
     const createPayload = {
-      userId: updateUserId,
       model: 'm',
       name: 'A',
       tokens: [
@@ -438,7 +426,6 @@ describe('agent routes', () => {
     const u1Id = await addUserNoKeys('1');
 
     const basePayload = {
-      userId: u1Id,
       model: 'm',
       name: 'Draft1',
       tokens: [
@@ -500,7 +487,7 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/portfolio-workflows',
       cookies: authCookies(u2Id),
-      payload: { ...basePayload, userId: u2Id, name: 'Active', status: 'active' },
+      payload: { ...basePayload, name: 'Active', status: 'active' },
     });
     expect(res.statusCode).toBe(200);
     const activeId = res.json().id as string;
@@ -509,7 +496,7 @@ describe('agent routes', () => {
       method: 'POST',
       url: '/api/portfolio-workflows',
       cookies: authCookies(u2Id),
-      payload: { ...basePayload, userId: u2Id, name: 'Draft2', status: 'draft' },
+      payload: { ...basePayload, name: 'Draft2', status: 'draft' },
     });
     const draft2Id = resDraft2.json().id as string;
 
@@ -553,7 +540,6 @@ describe('agent routes', () => {
     (globalThis as any).fetch = fetchMock;
 
     const base = {
-      userId: dupId,
       model: 'm',
       name: 'A1',
       tokens: [
@@ -619,7 +605,6 @@ describe('agent routes', () => {
     const draftUserId = await addUserNoKeys('draftUser');
 
     const draftPayload = {
-      userId: draftUserId,
       model: 'm',
       name: 'Draft',
       tokens: [
@@ -667,7 +652,6 @@ describe('agent routes', () => {
     const updId = await addUserNoKeys('updUser');
 
     const base = {
-      userId: updId,
       model: 'm1',
       name: 'Draft1',
       tokens: [
@@ -721,7 +705,6 @@ describe('agent routes', () => {
     const app = await buildServer();
     const nomodelId = await addUser('nomodel');
     const payload = {
-      userId: nomodelId,
       model: '',
       name: 'Draft',
       tokens: [
@@ -755,7 +738,6 @@ describe('agent routes', () => {
     const app = await buildServer();
     const allocId = await addUserNoKeys('allocUser');
     const payload = {
-      userId: allocId,
       model: 'm',
       name: 'Bad',
       tokens: [
