@@ -1,4 +1,4 @@
-import { db } from '../db/index.js';
+import { db, withTransaction } from '../db/index.js';
 import { AgentStatus } from '../util/agents.js';
 
 export interface PortfolioWorkflowTokenRow { token: string; min_allocation: number; }
@@ -188,38 +188,39 @@ export async function insertAgent(data: {
   manualRebalance: boolean;
   useEarn: boolean;
 }): Promise<PortfolioWorkflowRow> {
-  const { rows } = await db.query(
-    `INSERT INTO portfolio_workflow (user_id, model, status, start_balance, name, cash_token, risk, review_interval, agent_instructions, manual_rebalance, use_earn)
+  let id = '';
+  await withTransaction(async (client) => {
+    const { rows } = await client.query(
+      `INSERT INTO portfolio_workflow (user_id, model, status, start_balance, name, cash_token, risk, review_interval, agent_instructions, manual_rebalance, use_earn)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id`,
-    [
-      data.userId,
-      data.model,
-      data.status,
-      data.startBalance,
-      data.name,
-      data.cashToken,
-      data.risk,
-      data.reviewInterval,
-      data.agentInstructions,
-      data.manualRebalance,
-      data.useEarn,
-    ],
-  );
-  const id = rows[0].id as string;
-  const params: any[] = [id];
-  const values: string[] = [];
-  data.tokens.forEach((t, i) => {
-    values.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, ${i + 1})`);
-    params.push(t.token, t.minAllocation);
-  });
-  if (values.length)
-    await db.query(
-      `INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ${values.join(
-        ', ',
-      )}`,
-      params,
+      [
+        data.userId,
+        data.model,
+        data.status,
+        data.startBalance,
+        data.name,
+        data.cashToken,
+        data.risk,
+        data.reviewInterval,
+        data.agentInstructions,
+        data.manualRebalance,
+        data.useEarn,
+      ],
     );
+    id = rows[0].id as string;
+    const params: any[] = [id];
+    const values: string[] = [];
+    data.tokens.forEach((t, i) => {
+      values.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, ${i + 1})`);
+      params.push(t.token, t.minAllocation);
+    });
+    if (values.length)
+      await client.query(
+        `INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ${values.join(', ')}`,
+        params,
+      );
+  });
   return (await getAgent(id))!;
 }
 
@@ -237,36 +238,36 @@ export async function updateAgent(data: {
   manualRebalance: boolean;
   useEarn: boolean;
 }): Promise<void> {
-  await db.query(
-    `UPDATE portfolio_workflow SET model = $1, status = $2, name = $3, cash_token = $4, risk = $5, review_interval = $6, agent_instructions = $7, start_balance = $8, manual_rebalance = $9, use_earn = $10 WHERE id = $11`,
-    [
-      data.model,
-      data.status,
-      data.name,
-      data.cashToken,
-      data.risk,
-      data.reviewInterval,
-      data.agentInstructions,
-      data.startBalance,
-      data.manualRebalance,
-      data.useEarn,
-      data.id,
-    ],
-  );
-  await db.query('DELETE FROM portfolio_workflow_tokens WHERE portfolio_workflow_id = $1', [data.id]);
-  const params: any[] = [data.id];
-  const values: string[] = [];
-  data.tokens.forEach((t, i) => {
-    values.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, ${i + 1})`);
-    params.push(t.token, t.minAllocation);
-  });
-  if (values.length)
-    await db.query(
-      `INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ${values.join(
-        ', ',
-      )}`,
-      params,
+  await withTransaction(async (client) => {
+    await client.query(
+      `UPDATE portfolio_workflow SET model = $1, status = $2, name = $3, cash_token = $4, risk = $5, review_interval = $6, agent_instructions = $7, start_balance = $8, manual_rebalance = $9, use_earn = $10 WHERE id = $11`,
+      [
+        data.model,
+        data.status,
+        data.name,
+        data.cashToken,
+        data.risk,
+        data.reviewInterval,
+        data.agentInstructions,
+        data.startBalance,
+        data.manualRebalance,
+        data.useEarn,
+        data.id,
+      ],
     );
+    await client.query('DELETE FROM portfolio_workflow_tokens WHERE portfolio_workflow_id = $1', [data.id]);
+    const params: any[] = [data.id];
+    const values: string[] = [];
+    data.tokens.forEach((t, i) => {
+      values.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, ${i + 1})`);
+      params.push(t.token, t.minAllocation);
+    });
+    if (values.length)
+      await client.query(
+        `INSERT INTO portfolio_workflow_tokens (portfolio_workflow_id, token, min_allocation, position) VALUES ${values.join(', ')}`,
+        params,
+      );
+  });
 }
 
 export async function deleteAgent(id: string): Promise<void> {
