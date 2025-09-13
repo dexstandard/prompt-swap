@@ -19,6 +19,7 @@ import {
 import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import Toggle from '../ui/Toggle';
+import SelectInput from './SelectInput';
 
 interface Props {
   onTokensChange?: (tokens: string[]) => void;
@@ -207,7 +208,7 @@ export default function PortfolioWorkflowFields({
                     max={95}
                     {...field}
                     onChange={(e) => {
-                      let value =
+                      let value: number | '' =
                         e.target.value === '' ? '' : Number(e.target.value);
                       if (value !== '') {
                         if (value < 0) value = 0;
