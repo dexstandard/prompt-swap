@@ -22,7 +22,6 @@ export enum AgentStatus {
 }
 
 export interface AgentInput {
-  userId: string;
   model: string;
   name: string;
   cash: string;
@@ -61,11 +60,7 @@ async function validateAgentInput(
   body: AgentInput,
   id?: string,
 ): Promise<ValidationErr | null> {
-  if (body.userId !== userId) {
-    log.error('user mismatch');
-    return { code: 403, body: errorResponse(ERROR_MESSAGES.forbidden) };
-  }
-  body.cash = body.cash.toUpperCase();
+  body.cash = (body.cash ?? '').toUpperCase();
   if (!['USDT', 'USDC'].includes(body.cash)) {
     log.error('invalid cash token');
     return { code: 400, body: errorResponse('invalid cash token') };
@@ -91,7 +86,7 @@ async function validateAgentInput(
     log.error('model too long');
     return { code: 400, body: errorResponse(lengthMessage('model', 50)) };
   } else {
-    const keyRow = await getAiKeyRow(body.userId);
+    const keyRow = await getAiKeyRow(userId);
     if (!keyRow?.own && keyRow?.shared?.model && body.model !== keyRow.shared.model) {
       log.error('model not allowed');
       return { code: 400, body: errorResponse('model not allowed') };
@@ -100,7 +95,7 @@ async function validateAgentInput(
   if (body.status === AgentStatus.Draft) {
     const dupDraft = await findIdenticalDraftAgent(
       {
-        userId: body.userId,
+        userId,
         model: body.model,
         name: body.name,
         cashToken: body.cash,
@@ -125,7 +120,7 @@ async function validateAgentInput(
   } else {
     const conflict = await validateTokenConflicts(
       log,
-      body.userId,
+      userId,
       body.tokens.map((t) => t.token),
       id,
     );
@@ -186,7 +181,7 @@ export async function prepareAgentForUpsert(
   if (err) return err;
   let startBalance: number | null = null;
   if (body.status === AgentStatus.Active) {
-    const keyErr = await ensureApiKeys(log, body.userId);
+    const keyErr = await ensureApiKeys(log, userId);
     if (keyErr) return keyErr;
     const bal = await getStartBalance(
       log,

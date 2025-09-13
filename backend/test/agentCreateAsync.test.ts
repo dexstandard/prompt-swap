@@ -51,7 +51,6 @@ describe('agent creation', () => {
     (globalThis as any).fetch = fetchMock;
 
     const payload = {
-      userId,
       model: 'm',
       name: 'Draft',
       tokens: [
@@ -93,7 +92,6 @@ describe('agent creation', () => {
     const userId = await addUser('2');
 
     const payload = {
-      userId,
       model: 'm',
       name: 'Multi',
       tokens: [

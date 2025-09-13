@@ -111,7 +111,7 @@ export default async function agentRoutes(app: FastifyInstance) {
         const { body: validated, startBalance } = res;
         const status = validated.status;
         const row = await insertAgent({
-          userId: validated.userId,
+          userId,
           model: validated.model,
           status,
           startBalance,
@@ -497,12 +497,6 @@ export default async function agentRoutes(app: FastifyInstance) {
         if (!ctx) return;
         const { userId, id, log } = ctx;
         const body = req.body as AgentInput;
-        if (body.userId !== userId) {
-          log.error('forbidden');
-          return reply
-            .code(403)
-            .send(errorResponse(ERROR_MESSAGES.forbidden));
-        }
         const res = await prepareAgentForUpsert(log, userId, body, id);
         if ('code' in res) return reply.code(res.code).send(res.body);
         const { body: validated, startBalance } = res;
