@@ -9,7 +9,13 @@ import { Plus, Trash } from 'lucide-react';
 import type { BalanceInfo } from '../../lib/usePrerequisites';
 import type { BinanceAccount } from '../../lib/useBinanceAccount';
 import { useTranslation } from '../../lib/i18n';
-import { tokens, stableCoins, riskOptions, reviewIntervalOptions, type PortfolioReviewFormValues } from '../../lib/constants';
+import {
+  tokens,
+  stableCoins,
+  riskOptions,
+  reviewIntervalOptions,
+  type PortfolioReviewFormValues,
+} from '../../lib/constants';
 import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import SelectInput from './SelectInput';
@@ -232,16 +238,9 @@ export default function PortfolioWorkflowFields({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-2 text-sm font-medium mt-2">
+      <div className="grid grid-cols-2 grid-rows-4 grid-flow-col items-start gap-x-4 gap-y-2 text-sm font-medium mt-2">
         <span className="text-left">Total $:</span>
         <span>{totalUsd.toFixed(2)}</span>
-        <span className="text-left">{t('use_binance_earn')}</span>
-        <Toggle
-          label=""
-          checked={useEarn}
-          onChange={onUseEarnChange}
-          size="sm"
-        />
         <label htmlFor="risk" className="text-left">
           {t('risk_tolerance')}
         </label>
@@ -256,6 +255,13 @@ export default function PortfolioWorkflowFields({
               options={riskOptions}
             />
           )}
+        />
+        <span className="text-left">{t('use_binance_earn')}</span>
+        <Toggle
+          label=""
+          checked={useEarn}
+          onChange={onUseEarnChange}
+          size="sm"
         />
         <label htmlFor="reviewInterval" className="text-left">
           {t('review_interval')}
@@ -273,6 +279,6 @@ export default function PortfolioWorkflowFields({
           )}
         />
       </div>
-    </>
-  );
-}
+      </>
+    );
+  }
