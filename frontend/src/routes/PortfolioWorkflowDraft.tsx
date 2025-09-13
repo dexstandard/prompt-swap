@@ -63,8 +63,14 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
         }
       : undefined,
   });
-  const { hasOpenAIKey, hasBinanceKey, models, balances, accountBalances } =
-    usePrerequisites(tokenSymbols);
+  const {
+    hasOpenAIKey,
+    hasBinanceKey,
+    models,
+    balances,
+    accountBalances,
+    isAccountLoading,
+  } = usePrerequisites(tokenSymbols);
 
   const [name, setName] = useState(data?.name || '');
   const [agentInstructions, setAgentInstructions] = useState(
@@ -114,6 +120,7 @@ export default function PortfolioWorkflowDraft({ draft }: Props) {
             onTokensChange={setTokenSymbols}
             balances={balances}
             accountBalances={accountBalances}
+            accountLoading={isAccountLoading}
             useEarn={useEarn}
             onUseEarnChange={setUseEarn}
           />
