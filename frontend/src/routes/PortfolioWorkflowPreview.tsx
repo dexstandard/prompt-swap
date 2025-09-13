@@ -251,13 +251,11 @@ export default function PortfolioWorkflowPreview({ draft }: Props) {
               .toFixed(5);
           })()}
         </div>
-        <div className="mt-4 space-y-1">
-          <p>
-            <strong>{t('risk_tolerance')}:</strong> {workflowData.risk}
-          </p>
-          <p>
-            <strong>{t('review_interval')}:</strong> {workflowData.reviewInterval}
-          </p>
+        <div className="mt-4 grid grid-cols-2 grid-rows-2 gap-x-4 gap-y-1 text-sm">
+          <span className="font-medium">{t('risk_tolerance')}</span>
+          <span className="font-medium">{t('review_interval')}</span>
+          <span>{workflowData.risk}</span>
+          <span>{workflowData.reviewInterval}</span>
         </div>
       </div>
       <AgentInstructions

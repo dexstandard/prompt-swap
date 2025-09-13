@@ -263,6 +263,9 @@ export default function PortfolioWorkflowFields({
         <label htmlFor="risk" className="text-left">
           {t('risk_tolerance')}
         </label>
+        <label htmlFor="reviewInterval" className="text-left">
+          {t('review_interval')}
+        </label>
         <Controller
           name="risk"
           control={control}
@@ -275,9 +278,6 @@ export default function PortfolioWorkflowFields({
             />
           )}
         />
-        <label htmlFor="reviewInterval" className="text-left">
-          {t('review_interval')}
-        </label>
         <Controller
           name="reviewInterval"
           control={control}
