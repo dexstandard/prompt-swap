@@ -20,6 +20,7 @@ import TokenSelect from './TokenSelect';
 import TextInput from './TextInput';
 import Toggle from '../ui/Toggle';
 import SelectInput from './SelectInput';
+import FormField from './FormField';
 
 interface Props {
   onTokensChange?: (tokens: string[]) => void;
@@ -153,13 +154,9 @@ export default function PortfolioWorkflowFields({
   return (
     <>
       <div className="space-y-2 w-fit">
-        <div
-          className={`grid ${colTemplate} gap-2 text-sm font-medium`}
-        >
+        <div className={`grid ${colTemplate} gap-2 text-md font-bold`}>
           <div className="text-left">Token</div>
-          <div className="text-left">
-            {useEarn ? 'Spot + Earn' : 'Spot'}
-          </div>
+          <div className="text-left">{useEarn ? 'Spot + Earn' : 'Spot'}</div>
           <div className="text-left">Min %</div>
           <div />
         </div>
@@ -248,10 +245,10 @@ export default function PortfolioWorkflowFields({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2 text-sm font-medium mt-2">
-        <span className="text-left">Total $:</span>
+      <div className="grid grid-cols-4 items-center gap-x-4 gap-y-2 mt-2">
+        <span className="text-left text-md font-bold">Total $:</span>
         <span>{totalUsd.toFixed(2)}</span>
-        <span className="text-left">{t('use_binance_earn')}</span>
+        <span className="text-left text-md font-bold">{t('use_binance_earn')}</span>
         <Toggle
           label=""
           checked={useEarn}
@@ -259,37 +256,43 @@ export default function PortfolioWorkflowFields({
           size="sm"
         />
       </div>
-      <div className="grid grid-cols-2 grid-rows-2 items-start gap-x-4 gap-y-1 text-sm font-medium mt-2">
-        <label htmlFor="risk" className="text-left">
-          {t('risk_tolerance')}
-        </label>
-        <label htmlFor="reviewInterval" className="text-left">
-          {t('review_interval')}
-        </label>
-        <Controller
-          name="risk"
-          control={control}
-          render={({ field }) => (
-            <SelectInput
-              id="risk"
-              value={field.value}
-              onChange={field.onChange}
-              options={riskOptions}
-            />
-          )}
-        />
-        <Controller
-          name="reviewInterval"
-          control={control}
-          render={({ field }) => (
-            <SelectInput
-              id="reviewInterval"
-              value={field.value}
-              onChange={field.onChange}
-              options={reviewIntervalOptions(t)}
-            />
-          )}
-        />
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        <FormField
+          label={t('risk_tolerance')}
+          htmlFor="risk"
+          labelClassName="block text-md font-bold"
+        >
+          <Controller
+            name="risk"
+            control={control}
+            render={({ field }) => (
+              <SelectInput
+                id="risk"
+                value={field.value}
+                onChange={field.onChange}
+                options={riskOptions}
+              />
+            )}
+          />
+        </FormField>
+        <FormField
+          label={t('review_interval')}
+          htmlFor="reviewInterval"
+          labelClassName="block text-md font-bold"
+        >
+          <Controller
+            name="reviewInterval"
+            control={control}
+            render={({ field }) => (
+              <SelectInput
+                id="reviewInterval"
+                value={field.value}
+                onChange={field.onChange}
+                options={reviewIntervalOptions(t)}
+              />
+            )}
+          />
+        </FormField>
       </div>
       </>
     );
