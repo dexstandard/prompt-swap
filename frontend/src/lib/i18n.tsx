@@ -141,7 +141,7 @@ const translations: Record<Lang, Record<string, string>> = {
     trading_agent_warning:
       'Trading portfolio workflow will use all available balance for {tokens} in your Binance Spot wallet. Move excess funds to futures wallet before trading.',
     dont_move_funds_warning:
-      "DON'T MOVE FUNDS ON SPOT WALLET DURING TRADING! It will confuse the trading portfolio workflow and may lead to unexpected results.",
+      "DON'T MOVE FUNDS FROM SPOT WALLET DURING TRADING! It will confuse the trading agent and may lead to unexpected results.",
     update_agent: 'Update Portfolio Workflow',
     failed_update_agent: 'Failed to update portfolio workflow',
     update_running_agent_prompt: 'Update running portfolio workflow?',
@@ -308,7 +308,7 @@ const translations: Record<Lang, Record<string, string>> = {
     trading_agent_warning:
       'Торговое управление портфолио использует весь доступный баланс для {tokens} на вашем Binance Spot кошельке. Перед началом торговли переместите лишние средства на фьючерсный кошелёк.',
     dont_move_funds_warning:
-      'НЕ ПЕРЕВОДИТЕ СРЕДСТВА НА SPOT-КОШЕЛЁК ВО ВРЕМЯ ТОРГОВЛИ! Это собьёт управление портфолио и может привести к непредсказуемым результатам.',
+      'НЕ ПЕРЕВОДИТЕ СРЕДСТВА СО SPOT-КОШЕЛКА ВО ВРЕМЯ ТОРГОВЛИ! Это собьёт торгового агента и может привести к непредсказуемым результатам.',
     update_agent: 'Обновить портфолио',
     failed_update_agent: 'Не удалось обновить портфолио',
     update_running_agent_prompt: 'Обновить активное портфолио?',

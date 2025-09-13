@@ -28,7 +28,6 @@ describe('agent start', () => {
     const app = await buildServer();
     const userId = await addUser('1');
     const payload = {
-      userId,
       model: 'm',
       name: 'Draft',
       tokens: [
